@@ -40,12 +40,23 @@ final class UrlOpener: UrlOpenerType {
         let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
         userActivity.webpageURL = url
 
-        // Try and open the link as universal link
-        return application.delegate?.application?(
+        let openedByAppDelegate = application.delegate?.application?(
             application,
             continue: userActivity,
             restorationHandler: { _ in }
         ) ?? false
+
+        if openedByAppDelegate {
+            return true
+        }
+
+        if let windowScene = application.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+           windowScene.delegate?.scene?(windowScene, continue: userActivity) != nil {
+            return true
+        }
+
+        // Try and open the link as universal link
+        return false
     }
 
     private func openURLSchemeDeeplink(_ url: URL, application: UIApplication) {
