@@ -115,6 +115,7 @@ open class CarouselInAppContentBlockView: UIView {
             guard let self else { return }
             let height = self.customHeight ?? height.height
             self.redrawWithNewHeight(inputView: self, loadedInAppContentBlocksView: collectionView, height: height)
+            defaultBehaviourCallback.onHeightUpdate(placeholderId: placeholder, height: height)
         }
     }
 
@@ -159,8 +160,9 @@ open class CarouselInAppContentBlockView: UIView {
                     )
                 }
             self.filterContentBlocks(placeholder: self.placeholder) { data in
-                if data.isEmpty {
+                guard !data.isEmpty else {
                     self.defaultBehaviourCallback.onNoMessageFound(placeholderId: self.placeholder)
+                    return
                 }
                 let toReturn = data
                     .compactMap { response in
