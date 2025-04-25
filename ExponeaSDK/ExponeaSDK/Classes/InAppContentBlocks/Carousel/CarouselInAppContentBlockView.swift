@@ -108,14 +108,21 @@ open class CarouselInAppContentBlockView: UIView {
             }
             .store(in: &cancellables)
 
-        redrawWithNewHeight(inputView: self, loadedInAppContentBlocksView: collectionView, height: 1)
-
         calculator.heightUpdate = { [weak self] height in
             guard let self else { return }
             let height = self.customHeight ?? height.height
             self.redrawWithNewHeight(inputView: self, loadedInAppContentBlocksView: collectionView, height: height)
             defaultBehaviourCallback.onHeightUpdate(placeholderId: placeholder, height: height)
         }
+
+        IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+            guard let self else { return }
+            self.height?.constant = 0
+            self.stopTimer()
+            self.layoutIfNeeded()
+        }
+
+        redrawWithNewHeight(inputView: self, loadedInAppContentBlocksView: collectionView, height: 1)
     }
 
     open func filterContentBlocks(placeholder: String, continueCallback: TypeBlock<[InAppContentBlockResponse]>?, expiredCompletion: EmptyBlock?) {
@@ -145,6 +152,10 @@ open class CarouselInAppContentBlockView: UIView {
         alreadyShowedMessages.removeAll()
         savedTimer = nil
         state = .stopTimer
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "In-app reload failed: SDK is stopping")
+            return
+        }
         inAppContentBlocksManager.loadMessagesForCarousel(placeholder: placeholder) { [weak self] in
             guard let self else { return }
             self.inAppContentBlocksManager
@@ -171,6 +182,9 @@ open class CarouselInAppContentBlockView: UIView {
                 let input = self.maxMessagesCount > 0 ? Array(sortedMessages.prefix(self.maxMessagesCount)) : sortedMessages
                 self.messages = input.filter { $0.message != nil }
                 self._data.changeValue(with: { $0 = self.makeDuplicate(input: input) })
+                if let first = self.data.first?.html {
+                    self.calculator.loadHtml(placedholderId: self.placeholder, html: first)
+                }
                 self.state = .refresh
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     self.startCarouseling()
@@ -301,7 +315,12 @@ open class CarouselInAppContentBlockView: UIView {
     }
 
     public func getShownCount() -> Int {
-        data.filter { $0.message?.status?.displayed != nil }.count
+        let data = data.filter { $0.message?.status?.displayed != nil }
+        var messages: Set<StaticReturnData> = .init()
+        data.forEach { item in
+            messages.insert(item)
+        }
+        return messages.count
     }
 
     private func refreshContent() {
@@ -326,6 +345,11 @@ open class CarouselInAppContentBlockView: UIView {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 guard let self else { return }
+                guard !IntegrationManager.shared.isStopped else {
+                    Exponea.logger.log(.error, message: "In-app content blocks fetch failed: SDK is stopping")
+                    stopTimer()
+                    return
+                }
                 switch state {
                 case .restart:
                     self.savedTimer = nil
