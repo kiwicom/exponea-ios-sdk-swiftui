@@ -107,13 +107,26 @@ final class InAppMessagePresenter: InAppMessagePresenterType {
                         guard let inAppMessageView = self.inAppMessageView else {
                             return
                         }
+
+                        let targetWindow: UIWindow? = {
+                            if let w = self.window { return w }
+                            if #available(iOS 13.0, *) {
+                                return UIApplication.shared.connectedScenes
+                                    .compactMap { $0 as? UIWindowScene }
+                                    .flatMap { $0.windows }
+                                    .first { $0.isKeyWindow }
+                            } else {
+                                return UIApplication.shared.keyWindow
+                            }
+                        }()
+
                         try self.inAppMessageView?.present(
                             in: viewController,
-                            window: self.window ?? UIApplication.shared.keyWindow
+                            window: targetWindow
                         )
                         self.presenting = true
                         Exponea.logger.log(.verbose, message: "In-app message presented.")
-                        if oldPayload != nil || payloadHtml != nil { // old inapp
+                        if oldPayload != nil || payloadHtml != nil {
                             self.setMessageTimeout(inAppMessageView: inAppMessageView, timeout: timeout)
                         }
                         presentedCallback?(inAppMessageView, nil)
@@ -168,10 +181,6 @@ final class InAppMessagePresenter: InAppMessagePresenterType {
                 )
             }
         case .modal, .fullscreen:
-            guard let image = image else {
-                Exponea.logger.log(.error, message: "In-app message type \(messageType) requires image!")
-                throw InAppMessagePresenterError.unableToCreateView
-            }
             var fullscreen = false
             if case .fullscreen = messageType {
                 fullscreen = true
@@ -203,6 +212,10 @@ final class InAppMessagePresenter: InAppMessagePresenterType {
                 }
                 return view
             } else if let oldPayload {
+                guard let image = image else {
+                    Exponea.logger.log(.error, message: "In-app message type \(messageType) requires image!")
+                    throw InAppMessagePresenterError.unableToCreateView
+                }
                 return InAppMessageDialogView(
                     payload: oldPayload,
                     image: image,
@@ -218,10 +231,6 @@ final class InAppMessagePresenter: InAppMessagePresenterType {
                 )
             }
         case .slideIn:
-            guard let image = image else {
-                Exponea.logger.log(.error, message: "In-app message type \(messageType) requires image!")
-                throw InAppMessagePresenterError.unableToCreateView
-            }
             if var payload {
                 let updatedConfigs = payload.buttons.map { payload in
                     var updatedPayload = payload
@@ -248,6 +257,10 @@ final class InAppMessagePresenter: InAppMessagePresenterType {
                 }
                 return slideInView
             } else if let oldPayload {
+                guard let image = image else {
+                    Exponea.logger.log(.error, message: "In-app message type \(messageType) requires image!")
+                    throw InAppMessagePresenterError.unableToCreateView
+                }
                 return OldInAppMessageSlideInView(
                     payload: oldPayload,
                     image: image,
@@ -296,14 +309,27 @@ final class InAppMessagePresenter: InAppMessagePresenterType {
     }
 
     static func getTopViewController(window: UIWindow? = nil) -> UIViewController? {
-        let window = window ?? UIApplication.shared.keyWindow
-        if var topController = window?.rootViewController {
-            while let presentedViewController = topController.presentedViewController,
-                  !presentedViewController.isBeingDismissed {
-                topController = presentedViewController
+        let keyWindow: UIWindow? = {
+            if #available(iOS 13.0, *) {
+                return UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .flatMap { $0.windows }
+                    .first { $0.isKeyWindow }
+            } else {
+                return UIApplication.shared.keyWindow
             }
-            return topController
+        }()
+
+        let window = window ?? keyWindow
+        guard var topController = window?.rootViewController else { return nil }
+
+        var lastNonAlert = topController
+        while let presented = topController.presentedViewController,
+              !presented.isBeingDismissed {
+            if presented is UIAlertController { break }
+            lastNonAlert = presented
+            topController = presented
         }
-        return nil
+        return lastNonAlert
     }
 }

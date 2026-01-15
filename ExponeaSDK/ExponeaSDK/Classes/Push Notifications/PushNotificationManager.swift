@@ -26,6 +26,11 @@ public extension PushNotificationManagerDelegate {
     func silentPushNotificationReceived(extraData: [AnyHashable: Any]?) {}
 }
 
+public struct PushTokenType {
+    var pushToken: String
+    var isTokenValid: Bool
+}
+
 final class PushNotificationManager: NSObject, PushNotificationManagerType {
     /// The tracking manager used to track push events
     internal var trackingConsentManager: TrackingConsentManagerType
@@ -35,8 +40,8 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
     private let appGroup: String? // used for sharing data across extensions, fx. for push delivered tracking
     private let tokenTrackFrequency: TokenTrackFrequency
     private let urlOpener: UrlOpenerType
-    private var currentPushToken: String?
-    private var lastKnownPushToken: String?
+    private var currentPushToken: PushTokenType?
+    private var lastKnownPushToken: PushTokenType?
     private var lastTokenTrackDate: Date
     private var pushNotificationSwizzler: PushNotificationSwizzler?
 
@@ -86,8 +91,15 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
         self.trackingConsentManager = trackingConsentManager
         self.trackingManager = trackingManager
         self.tokenTrackFrequency = tokenTrackFrequency
-        self.currentPushToken = currentPushToken
-        self.lastKnownPushToken = currentPushToken
+
+        if let currentPushToken {
+            let newToken = PushTokenType(
+                pushToken: currentPushToken,
+                isTokenValid: true
+            )
+            self.currentPushToken = newToken
+            self.lastKnownPushToken = newToken
+        }
         self.lastTokenTrackDate = lastTokenTrackDate ?? .distantPast
         self.urlOpener = urlOpener
         self.requirePushAuthorization = requirePushAuthorization
@@ -143,9 +155,8 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
             object: nil
         )
     }
-    
+
     // MARK: App lifecycle
-    
     @objc internal func applicationDidBecomeActive() {
         Exponea.shared.executeSafely {
             self.applicationDidBecomeActiveUnsafe()
@@ -204,10 +215,10 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
                 pendingOpenedPushes.append(pushOpenedData)
             }
         } else {
-            if (pushOpenedData.considerConsent &&
-                !pushOpenedData.hasTrackingConsent &&
-                !GdprTracking.isTrackForced(pushOpenedData.actionValue)
-            ) {
+            if pushOpenedData.considerConsent
+                && !pushOpenedData.hasTrackingConsent
+                && !GdprTracking.isTrackForced(pushOpenedData.actionValue)
+             {
                 Exponea.logger.log(.verbose, message: "Campaign data for delivered notification are not tracked because consent is not given")
             } else {
                 // save campaign to be added to session start
@@ -258,12 +269,23 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
         }
     }
 
-    func handlePushTokenRegisteredUnsafe(token: String) {
-        self.lastKnownPushToken = token
-        UNAuthorizationStatusProvider.current.isAuthorized { authorized in
-            if !self.requirePushAuthorization || authorized {
-                self.currentPushToken = token
-                self.trackCurrentPushToken(isAuthorized: authorized)
+    private func handlePushTokenRegisteredUnsafe(token: String) {
+        Exponea.shared.executeSafely {
+            UNAuthorizationStatusProvider.current.isAuthorized { [weak self] authorized in
+                guard let self else { return }
+                Exponea.shared.executeSafely {
+                    if let current = self.currentPushToken?.pushToken,
+                       current != token {
+                        self.trackCurrentPushToken(isAuthorized: authorized, isCancelled: true)
+                    }
+                    let pushTokenType = PushTokenType(
+                        pushToken: token,
+                        isTokenValid: !self.requirePushAuthorization || authorized
+                    )
+                    self.lastKnownPushToken = pushTokenType
+                    self.currentPushToken = pushTokenType
+                    self.trackCurrentPushToken(isAuthorized: authorized)
+                }
             }
         }
     }
@@ -371,28 +393,32 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
     func verifyPushStatusAndTrackPushToken() {
         UNAuthorizationStatusProvider.current.isAuthorized { authorized in
             if self.requirePushAuthorization && !authorized {
-                if self.currentPushToken != nil {
-                    self.currentPushToken = nil
+                if self.currentPushToken?.isTokenValid == true {
+                    self.currentPushToken?.isTokenValid = false
                     self.trackCurrentPushToken(isAuthorized: authorized)
                 }
             } else {
-                if self.currentPushToken == nil {
-                    self.currentPushToken = self.lastKnownPushToken
-                }
+                self.currentPushToken?.isTokenValid = authorized
                 self.checkForPushTokenFrequency(isAuthorized: authorized)
             }
         }
     }
 
-    private func trackCurrentPushToken(isAuthorized authorized: Bool) {
+    private func trackCurrentPushToken(isAuthorized: Bool, isCancelled: Bool = false) {
         guard !IntegrationManager.shared.isStopped else {
             Exponea.logger.log(.error, message: "trackCurrentPushToken failed, Exponea is stopped")
             return
         }
         do {
-            try trackingManager.track(
-                .registerPushToken,
-                with: [.pushNotificationToken(token: currentPushToken, authorized: authorized)]
+            try trackingManager.trackNotificationState(
+                pushToken: currentPushToken?.pushToken,
+                isValid: isCancelled ? false : (currentPushToken?.isTokenValid ?? true),
+                description: isCancelled ?
+                "Invalidated" : (
+                    isAuthorized
+                    ? "Permission granted"
+                    : "Permission denied"
+                )
             )
         } catch {
             Exponea.logger.log(.error, message: "Error tracking current push token. \(error.localizedDescription)")
@@ -416,7 +442,7 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
 
         case .onTokenChange:
             // Track if changed from last tracked
-            if trackingManager.customerPushToken != currentPushToken {
+            if trackingManager.customerPushToken != currentPushToken?.pushToken {
                 lastTokenTrackDate = .init()
                 trackCurrentPushToken(isAuthorized: authorized)
             }
