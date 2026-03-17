@@ -200,7 +200,7 @@ extension TrackingManager: TrackingManagerType {
     public func trackNotificationState(pushToken: String?, isValid: Bool, description: String) throws {
         if let pushToken {
             let data: [String: JSONValue] = [
-                "platform": .string("iOS"),
+                "platform": .string("ios"),
                 "description": .string(description)
             ]
             try trackInternal(
@@ -214,6 +214,8 @@ extension TrackingManager: TrackingManagerType {
                 ],
                 trackingAllowed: true
             )
+        } else {
+            Exponea.logger.log(.error, message: "The trackNotificationState failed, pushToken is nil")
         }
     }
 
