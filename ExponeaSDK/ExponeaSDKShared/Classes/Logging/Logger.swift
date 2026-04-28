@@ -59,7 +59,6 @@ open class Logger {
                   line: Int = #line,
                   funcName: String = #function) -> Bool {
 
-        // Don't log if logging level set too low.
         guard logLevel.rawValue >= level.rawValue else {
             return false
         }

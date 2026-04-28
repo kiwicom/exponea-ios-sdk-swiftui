@@ -10,6 +10,8 @@ import Foundation
 import Quick
 import Nimble
 import Combine
+import UIKit
+import Mockingjay
 @testable import ExponeaSDK
 
 fileprivate class CustomCarouselCallback: DefaultContentBlockCarouselCallback {
@@ -90,6 +92,45 @@ class InAppContentBlocksManagerSpec: QuickSpec {
         }
         
         it("Corrupted images") {
+            // Stub network responses deterministically — previously this test made real HTTPS
+            // calls to upload.wikimedia.org and flaked under slow/offline network.
+            // Mockingjay auto-swizzles `URLSessionConfiguration.ephemeral` at `+load` time, which
+            // is exactly what `hasHtmlImages` uses, so no production injection seam is needed.
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+            let validImageData = renderer.image { context in
+                UIColor.red.setFill()
+                context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+            }.pngData()!
+            MockingjayProtocol.addStub(
+                matcher: { request in
+                    request.url?.absoluteString.contains("/Gull_portrait_ca_usa.jpg") == true
+                },
+                builder: { _ in
+                    let response = HTTPURLResponse(
+                        url: URL(string: "https://upload.wikimedia.org/wikipedia/commons/9/9a/Gull_portrait_ca_usa.jpg")!,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: ["Content-Type": "image/png"]
+                    )!
+                    return .success(response, .content(validImageData))
+                }
+            )
+            MockingjayProtocol.addStub(
+                matcher: { request in
+                    request.url?.absoluteString.contains("/Gull_portrait_ca_usssssa.jpg") == true
+                },
+                builder: { _ in
+                    let response = HTTPURLResponse(
+                        url: URL(string: "https://upload.wikimedia.org/wikipedia/commons/9/9a/Gull_portrait_ca_usssssa.jpg")!,
+                        statusCode: 404,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(Data()))
+                }
+            )
+            defer { MockingjayProtocol.removeAllStubs() }
+
             let rawHtml = "<html>" +
             "<body>" +
             "<img src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Gull_portrait_ca_usa.jpg'>" +
@@ -111,12 +152,82 @@ class InAppContentBlocksManagerSpec: QuickSpec {
             "<div data-link='https://example.com/1'>Action 1</div>" +
             "<div data-link='https://example.com/2'>Action 2</div>" +
             "</body></html>"
-            let result = manager.hasHtmlImages(html: rawHtml) // true
-            let result2 = manager.hasHtmlImages(html: rawHtmlEmptyImages) // true
-            let result3 = manager.hasHtmlImages(html: rawHtmlCorruptedImage) // false
-            expect(result).to(beTrue())
-            expect(result2).to(beTrue())
-            expect(result3).to(beFalse())
+            // `hasHtmlImages` enforces `dispatchPrecondition(.notOnQueue(.main))` on its
+            // implementation, so we must invoke it off-main. Quick test bodies run on main,
+            // so we hop to a background queue and rendezvous via `waitUntil`.
+            var result: Bool?
+            var result2: Bool?
+            var result3: Bool?
+            waitUntil(timeout: .seconds(10)) { done in
+                DispatchQueue.global(qos: .utility).async {
+                    result = manager.hasHtmlImages(html: rawHtml)
+                    result2 = manager.hasHtmlImages(html: rawHtmlEmptyImages)
+                    result3 = manager.hasHtmlImages(html: rawHtmlCorruptedImage)
+                    done()
+                }
+            }
+            expect(result).to(equal(true))   // stubbed 200 with valid PNG
+            expect(result2).to(equal(true))  // no images at all
+            expect(result3).to(equal(false)) // stubbed 404 / empty body
+        }
+
+        it("hasHtmlImages consults InAppMessagesCache and skips the network on hit") {
+            // Regression for the carousel cold-paint short-circuit: after HtmlNormalizer.asBase64Image
+            // has baked images for offline rendering, every image URL is already on disk in
+            // InAppMessagesCache. `hasHtmlImages` must consult that cache first and short-circuit
+            // to `true` on any decodable hit, without issuing a network request.
+            let uniqueSuffix = UUID().uuidString
+            let cachedImageUrl = "https://example.test/\(uniqueSuffix).png"
+
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+            let validImageData = renderer.image { ctx in
+                UIColor.blue.setFill()
+                ctx.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+            }.pngData()!
+
+            // Pre-populate the exact cache entry the production code will read.
+            let cache = InAppMessagesCache()
+            cache.saveImageData(at: cachedImageUrl, data: validImageData)
+
+            // Counter shared between test and Mockingjay matcher/builder. The matcher runs
+            // on every URL loaded through any `URLSessionConfiguration.ephemeral`-based session,
+            // so it is the authoritative witness of whether the production code went to the
+            // network at all for this URL.
+            let networkInvocationCount = Atomic(wrappedValue: 0)
+            MockingjayProtocol.addStub(
+                matcher: { request in
+                    request.url?.absoluteString == cachedImageUrl
+                },
+                builder: { _ in
+                    networkInvocationCount.changeValue { $0 += 1 }
+                    // Intentionally fail the network path: if the production code skips the
+                    // cache and hits the network, the returned empty body will not decode
+                    // as a UIImage and `hasHtmlImages` will return `false`, which the
+                    // assertion below will catch.
+                    let response = HTTPURLResponse(
+                        url: URL(string: cachedImageUrl)!,
+                        statusCode: 500,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(Data()))
+                }
+            )
+            defer { MockingjayProtocol.removeAllStubs() }
+
+            let rawHtml = "<html><body>" +
+            "<img src='\(cachedImageUrl)'>" +
+            "</body></html>"
+
+            var result: Bool?
+            waitUntil(timeout: .seconds(5)) { done in
+                DispatchQueue.global(qos: .utility).async {
+                    result = manager.hasHtmlImages(html: rawHtml)
+                    done()
+                }
+            }
+            expect(result).to(equal(true))
+            expect(networkInvocationCount.wrappedValue).to(equal(0))
         }
 
         it("check filtered") {
@@ -483,6 +594,308 @@ class InAppContentBlocksManagerSpec: QuickSpec {
             expect(isMessageValid).to(beTrue())
         }
         
+        it("batch static requests with empty placeholderId receive empty result") {
+            var completionCalled = false
+            waitUntil(timeout: .seconds(5)) { done in
+                manager.refreshStaticViewContent(staticQueueData: .init(
+                    tag: 0,
+                    placeholderId: "",
+                    completion: { result in
+                        completionCalled = true
+                        expect(result.html).to(beEmpty())
+                        expect(result.message).to(beNil())
+                        DispatchQueue.main.async { done() }
+                    }
+                ))
+            }
+            expect(completionCalled).to(beTrue())
+        }
+
+        // Regression guard for C3: `CarouselInAppContentBlockView.reload` is `open` on a
+        // `public` class — subclasses / host apps may call from any thread. A trap-on-background
+        // contract was a release-build regression introduced during the batching refactor.
+        it("CarouselInAppContentBlockView.reload is safe to call from a background queue") {
+            let view = CarouselInAppContentBlockView(placeholder: "carousel_bg_test")
+            waitUntil(timeout: .seconds(3)) { done in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    view.reload(isTriggered: false)
+                    DispatchQueue.main.async { done() }
+                }
+            }
+            expect(true).to(beTrue())
+        }
+
+        // Regression guard for C3: `refreshStaticViewContent` is public-surface via
+        // `InAppContentBlocksManagerType` and must not trap when invoked off the main queue.
+        it("refreshStaticViewContent is safe to call from a background queue") {
+            var completionCalled = false
+            waitUntil(timeout: .seconds(5)) { done in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    manager.refreshStaticViewContent(staticQueueData: .init(
+                        tag: 7,
+                        placeholderId: "",
+                        completion: { _ in
+                            completionCalled = true
+                            DispatchQueue.main.async { done() }
+                        }
+                    ))
+                }
+            }
+            expect(completionCalled).to(beTrue())
+        }
+
+        it("multiple batched requests all receive completions") {
+            let requestCount = 5
+            var completionCount = 0
+            waitUntil(timeout: .seconds(10)) { done in
+                for i in 0..<requestCount {
+                    manager.refreshStaticViewContent(staticQueueData: .init(
+                        tag: i,
+                        placeholderId: "placeholder_\(i)",
+                        completion: { _ in
+                            completionCount += 1
+                            if completionCount == requestCount {
+                                DispatchQueue.main.async { done() }
+                            }
+                        }
+                    ))
+                }
+            }
+            expect(completionCount).to(equal(requestCount))
+        }
+
+        it("ttlSeen is preserved after message update") {
+            let msgId = "ttl-test-\(UUID().uuidString)"
+            let ttlDate = Date().addingTimeInterval(-100)
+            let message = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: msgId,
+                personalized: .getSample(status: .ok, ttlSeen: ttlDate)
+            )
+            manager.addMessage(message)
+            let concreteManager = manager as! InAppContentBlocksManager
+            let stored = concreteManager.inAppContentBlockMessages.first(where: { $0.id == msgId })
+            expect(stored).toNot(beNil())
+            expect(stored?.personalizedMessage?.ttlSeen).to(equal(ttlDate))
+        }
+
+        it("addMessage is safe under concurrent access") {
+            let concreteManager = manager as! InAppContentBlocksManager
+            let group = DispatchGroup()
+            let iterations = 50
+            for i in 0..<iterations {
+                group.enter()
+                DispatchQueue.global().async {
+                    manager.addMessage(SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                        id: "concurrent-\(i)"
+                    ))
+                    group.leave()
+                }
+            }
+            waitUntil(timeout: .seconds(5)) { done in
+                group.notify(queue: .main) { done() }
+            }
+            let concurrentMessages = concreteManager.inAppContentBlockMessages.filter {
+                $0.id.hasPrefix("concurrent-")
+            }
+            expect(concurrentMessages.count).to(equal(iterations))
+        }
+
+        // Regression guard for the "only one carousel renders" bug caused by a single shared
+        // validation token being overwritten when multiple `CarouselInAppContentBlockView`s for
+        // different placeholders started loading in parallel. Each placeholder must own its own
+        // token; loading placeholder B must not invalidate placeholder A's in-flight validation.
+        it("loadMessagesForCarousel keeps per-placeholder validation tokens independent") {
+            let concreteManager = manager as! InAppContentBlocksManager
+            manager.addMessage(SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "carousel-indep-a-\(UUID().uuidString)",
+                placeholders: ["carousel_a"]
+            ))
+            manager.addMessage(SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "carousel-indep-b-\(UUID().uuidString)",
+                placeholders: ["carousel_b"]
+            ))
+
+            // Token writes happen synchronously inside `loadMessagesForCarousel` before the
+            // async network call, so we can assert on them without waiting for completion.
+            // Called through the concrete type because `loadMessagesForCarousel` is no longer
+            // part of the public `InAppContentBlocksManagerType` surface.
+            concreteManager.loadMessagesForCarousel(
+                placeholder: "carousel_a",
+                initialCompletion: nil,
+                completion: nil
+            )
+            let tokenA = concreteManager.carouselValidationTokens["carousel_a"]
+            expect(tokenA).toNot(beNil())
+
+            concreteManager.loadMessagesForCarousel(
+                placeholder: "carousel_b",
+                initialCompletion: nil,
+                completion: nil
+            )
+            let tokenB = concreteManager.carouselValidationTokens["carousel_b"]
+            expect(tokenB).toNot(beNil())
+            // Crucially, A's token must still be intact — the B reload must not have clobbered it.
+            expect(concreteManager.carouselValidationTokens["carousel_a"]).to(equal(tokenA))
+            expect(tokenB).toNot(equal(tokenA))
+        }
+
+        // Regression guard: two back-to-back reload() calls for the SAME placeholder
+        // must NOT both issue a personalization fetch. A production trace captured two
+        // identical POST /inappcontentblocks bursts 216 ms apart for `example_carousel`,
+        // costing ~300 ms of wall-clock and doubling HTML-normalization work on the
+        // cold-render path.
+        //
+        // Observable proxy: `carouselValidationTokens[placeholder]`. `loadMessagesForCarousel`
+        // rotates this token synchronously on the calling thread *right before* invoking
+        // the provider — so token rotations are a 1:1 synchronous proxy for provider
+        // invocations on the same main thread. Under the dedup fix, the second caller
+        // short-circuits on the in-flight map BEFORE rotating the token; under the
+        // pre-fix code each call unconditionally rotates, producing two distinct UUIDs.
+        //
+        // Why not spy on the repository directly: `InAppContentBlocksDataProvider.serverRepository`
+        // is a `private lazy var` that captures `Exponea.shared.repository` on first access,
+        // and `ExponeaInternal.configure` triggers that first access during `loadInAppContentBlockMessages`
+        // — before any test-side swap. A token-level proxy avoids adding a second injection seam.
+        it("two loadMessagesForCarousel calls for the same placeholder share one in-flight fetch") {
+            let concreteManager = manager as! InAppContentBlocksManager
+            let placeholder = "carousel_dedup_\(UUID().uuidString)"
+            // Prime the static cache so `idsForDownload` is non-empty — matches the
+            // production scenario captured in the log trace where the placeholder has
+            // known message IDs before the personalization fetch fires.
+            manager.addMessage(SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "dedup-msg-\(UUID().uuidString)",
+                placeholders: [placeholder]
+            ))
+
+            concreteManager.loadMessagesForCarousel(
+                placeholder: placeholder,
+                initialCompletion: nil,
+                completion: nil
+            )
+            let firstToken = concreteManager.carouselValidationTokens[placeholder]
+            expect(firstToken).toNot(beNil())
+
+            concreteManager.loadMessagesForCarousel(
+                placeholder: placeholder,
+                initialCompletion: nil,
+                completion: nil
+            )
+            let secondToken = concreteManager.carouselValidationTokens[placeholder]
+
+            // Under dedup: the second call attaches as a waiter on the first in-flight
+            // fetch and does NOT rotate the token → secondToken == firstToken.
+            // Pre-dedup (the failing-first baseline this test is designed to catch):
+            // each call rotates unconditionally → secondToken != firstToken.
+            expect(secondToken).to(equal(firstToken))
+        }
+
+        // Stale-result-drop regression: a late-arriving personalization callback from
+        // a superseded fetch must NOT consume the current in-flight record (which
+        // belongs to a newer fetch). Without the guard, a naïve
+        // `map.removeValue(forKey: placeholder)` in the callback would orphan the newer
+        // run's waiters. Under the `claimInFlightCarouselFetch` guard, the mismatched
+        // `validationToken` makes the claim a no-op, leaving the newer record intact.
+        it("stale personalized-fetch callback does not consume a newer in-flight record") {
+            let concreteManager = manager as! InAppContentBlocksManager
+            let placeholder = "carousel_stale_\(UUID().uuidString)"
+
+            // Simulate a newer fetch that has taken over the placeholder's in-flight slot
+            // after some older fetch was kicked off. The newer fetch owns `newerToken`
+            // and has two waiters queued (the initiator + a subsequent caller that
+            // attached via dedup).
+            let olderToken = UUID()
+            let newerToken = UUID()
+            var initialFires = 0
+            var completionFires = 0
+            let newerRecord = CarouselInFlightFetch(
+                validationToken: newerToken,
+                waiters: [
+                    (
+                        initial: { initialFires += 1 },
+                        completion: { completionFires += 1 }
+                    ),
+                    (
+                        initial: { initialFires += 1 },
+                        completion: { completionFires += 1 }
+                    )
+                ]
+            )
+            concreteManager.$carouselInFlightFetches.changeValue { $0[placeholder] = newerRecord }
+
+            // The older fetch's callback finally arrives and attempts to claim — with
+            // ITS own (now-stale) token. The guard must refuse, return nil, and leave
+            // the newer record + its waiters untouched.
+            let claimedByStale = concreteManager.claimInFlightCarouselFetch(
+                placeholder: placeholder,
+                validationToken: olderToken
+            )
+            expect(claimedByStale).to(beNil())
+            expect(concreteManager.carouselInFlightFetches[placeholder]?.validationToken).to(equal(newerToken))
+            expect(concreteManager.carouselInFlightFetches[placeholder]?.waiters.count).to(equal(2))
+            expect(initialFires).to(equal(0))
+            expect(completionFires).to(equal(0))
+
+            // The newer fetch's own callback then arrives with the matching token and
+            // correctly claims the record. Waiters are returned to the caller (who will
+            // fan them out via `broadcastInitial` / `broadcastCompletion`) and the map
+            // slot is cleared.
+            let claimedByCurrent = concreteManager.claimInFlightCarouselFetch(
+                placeholder: placeholder,
+                validationToken: newerToken
+            )
+            expect(claimedByCurrent?.count).to(equal(2))
+            expect(concreteManager.carouselInFlightFetches[placeholder]).to(beNil())
+            // Manually fan out to verify the waiters are the ones we registered (not
+            // stubs created by the claim path) — this also catches any accidental
+            // truncation of the waiters array during the claim.
+            claimedByCurrent?.forEach { waiter in
+                waiter.initial?()
+                waiter.completion?()
+            }
+            expect(initialFires).to(equal(2))
+            expect(completionFires).to(equal(2))
+        }
+
+        // Regression guard for C1 (TOCTOU): after the token rotates, a stale worker's write of
+        // `.valid` / `.corrupted` must NOT overwrite the fresh run's `.pending`. The pre-fix
+        // `updateImageValidationState(messageId:isCorrupted:)` did not check the token, so the
+        // final state write from a superseded run would clobber the current run's state.
+        it("stale worker's final state write is a no-op when token has rotated") {
+            let concreteManager = manager as! InAppContentBlocksManager
+            let messageId = "stale-race-\(UUID().uuidString)"
+            let placeholder = "carousel_race_\(UUID().uuidString)"
+
+            // Run 1 starts — token T1 registered, `.pending` written.
+            let tokenRun1 = UUID()
+            concreteManager.$carouselValidationTokens.changeValue { $0[placeholder] = tokenRun1 }
+            concreteManager.$imageValidationStates.changeValue { $0[messageId] = .pending }
+
+            // Run 2 supersedes Run 1 — token T2 registered, fresh `.pending` written.
+            let tokenRun2 = UUID()
+            concreteManager.$carouselValidationTokens.changeValue { $0[placeholder] = tokenRun2 }
+            concreteManager.$imageValidationStates.changeValue { $0[messageId] = .pending }
+
+            // Run 1's stale worker attempts to finalize — under the fix, this is a no-op because
+            // `placeholder`'s active token is T2, not T1.
+            concreteManager.updateImageValidationState(
+                messageId: messageId,
+                placeholder: placeholder,
+                validationToken: tokenRun1,
+                isCorrupted: false
+            )
+
+            expect(concreteManager.imageValidationStates[messageId]).to(equal(.pending))
+
+            // Meanwhile, Run 2's worker finalizing with the current token T2 DOES write through.
+            concreteManager.updateImageValidationState(
+                messageId: messageId,
+                placeholder: placeholder,
+                validationToken: tokenRun2,
+                isCorrupted: true
+            )
+            expect(concreteManager.imageValidationStates[messageId]).to(equal(.corrupted))
+        }
+
         describe("InAppContentBlockResponse") {
             let json: [String: Any] = [
                 "id": "test-id",

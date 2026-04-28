@@ -62,24 +62,14 @@ open class CarouselInAppContentBlockView: UIView {
     private var alreadyShowedMessages: [String] = []
     private let defaultBehaviourCallback: DefaultContentBlockCarouselCallback!
     private var behaviourCallback: InAppContentBlockCallbackType = DefaultInAppContentBlockCallback()
-    private var shouSkipCollectionReload = false
-    private var didSet = false
+    private var pendingScrollMessageId: String?
+    private var didNotifyNoMessage = false
+    private var hasStartedCarousel = false
+    private var reloadToken = UUID()
+    private let carouselStartDelay: TimeInterval = 0.5
 
     @Atomic private var messages: [StaticReturnData] = []
-    @Atomic private var data: [StaticReturnData] = [] {
-        didSet {
-            if data.count > 1 && !didSet {
-                didSet = true
-                _data.changeValue(with: { $0.insert(data.last!, at: 0) })
-                _data.changeValue(with: { $0.append(data[1]) })
-            }
-            guard !shouSkipCollectionReload else { return }
-            onMain {
-                self.collectionView.reloadData()
-                self.collectionView.scrollToItem(at: IndexPath(item: self.data.count / 2, section: 0), at: .centeredHorizontally, animated: false)
-            }
-        }
-    }
+    @Atomic private var data: [StaticReturnData] = []
     private var savedTimer: TimeInterval?
     private let placeholder: String
 
@@ -152,52 +142,46 @@ open class CarouselInAppContentBlockView: UIView {
     }
 
     open func reload(isTriggered: Bool = false) {
+        // Public surface (`open` on a `public` class): host apps and subclasses may call
+        // `reload` from any thread. The main-queue hop below is mandatory — `performReload`
+        // mutates view state that must be touched only on main.
+        onMain { [weak self] in
+            guard let self else { return }
+            self.performReload(isTriggered: isTriggered)
+        }
+    }
+
+    /// Main-queue-only body of `reload`. Kept non-overridable so subclasses can still override
+    /// the public `reload(isTriggered:)` entry point, but the thread-sensitive state transitions
+    /// here are guaranteed to run on main.
+    private func performReload(isTriggered: Bool) {
         alreadyShowedMessages.removeAll()
         savedTimer = nil
         state = .stopTimer
+        didNotifyNoMessage = false
+        hasStartedCarousel = false
+        pendingScrollMessageId = nil
+        reloadToken = UUID()
         guard !IntegrationManager.shared.isStopped else {
             Exponea.logger.log(.error, message: "In-app reload failed: SDK is stopping")
             return
         }
-        inAppContentBlocksManager.loadMessagesForCarousel(placeholder: placeholder) { [weak self] in
-            guard let self else { return }
-            self.inAppContentBlocksManager
-                .inAppContentBlockMessages
-                .filter { $0.placeholders.contains(self.placeholder) }
-                .filter { $0.personalizedMessage?.isCorruptedImage == true }
-                .forEach { message in
-                    self.defaultBehaviourCallback.onError(
-                        placeholderId: message.id,
-                        contentBlock: message,
-                        errorMessage: "Corrupted image for \(message.id)"
-                    )
+        let token = reloadToken
+        inAppContentBlocksManager.loadMessagesForCarousel(
+            placeholder: placeholder,
+            initialCompletion: { [weak self] in
+                onMain {
+                    guard let self, self.reloadToken == token else { return }
+                    self.applyCarouselData(isTriggered: isTriggered, phase: .initial)
                 }
-            self.filterContentBlocks(placeholder: self.placeholder) { data in
-                guard !data.isEmpty else {
-                    self.defaultBehaviourCallback.onNoMessageFound(placeholderId: self.placeholder)
-                    return
-                }
-                let toReturn = data
-                    .compactMap { response in
-                        self.inAppContentBlocksManager.prepareCarouselStaticData(messages: response)
-                    }
-                let sortedMessages = self.sortContentBlocks(data: toReturn)
-                let input = self.maxMessagesCount > 0 ? Array(sortedMessages.prefix(self.maxMessagesCount)) : sortedMessages
-                self.messages = input.filter { $0.message != nil }
-                self._data.changeValue(with: { $0 = self.makeDuplicate(input: input) })
-                if let first = self.data.first?.html {
-                    self.calculator.loadHtml(placedholderId: self.placeholder, html: first)
-                }
-                self.state = .refresh
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self.startCarouseling()
-                }
-            } expiredCompletion: { [weak self] in
-                if !isTriggered {
-                    self?.reload(isTriggered: true)
+            },
+            completion: { [weak self] in
+                onMain {
+                    guard let self, self.reloadToken == token else { return }
+                    self.applyCarouselData(isTriggered: true, phase: .full)
                 }
             }
-        }
+        )
     }
 
     internal func makeDuplicate(input: [StaticReturnData]) -> [StaticReturnData] {
@@ -226,6 +210,113 @@ open class CarouselInAppContentBlockView: UIView {
         return copy
     }
 
+    private enum CarouselLoadPhase {
+        case initial
+        case full
+    }
+
+    private func applyCarouselData(isTriggered: Bool, phase: CarouselLoadPhase) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        if phase == .full {
+            reportCorruptedImages()
+        }
+        filterContentBlocks(placeholder: placeholder) { [weak self] data in
+            guard let self else { return }
+            guard !data.isEmpty else {
+                if phase == .full {
+                    self.notifyNoMessageFound()
+                }
+                return
+            }
+            let toReturn = data.compactMap { response in
+                self.inAppContentBlocksManager.prepareCarouselStaticData(messages: response)
+            }
+            let sortedMessages = self.sortContentBlocks(data: toReturn)
+            let input = self.maxMessagesCount > 0 ? Array(sortedMessages.prefix(self.maxMessagesCount)) : sortedMessages
+            guard !input.isEmpty else {
+                if phase == .full {
+                    self.notifyNoMessageFound()
+                }
+                return
+            }
+            let currentMessageId = self.currentMessage?.message?.id
+            let newFiltered = input.filter { $0.message != nil }
+            if phase == .full {
+                // Eligible set unchanged from the initial phase — skip the rebuild,
+                // the second WKWebView load, and the collection-view refresh to avoid
+                // the visible flicker / scroll-jump on the cold-render path.
+                let previousIds = self.messages.compactMap { $0.message?.id }
+                let nextIds = newFiltered.compactMap { $0.message?.id }
+                if previousIds == nextIds, !previousIds.isEmpty {
+                    return
+                }
+            }
+            self.messages = newFiltered
+            self.pendingScrollMessageId = currentMessageId
+            self._data.changeValue(with: { $0 = self.makeDuplicate(input: input) })
+            if let first = self.data.first?.html {
+                self.calculator.loadHtml(placedholderId: self.placeholder, html: first)
+            }
+            self.state = .refresh
+            if !self.hasStartedCarousel {
+                self.hasStartedCarousel = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + carouselStartDelay) { [weak self] in
+                    self?.startCarouseling()
+                }
+            }
+        } expiredCompletion: { [weak self] in
+            guard let self else { return }
+            if !isTriggered {
+                self.reload(isTriggered: true)
+            }
+        }
+    }
+
+    private func notifyNoMessageFound() {
+        guard !didNotifyNoMessage else { return }
+        didNotifyNoMessage = true
+        defaultBehaviourCallback.onNoMessageFound(placeholderId: placeholder)
+    }
+
+    private func reportCorruptedImages() {
+        inAppContentBlocksManager
+            .inAppContentBlockMessages
+            .filter { $0.placeholders.contains(placeholder) }
+            .filter { $0.personalizedMessage?.isCorruptedImage == true }
+            .forEach { message in
+                defaultBehaviourCallback.onError(
+                    placeholderId: message.id,
+                    contentBlock: message,
+                    errorMessage: "Corrupted image for \(message.id)"
+                )
+            }
+    }
+
+    private func indexForMessageId(_ messageId: String) -> Int? {
+        guard !data.isEmpty else { return nil }
+        let middleIndex = data.count / 2
+        if let index = data[middleIndex...].firstIndex(where: { $0.message?.id == messageId }) {
+            return index
+        }
+        if let index = data[..<middleIndex].firstIndex(where: { $0.message?.id == messageId }) {
+            return index
+        }
+        return nil
+    }
+
+    private func scrollToPendingMessageOrCenter() {
+        guard !data.isEmpty else { return }
+        let targetIndex: Int = {
+            if let messageId = pendingScrollMessageId,
+               let index = indexForMessageId(messageId) {
+                return index
+            }
+            return data.count / 2
+        }()
+        pendingScrollMessageId = nil
+        collectionView.scrollToItem(at: IndexPath(item: targetIndex, section: 0), at: .centeredHorizontally, animated: false)
+    }
+
     public func checkMessage(message: StaticReturnData, shouldBeReloaded: Bool = false) {
         guard let messageResponse = message.message else { return }
         inAppContentBlocksManager.isMessageValid(message: messageResponse) { [weak self] isValid in
@@ -249,9 +340,7 @@ open class CarouselInAppContentBlockView: UIView {
                     }
                     indexes.forEach { index in
                         if self.data[safeIndex: index] != nil {
-                            self.shouSkipCollectionReload = true
                             self._data.changeValue(with: { $0[index] = newData })
-                            self.shouSkipCollectionReload = false
                         }
                     }
                 }
@@ -366,6 +455,7 @@ open class CarouselInAppContentBlockView: UIView {
                 case .refresh:
                     defaultBehaviourCallback.onMessagesChanged(count: self.messages.count, messages: self.messages.map { $0.message! })
                     self.collectionView.reloadData()
+                    self.scrollToPendingMessageOrCenter()
                 case .startTimer:
                     self.startTimer()
                 }

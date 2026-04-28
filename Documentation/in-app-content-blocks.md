@@ -163,21 +163,10 @@ let index = carouselView.getShownIndex()
 let count = carouselView.getShownCount()
 ```
 
-You can register a `onMessageShown` or `onMessageChanged` callback to a carousel view instance to retrieve information for each update.
+Receive carousel presentation callbacks by providing a DefaultContentBlockCarouselCallback implementation via the behaviourCallback parameter of the carousel view initializer (see [Customize action behavior](#carousel-view) below). The protocol provides the following methods:
 
-```swift
-// This is triggered on each scroll so 'contentBlock' parameter represents currently shown content block
-carouselView.onMessageShown = { message in
-    print(message.index) // so as 'index' represents position index of currently shown content block 
-    print(message.placeholderId)
-}
-
-// This is triggered after 'reload' or if a content block is removed because interaction has been done
-carouselView.onMessageChanged = { data in
-    print("ON MESSAGE CHANGED")
-    print(data)
-}    
-```
+- `onMessageShown(placeholderId:contentBlock:index:count:)` is triggered on each scroll, providing the currently shown content block and its position index.
+- `onMessagesChanged(count:messages:)` is triggered after `reload` or when a content block is removed due to user interaction.
 
 ### Defer in-app content blocks loading
 
@@ -301,6 +290,17 @@ class CustomInAppContentBlockCallback: InAppContentBlockCallbackType {
         // content block action has to be handled for given `action.url`
         handleUrlByYourApp(action.url)
     }
+
+    func onActionClickedSafari(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse, action: ExponeaSDK.InAppContentBlockAction) {
+        // content block action has to be tracked for 'click' event
+        Exponea.shared.trackInAppContentBlockClick(
+            placeholderId: placeholderId,
+            action: action,
+            message: contentBlock
+        )
+        // content block action has to be handled for given `action.url`
+        handleUrlByYourApp(action.url)
+    }
 }
 ```
 
@@ -310,28 +310,22 @@ class CustomInAppContentBlockCallback: InAppContentBlockCallbackType {
 
 #### Carousel view
 
-You can configure the action behavior for a `CarouselInAppContentBlockView` through `contentBlockCarouselCallback` by setting the `trackActions` and `overrideDefaultBehavior` flags.
+Configure the action behavior of `CarouselInAppContentBlockView` by passing a custom `DefaultContentBlockCarouselCallback` implementation using the `behaviourCallback` parameter of the initializer. The callback object controls the `trackActions` and `overrideDefaultBehavior` flags.
 
 ##### trackActions
 
 - Default value: `true`
-- If `false`, events "close" and "click" on banners won't be tracked by the SDK. You can add your custom behavior via `customContentBlockCarouselCallback` (see example [below](#customcontentblockcarouselcallback)).
-
-```swift
-carousel.contentBlockCarouselCallback.trackActions = false
-```
+- If `false`, the SDK won't track `close` and `click` events on banners.
 
 ##### overrideDefaultBehavior
 
 - Default value: `false`
-- If `true`, deep links and universal links won't be opened. You can add your custom behavior via `customContentBlockCarouselCallback` (see example [below](#customcontentblockcarouselcallback)).
+- If `true`, the SDK won't open deep links or universal links.
 
-##### customContentBlockCarouselCallback
-
-You can add your custom behavior by setting `customContentBlockCarouselCallback` on the `CarouselInAppContentBlockView`:
+Set these flags on your callback object and pass it to the carousel view initializer:
 
 ```swift
-CarouselInAppContentBlockView(placeholder: "example_carousel", customContentBlockCarouselCallback: CustomCarouselCallback())
+CarouselInAppContentBlockView(placeholder: "example_carousel", behaviourCallback: CustomCarouselCallback())
 ```
 
 The callback behavior object must implement `DefaultContentBlockCarouselCallback`.
@@ -342,7 +336,11 @@ public class CustomCarouselCallback: DefaultContentBlockCarouselCallback {
     public var overrideDefaultBehavior: Bool = false
     public var trackActions: Bool = true
 
-    public func onMessageShown(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse) {
+    public func onMessageShown(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse, index: Int, count: Int) {
+        // space for custom implementation
+    }
+
+    public func onMessagesChanged(count: Int, messages: [ExponeaSDK.InAppContentBlockResponse]) {
         // space for custom implementation
     }
 
@@ -448,7 +446,7 @@ class CustomBehaviourCallback: InAppContentBlockCallbackType {
     }
 
     func onMessageShown(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse) {
-        // Calling originalBehavior tracks 'show' event and opens URL
+        // Calling originalBehaviour tracks 'show' event and opens URL
         originalBehaviour.onMessageShown(placeholderId: placeholderId, contentBlock: contentBlock)
         viewDelegate.showMessage(contentBlock)
     }
@@ -458,20 +456,25 @@ class CustomBehaviourCallback: InAppContentBlockCallbackType {
     }
 
     func onError(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse?, errorMessage: String) {
-        // Calling originalBehavior tracks 'error' event
+        // Calling originalBehaviour tracks 'error' event
         originalBehaviour.onError(placeholderId: placeholderId, contentBlock: contentBlock, errorMessage: errorMessage)
         viewDelegate.showError()
     }
 
     func onCloseClicked(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse) {
-        // Calling originalBehavior tracks 'close' event
+        // Calling originalBehaviour tracks 'close' event
         originalBehaviour.onCloseClicked(placeholderId: placeholderId, contentBlock: contentBlock)
         viewDelegate.hideMe()
     }
 
     func onActionClicked(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse, action: ExponeaSDK.InAppContentBlockAction) {
-        // Calling originalBehavior tracks 'click' event
+        // Calling originalBehaviour tracks 'click' event
         originalBehaviour.onActionClicked(placeholderId: placeholderId, contentBlock: contentBlock, action: action)
+    }
+
+    func onActionClickedSafari(placeholderId: String, contentBlock: ExponeaSDK.InAppContentBlockResponse, action: ExponeaSDK.InAppContentBlockAction) {
+        // Calling originalBehaviour tracks 'click' event and opens in SFSafariViewController
+        originalBehaviour.onActionClickedSafari(placeholderId: placeholderId, contentBlock: contentBlock, action: action)
     }
 }
 ```
