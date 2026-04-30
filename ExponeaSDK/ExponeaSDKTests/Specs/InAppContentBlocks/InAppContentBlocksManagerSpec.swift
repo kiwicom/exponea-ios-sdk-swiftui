@@ -994,5 +994,58 @@ class InAppContentBlocksManagerSpec: QuickSpec {
                 expect(roundTrip.placeholders) == ["a", "b"]
             }
         }
+
+        // Regression guard: CarouselInAppContentBlockView must not be retained by its
+        // own Combine cancellables. Strong-self captures in the notification sinks
+        // created a cycle that prevented dealloc after identifyCustomer(...) and could
+        // surface previous-customer content.
+        it("CarouselInAppContentBlockView is deallocated when the host releases its strong reference") {
+            weak var weakView: CarouselInAppContentBlockView?
+            autoreleasepool {
+                let view = CarouselInAppContentBlockView(placeholder: "ph_carousel_dealloc")
+                weakView = view
+                // The host releases its only strong reference here.
+                view.release()
+            }
+            // Combine subscriptions are cancelled and the array is drained on `release()`,
+            // so the view should be deallocated immediately after the autoreleasepool drains.
+            expect(weakView).toEventually(beNil(), timeout: .seconds(2))
+        }
+
+        // Regression guard: release() must drop all Combine subscriptions.
+        // Before the fix, release() called removeObserver(self, ...) — a no-op for
+        // publisher-based subscriptions — and the cancellables array remained populated.
+        it("CarouselInAppContentBlockView.release() cancels all Combine subscriptions") {
+            let view = CarouselInAppContentBlockView(placeholder: "ph_carousel_cancel")
+            expect(view.cancellables).toNot(beEmpty())
+            view.release()
+            expect(view.cancellables).to(beEmpty())
+        }
+
+        // Regression guard (cell-callback case): the cell wiring in `cellForItemAt`
+        // previously assigned `cell.touchCallback = saveCurrentTimer` and
+        // `cell.releaseCallback = startTimer` — unbound instance method refs that Swift
+        // desugars into strong-self closures. That formed a fourth retain cycle
+        // (self -> collectionView -> cell -> closure -> self) which is invisible to the
+        // other two regression tests because they never trigger `cellForItemAt`.
+        //
+        // Test seam usage: `_testOnly_vendCellAtFirstIndex` vends through the view's own
+        // (private, lazy) `collectionView`. This matters — vending through a scratch
+        // collection view local to the test would NOT pin the cycle, because a local
+        // collection view goes out of scope at the end of the autoreleasepool, releases
+        // the cell, the cell releases its closures, and the view dealloca regardless of
+        // the bug. Using `self.collectionView` mirrors the production retention graph
+        // (the carousel keeps its own collection view alive via a stored property).
+        it("CarouselInAppContentBlockView is deallocated even after a cell has been vended") {
+            weak var weakView: CarouselInAppContentBlockView?
+            autoreleasepool {
+                let view = CarouselInAppContentBlockView(placeholder: "ph_carousel_cell_dealloc")
+                weakView = view
+                view._testOnly_seedData([StaticReturnData(html: "<html></html>", tag: 0)])
+                view._testOnly_vendCellAtFirstIndex()
+                view.release()
+            }
+            expect(weakView).toEventually(beNil(), timeout: .seconds(2))
+        }
     }
 }

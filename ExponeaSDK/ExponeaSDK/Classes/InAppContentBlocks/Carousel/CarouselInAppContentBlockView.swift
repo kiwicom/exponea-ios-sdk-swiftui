@@ -19,9 +19,27 @@ open class CarouselInAppContentBlockView: UIView {
     private var height: NSLayoutConstraint?
 
     func createCompositionalLayout() -> UICollectionViewLayout {
-        UICollectionViewCompositionalLayout { _, _ in
-            self.createHorizontalScrollLayoutSection()
+        UICollectionViewCompositionalLayout { [weak self] _, _ in
+            self?.createHorizontalScrollLayoutSection() ?? Self.fallbackEmptyLayoutSection()
         }
+    }
+
+    /// Returned only when `self` has already been released and the layout system asks for
+    /// a section provider one final time. The collection view will be torn down momentarily;
+    /// returning a degenerate empty section is safer than force-unwrapping.
+    private static func fallbackEmptyLayoutSection() -> NSCollectionLayoutSection {
+        let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .fractionalHeight(1.0)
+        ))
+        let group = NSCollectionLayoutGroup.horizontal(
+            layoutSize: NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .fractionalHeight(1.0)
+            ),
+            subitems: [item]
+        )
+        return NSCollectionLayoutSection(group: group)
     }
 
     func createHorizontalScrollLayoutSection() -> NSCollectionLayoutSection {
@@ -90,14 +108,14 @@ open class CarouselInAppContentBlockView: UIView {
         listenToState()
 
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
-            .sink { _ in
-                self.startTimer()
+            .sink { [weak self] _ in
+                self?.startTimer()
             }
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
-            .sink { _ in
-                self.saveCurrentTimer()
+            .sink { [weak self] _ in
+                self?.saveCurrentTimer()
             }
             .store(in: &cancellables)
 
@@ -386,8 +404,12 @@ open class CarouselInAppContentBlockView: UIView {
     public func release() {
         removeFromSuperview()
         stopTimer()
-        NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
+        // The foreground/background observers are Combine `publisher(for:).sink`
+        // subscriptions stored in `cancellables`, not selector-based observers.
+        // Dropping the cancellables is what actually unsubscribes them. This also
+        // tears down the `$state` listener (`listenToState()`), which is the
+        // intended behavior on release — the view is no longer in the hierarchy.
+        cancellables.removeAll()
     }
 
     deinit {
@@ -569,8 +591,8 @@ extension CarouselInAppContentBlockView: UICollectionViewDataSource {
                 self?.checkMessage(message: message, shouldBeReloaded: true)
             }
         }
-        cell.touchCallback = saveCurrentTimer
-        cell.releaseCallback = startTimer
+        cell.touchCallback = { [weak self] in self?.saveCurrentTimer() }
+        cell.releaseCallback = { [weak self] in self?.startTimer() }
         cell.loadHtml(
             html: message.html,
             assignedMessage: message.message,
@@ -579,3 +601,36 @@ extension CarouselInAppContentBlockView: UICollectionViewDataSource {
         return cell
     }
 }
+
+#if DEBUG
+// MARK: - Internal helpers for unit tests
+//
+// These exist solely so XCTest specs can exercise the
+// `UICollectionViewDataSource.collectionView(_:cellForItemAt:)` path without
+// going through the async `loadMessagesForCarousel` pipeline. They are NOT
+// part of the public SDK surface, are compiled out of Release builds, and
+// must not be called from host applications.
+extension CarouselInAppContentBlockView {
+    /// Test-only: synchronously seeds the carousel's internal data buffers so
+    /// the data source can vend cells. Does NOT trigger any layout, refresh,
+    /// or HTML loading — purely a state injection for unit tests.
+    internal func _testOnly_seedData(_ entries: [StaticReturnData]) {
+        self._data.changeValue { $0 = entries }
+        self.messages = entries
+    }
+
+    /// Test-only: drives `collectionView(_:cellForItemAt:)` on the view's own
+    /// (private, lazy) `collectionView` so the cell is retained by the same
+    /// stored property the production code path uses. This is what lets
+    /// retain-cycle regression tests actually pin the
+    /// `self -> collectionView -> cell -> closure -> self` cycle.
+    /// Returns the dequeued cell (caller may discard it).
+    @discardableResult
+    internal func _testOnly_vendCellAtFirstIndex() -> UICollectionViewCell {
+        return self.collectionView(
+            self.collectionView,
+            cellForItemAt: IndexPath(item: 0, section: 0)
+        )
+    }
+}
+#endif
