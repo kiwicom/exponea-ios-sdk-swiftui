@@ -60,6 +60,13 @@ public final class WKWebViewHeightCalculator: WKWebView, WKNavigationDelegate, W
     private var isReadyForMessages: Bool = false
     private var messageHandler: WeakScriptMessageHandler?
     var id: String = ""
+    // Cached so we can recover from `webViewWebContentProcessDidTerminate(_:)`.
+    // The calculator never enters a view hierarchy, so iOS does not auto-recover
+    // its WebContent process after termination (e.g. while the app is backgrounded
+    // with the device locked). Without re-issuing the load explicitly, no
+    // `didFinish` reaches `heightUpdate`, the carousel stays pinned at its
+    // initial height, and the screen renders empty when the user returns.
+    private var lastLoadedHtml: String?
 
     public init() {
         let userContentController = WKUserContentController()
@@ -92,6 +99,21 @@ public final class WKWebViewHeightCalculator: WKWebView, WKNavigationDelegate, W
         }
         isReadyForMessages = true
         requestHeight(from: webView, retriesRemaining: 1)
+    }
+
+    public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        Exponea.logger.log(
+            .warning,
+            message: "Height calculator WebContent process terminated; reissuing last load for placeholder \(id)"
+        )
+        isReadyForMessages = false
+        lastReportedHeight = nil
+        guard let html = lastLoadedHtml, !html.isEmpty else { return }
+        // The `webView` parameter here is `self` at runtime (WebKit always passes
+        // the receiver as the delegate's webView), but routing the recovery load
+        // through the parameter mirrors the cell's recovery path and lets specs
+        // substitute a load-recording double in place of the real WebContent IPC.
+        webView.loadHTMLString(html, baseURL: nil)
     }
 
     private func requestHeight(from webView: WKWebView, retriesRemaining: Int) {
@@ -161,6 +183,7 @@ public extension WKWebViewHeightCalculator {
             self.id = placedholderId
             self.lastReportedHeight = nil
             self.isReadyForMessages = false
+            self.lastLoadedHtml = html
             self.loadHTMLString(html, baseURL: nil)
         }
     }

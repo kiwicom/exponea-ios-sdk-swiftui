@@ -669,7 +669,18 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
     func filterCarouselData(placeholder: String, continueCallback: TypeBlock<[InAppContentBlockResponse]>?, expiredCompletion: EmptyBlock?) {
         let placehodlersToUse = inAppContentBlockMessages.filter { !$0.placeholders.filter { $0 == placeholder }.isEmpty }
         let placeholdersNeedToRefresh = placehodlersToUse.filter { $0.personalizedMessage == nil && $0.content?.html == nil }
-        let expiredMessages = inAppContentBlockMessages.filter { inAppContentBlocks in
+        // Scope expiration to the placeholder being loaded. `loadMessagesForCarousel`
+        // only re-fetches `idsForDownload = messages.filter { $0.placeholders.contains(placeholder) }`,
+        // so an unrelated placeholder's expired messages can never be refreshed via this
+        // path. Including them here used to cause a permanent deadlock: e.g. when the
+        // app comes back from a long background (phone locked > TTL), every unrelated
+        // static-CB message is past its `ttlSeen + ttlSeconds`, the guard below
+        // forwards to `expiredCompletion?()` which re-runs `loadMessagesForCarousel`,
+        // which only refreshes the carousel's own messages, which leaves the unrelated
+        // ones expired — and the loop continues forever, leaving the carousel blank.
+        // The static-CB sibling `prepareInAppContentBlocksStaticView` already scopes
+        // its expiration check to `placehodlersToUse`; this matches it.
+        let expiredMessages = placehodlersToUse.filter { inAppContentBlocks in
             if let ttlSeen = inAppContentBlocks.personalizedMessage?.ttlSeen,
                let ttl = inAppContentBlocks.personalizedMessage?.ttlSeconds {
                 return Date() > ttlSeen.addingTimeInterval(TimeInterval(ttl))

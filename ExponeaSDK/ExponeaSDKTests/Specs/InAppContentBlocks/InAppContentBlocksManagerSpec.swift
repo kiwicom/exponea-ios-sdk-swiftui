@@ -11,8 +11,25 @@ import Quick
 import Nimble
 import Combine
 import UIKit
+import WebKit
 import Mockingjay
 @testable import ExponeaSDK
+
+/// Test double that records every `loadHTMLString` call routed through it.
+///
+/// Used by the WebContent-process-termination recovery specs so we can assert
+/// that the cell / calculator re-issued the cached HTML *into the supplied
+/// `WKWebView` parameter* (i.e. self-at-runtime in production), without
+/// spinning up the real WebKit IPC. Recording is synchronous; the super call
+/// is forwarded so the spy stays a fully-functional `WKWebView` and any
+/// `WKNavigationDelegate` wiring on the system under test continues to work.
+fileprivate final class LoadHTMLStringSpyWebView: WKWebView {
+    private(set) var loadedHtmlStrings: [String] = []
+    override func loadHTMLString(_ string: String, baseURL: URL?) -> WKNavigation? {
+        loadedHtmlStrings.append(string)
+        return super.loadHTMLString(string, baseURL: baseURL)
+    }
+}
 
 fileprivate class CustomCarouselCallback: DefaultContentBlockCarouselCallback {
 
@@ -1046,6 +1063,214 @@ class InAppContentBlocksManagerSpec: QuickSpec {
                 view.release()
             }
             expect(weakView).toEventually(beNil(), timeout: .seconds(2))
+        }
+
+        // MARK: - WebContent process termination recovery (CarouselContentBlockViewCell)
+        //
+        // When iOS jetsams a cell's WebContent process (notably while the app
+        // is backgrounded with the device locked), the cell must transparently
+        // reissue the HTML it last rendered so the user does not return to a
+        // blank carousel. The cache is `lastLoadedHtml`; it MUST be set on
+        // every successful `loadHtml` and MUST be cleared on `prepareForReuse`
+        // so a recycled cell never recovers with stale content from a previous
+        // index.
+
+        it("CarouselContentBlockViewCell.webViewWebContentProcessDidTerminate reissues the last loaded html") {
+            let cell = CarouselContentBlockViewCell(frame: .zero)
+            let html = "<html><body>recover-me</body></html>"
+            cell.loadHtml(html: html, assignedMessage: nil, placeholder: "ph_recover")
+
+            let spy = LoadHTMLStringSpyWebView()
+            cell.webViewWebContentProcessDidTerminate(spy)
+
+            expect(spy.loadedHtmlStrings).to(equal([html]))
+        }
+
+        it("CarouselContentBlockViewCell.webViewWebContentProcessDidTerminate is a no-op when no html has been loaded") {
+            // Termination can fire on a freshly-vended cell that has not been
+            // told to render anything yet (e.g. the WebContent process died
+            // mid-`cellForItemAt`). Reissuing an empty/nil cache would either
+            // crash or paint a blank page and clobber whatever recovery the
+            // real `loadHtml` is about to do.
+            let cell = CarouselContentBlockViewCell(frame: .zero)
+
+            let spy = LoadHTMLStringSpyWebView()
+            cell.webViewWebContentProcessDidTerminate(spy)
+
+            expect(spy.loadedHtmlStrings).to(beEmpty())
+        }
+
+        it("CarouselContentBlockViewCell.webViewWebContentProcessDidTerminate is a no-op after prepareForReuse clears the cache") {
+            // This is the key correctness property of clearing `lastLoadedHtml`
+            // in `prepareForReuse`: a recycled cell must NOT auto-recover into
+            // the previous index's HTML when the WebContent process is killed
+            // before the new `loadHtml` lands. Otherwise the user would briefly
+            // see the previous message under their finger after a swipe.
+            let cell = CarouselContentBlockViewCell(frame: .zero)
+            cell.loadHtml(html: "<html>previous</html>", assignedMessage: nil, placeholder: "ph_recover")
+            cell.prepareForReuse()
+
+            let spy = LoadHTMLStringSpyWebView()
+            cell.webViewWebContentProcessDidTerminate(spy)
+
+            expect(spy.loadedHtmlStrings).to(beEmpty())
+        }
+
+        it("CarouselContentBlockViewCell.webViewWebContentProcessDidTerminate is a no-op when the cached html is empty") {
+            // Empty HTML is a sentinel for "no message" (see `onNoMessageFound`).
+            // Reissuing it on recovery would surface a blank webview to the user
+            // and pollute the spy/IPC channel with no benefit.
+            let cell = CarouselContentBlockViewCell(frame: .zero)
+            cell.loadHtml(html: "", assignedMessage: nil, placeholder: "ph_recover")
+
+            let spy = LoadHTMLStringSpyWebView()
+            cell.webViewWebContentProcessDidTerminate(spy)
+
+            expect(spy.loadedHtmlStrings).to(beEmpty())
+        }
+
+        // MARK: - WebContent process termination recovery (WKWebViewHeightCalculator)
+        //
+        // The calculator is *off-screen* (never enters the view hierarchy), so
+        // unlike a cell's webview, iOS does NOT auto-restart its WebContent
+        // process after termination. Without an explicit reissue, no
+        // `didFinish` ever reaches `heightUpdate` and the carousel stays pinned
+        // at its initial 1pt placeholder height — the user returns to an
+        // invisible carousel. These specs pin that the cached `lastLoadedHtml`
+        // is the recovery payload, exactly as for the cell.
+
+        it("WKWebViewHeightCalculator.webViewWebContentProcessDidTerminate reissues the last loaded html") {
+            let calculator = WKWebViewHeightCalculator()
+            let html = "<html><body style='height:200px'></body></html>"
+            calculator.loadHtml(placedholderId: "ph_calc_recover", html: html)
+
+            let spy = LoadHTMLStringSpyWebView()
+            calculator.webViewWebContentProcessDidTerminate(spy)
+
+            expect(spy.loadedHtmlStrings).to(equal([html]))
+        }
+
+        it("WKWebViewHeightCalculator.webViewWebContentProcessDidTerminate is a no-op when no html has been loaded") {
+            let calculator = WKWebViewHeightCalculator()
+
+            let spy = LoadHTMLStringSpyWebView()
+            calculator.webViewWebContentProcessDidTerminate(spy)
+
+            expect(spy.loadedHtmlStrings).to(beEmpty())
+        }
+
+        it("WKWebViewHeightCalculator.webViewWebContentProcessDidTerminate is a no-op when the cached html is empty") {
+            // `loadHtml(placedholderId:html:)` short-circuits on empty input
+            // (it fires `heightUpdate(0)` and intentionally does NOT populate
+            // `lastLoadedHtml`), so the recovery path must do the same — no
+            // spurious empty navigation on termination.
+            let calculator = WKWebViewHeightCalculator()
+            calculator.loadHtml(placedholderId: "ph_calc_recover", html: "")
+
+            let spy = LoadHTMLStringSpyWebView()
+            calculator.webViewWebContentProcessDidTerminate(spy)
+
+            expect(spy.loadedHtmlStrings).to(beEmpty())
+        }
+
+        // MARK: - filterCarouselData expiration scoping
+        //
+        // The TTL-expiration check must be scoped to messages of the *queried*
+        // placeholder. Including unrelated placeholders' expired messages
+        // causes a permanent refresh loop because `loadMessagesForCarousel`
+        // only re-fetches the queried placeholder, so unrelated expirations
+        // are never resolved → `expiredCompletion` fires forever → the
+        // carousel never paints.
+
+        it("filterCarouselData ignores expired messages in unrelated placeholders so it cannot deadlock on TTL refresh") {
+            // Reproduces the production scenario: app returns from a long
+            // background; messages on `ph_other` are past their TTL but
+            // `ph_under_test` has fresh content. The carousel for
+            // `ph_under_test` MUST be allowed to paint.
+            let validForUnderTest = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "valid-under-test-\(UUID().uuidString)",
+                placeholders: ["ph_under_test"],
+                personalized: .getSample(status: .ok, ttlSeen: Date())
+            )
+            let expiredOnUnrelated = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "expired-other-\(UUID().uuidString)",
+                placeholders: ["ph_other"],
+                personalized: .getSample(status: .ok, ttlSeen: Date(timeIntervalSinceNow: -3600))
+            )
+            manager.addMessage(validForUnderTest)
+            manager.addMessage(expiredOnUnrelated)
+
+            var continued: [InAppContentBlockResponse]?
+            var expiredCompletionFired = false
+            manager.filterCarouselData(
+                placeholder: "ph_under_test",
+                continueCallback: { continued = $0 },
+                expiredCompletion: { expiredCompletionFired = true }
+            )
+
+            expect(expiredCompletionFired).to(beFalse())
+            expect(continued).toNot(beNil())
+            expect(continued?.contains(where: { $0.id == validForUnderTest.id })).to(beTrue())
+            // Sanity: an unrelated placeholder's message must never appear in
+            // the result for `ph_under_test`.
+            expect(continued?.contains(where: { $0.id == expiredOnUnrelated.id })).to(beFalse())
+        }
+
+        it("filterCarouselData triggers expiredCompletion when the queried placeholder itself has expired messages") {
+            // Inverse of the deadlock guard: when the QUERIED placeholder
+            // genuinely has expired content, the SDK must request a refresh —
+            // otherwise the carousel would paint stale messages.
+            let expiredForUnderTest = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "expired-under-test-\(UUID().uuidString)",
+                placeholders: ["ph_under_test"],
+                personalized: .getSample(status: .ok, ttlSeen: Date(timeIntervalSinceNow: -3600))
+            )
+            manager.addMessage(expiredForUnderTest)
+
+            var continued: [InAppContentBlockResponse]?
+            var expiredCompletionFired = false
+            manager.filterCarouselData(
+                placeholder: "ph_under_test",
+                continueCallback: { continued = $0 },
+                expiredCompletion: { expiredCompletionFired = true }
+            )
+
+            expect(expiredCompletionFired).to(beTrue())
+            expect(continued).to(beNil())
+        }
+
+        it("filterCarouselData returns only the queried placeholder's valid messages even when unrelated placeholders carry both valid and expired ones") {
+            // Stronger version of the deadlock guard: the result set must be
+            // strictly scoped to the queried placeholder regardless of what
+            // mixture of states sits in unrelated placeholders.
+            let validForUnderTest = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "valid-under-test-\(UUID().uuidString)",
+                placeholders: ["ph_under_test"],
+                personalized: .getSample(status: .ok, ttlSeen: Date())
+            )
+            let validForOther = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "valid-other-\(UUID().uuidString)",
+                placeholders: ["ph_other"],
+                personalized: .getSample(status: .ok, ttlSeen: Date())
+            )
+            let expiredForOther = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "expired-other-\(UUID().uuidString)",
+                placeholders: ["ph_other"],
+                personalized: .getSample(status: .ok, ttlSeen: Date(timeIntervalSinceNow: -3600))
+            )
+            manager.addMessage(validForUnderTest)
+            manager.addMessage(validForOther)
+            manager.addMessage(expiredForOther)
+
+            var continued: [InAppContentBlockResponse]?
+            manager.filterCarouselData(
+                placeholder: "ph_under_test",
+                continueCallback: { continued = $0 },
+                expiredCompletion: { }
+            )
+
+            expect(continued?.count).to(equal(1))
+            expect(continued?.first?.id).to(equal(validForUnderTest.id))
         }
     }
 }
