@@ -14,6 +14,22 @@ content:
 > Refer to the [SDK version update guide for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-version-update) for details on updating to the next major version.
 
 ## Release Notes
+## Release Notes for 4.1.0
+#### May 06, 2026
+* Added:
+  * Adds `onActionClickedSafari` callback to `InAppContentBlockCallbackType` and `DefaultContentBlockCarouselCallback` for opening browser actions in an in-app `SFSafariViewController`.
+  * Extends `DefaultContentBlockCarouselCallback` with `onMessagesChanged(count:messages:)` and adds `index`/`count` parameters to `onMessageShown`. The `behaviourCallback` initializer parameter on `CarouselInAppContentBlockView` now passes the custom callback.
+  * Adds `skipNativeRendering` flag to `StaticInAppContentBlockView` for hosts that render the HTML payload outside the SDK.
+  * Optimizes in-app content block loading with batched personalization requests for static placeholders, in-flight fetch deduplication for carousels, and on-disk image cache reuse during image validation.
+  * Replaces the fixed-delay height measurement in `WKWebViewHeightCalculator` with a mutation-observer-driven JavaScript bridge for faster and more responsive carousel and static block height updates.
+* Fixed:
+  * Fixes memory leaks in `CarouselInAppContentBlockView` caused by strong references in the compositional layout provider, foreground/background notification observers, and cell touch/release callbacks. `release()` now correctly cancels Combine subscriptions.
+  * Fixes blank carousel and static content blocks after iOS terminates the `WKWebView` WebContent process while the app is backgrounded, by adding `webViewWebContentProcessDidTerminate` recovery in both the carousel cell and the height calculator.
+  * Fixes an infinite carousel reload loop when unrelated placeholders' messages were past their TTL. The expiration check is now scoped to the placeholder being loaded.
+  * Fixes carousel cold-paint flicker and scroll-position jump when the eligible message set is unchanged between the initial and full load phases.
+  * Fixes race conditions in concurrent carousel loads by introducing per-placeholder validation tokens. Prevents data corruption during personalized message updates by mutating `inAppContentBlockMessages` by id instead of by index.
+
+
 ## Release Notes for 4.0.1
 #### April 15, 2026
 * Fixed:
