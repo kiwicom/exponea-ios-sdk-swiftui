@@ -442,8 +442,15 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
                         self.trackCurrentPushToken(isAuthorized: authorized)
                     }
                 } else {
+                    let wasValid = self.currentPushToken?.isTokenValid
                     self.currentPushToken?.isTokenValid = authorized
-                    self.checkForPushTokenFrequency(isAuthorized: authorized)
+                    if wasValid == false && authorized {
+                        // Permission was re-granted after being revoked; force track regardless of frequency
+                        // (token string is unchanged so frequency checks would silently skip this)
+                        self.trackCurrentPushToken(isAuthorized: authorized)
+                    } else {
+                        self.checkForPushTokenFrequency(isAuthorized: authorized)
+                    }
                 }
             }
         }

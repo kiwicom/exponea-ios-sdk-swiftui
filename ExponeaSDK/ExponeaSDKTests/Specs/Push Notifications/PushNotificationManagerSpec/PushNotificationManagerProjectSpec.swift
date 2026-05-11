@@ -1094,6 +1094,53 @@ final class PushNotificationManagerProjectSpec: QuickSpec {
                 )
             }
 
+            context("should track permission re-grant after revoke for all token track frequencies") {
+                let tokenTrackFrequencyTypes: [ExponeaSDK.TokenTrackFrequency] = [.onTokenChange, .everyLaunch, .daily]
+
+                for tokenTrackFrequency in tokenTrackFrequencyTypes {
+                    it("for token track frequency: \(tokenTrackFrequency.rawValue)") {
+                        // Step 1: app starts, permission granted
+                        UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                        createPushManager(
+                            requirePushAuthorization: true,
+                            currentToken: "test-token",
+                            tokenTrackFrequency: tokenTrackFrequency,
+                            lastTokenTrackDate: Date(timeIntervalSince1970: 1)
+                        )
+                        trackingManager.clearCalls()
+
+                        // Step 2: permission revoked, app foregrounds
+                        UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .denied)
+                        pushManager.applicationDidBecomeActive()
+                        expect(trackingManager.trackedEvents).to(haveCount(1))
+                        expect(trackingManager.trackedEvents.first?.type).to(equal(.notificationState))
+                        trackingManager.clearCalls()
+
+                        // Step 3: permission re-granted, app foregrounds — must emit valid=true event
+                        UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                        pushManager.applicationDidBecomeActive()
+                        expect(trackingManager.trackedEvents).to(equal([
+                            MockTrackingManager.TrackedEvent(
+                                type: .notificationState,
+                                data: [
+                                    .properties([
+                                        "platform": .string("ios"),
+                                        "application_id": .string("default-application"),
+                                        "device_id": .string("device-id"),
+                                        "description": .string("Permission granted")
+                                    ]),
+                                    .pushNotificationToken(
+                                        token: "test-token",
+                                        authorized: true
+                                    ),
+                                    .eventType("notification_state")
+                                ]
+                            )
+                        ]))
+                    }
+                }
+            }
+
             context("should send notification_state on first launch after upgrade from legacy SDK") {
                 let tokenTrackFrequencyTypes: [ExponeaSDK.TokenTrackFrequency] = [.onTokenChange, .everyLaunch, .daily]
                 
