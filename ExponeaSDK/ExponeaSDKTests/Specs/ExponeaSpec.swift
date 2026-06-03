@@ -580,17 +580,19 @@ class ExponeaSpec: QuickSpec {
                         expect(events[7].integrationId).to(equal("other-mock-token"))
 
                         let customerUpdates = try! database.fetchTrackCustomer()
+                        var expectedDeviceProps = DeviceProperties().properties
+                        expectedDeviceProps.removeValue(forKey: "platform")
                         expect(customerUpdates.count).to(equal(3))
                         expect(customerUpdates[0].customerIds["cookie"]).to(equal(firstCustomer.uuid.uuidString))
-                        expect(customerUpdates[0].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[0].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[0].integrationId).to(equal("mock-token"))
 
                         expect(customerUpdates[1].customerIds["cookie"]).to(equal(firstCustomer.uuid.uuidString))
-                        expect(customerUpdates[1].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[1].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[1].integrationId).to(equal("mock-token"))
 
                         expect(customerUpdates[2].customerIds["cookie"]).to(equal(secondCustomer.uuid.uuidString))
-                        expect(customerUpdates[2].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[2].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[2].integrationId).to(equal("other-mock-token"))
                     }
                     it("Config: integrationConfig - projectToken") {
@@ -653,17 +655,19 @@ class ExponeaSpec: QuickSpec {
                         expect(events[7].integrationId).to(equal("other-mock-token"))
 
                         let customerUpdates = try! database.fetchTrackCustomer()
+                        var expectedDeviceProps = DeviceProperties().properties
+                        expectedDeviceProps.removeValue(forKey: "platform")
                         expect(customerUpdates.count).to(equal(3))
                         expect(customerUpdates[0].customerIds["cookie"]).to(equal(firstCustomer.uuid.uuidString))
-                        expect(customerUpdates[0].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[0].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[0].integrationId).to(equal("mock-token"))
 
                         expect(customerUpdates[1].customerIds["cookie"]).to(equal(firstCustomer.uuid.uuidString))
-                        expect(customerUpdates[1].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[1].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[1].integrationId).to(equal("mock-token"))
 
                         expect(customerUpdates[2].customerIds["cookie"]).to(equal(secondCustomer.uuid.uuidString))
-                        expect(customerUpdates[2].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[2].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[2].integrationId).to(equal("other-mock-token"))
                     }
                     it("Config: integrationConfig - streamId") {
@@ -725,17 +729,19 @@ class ExponeaSpec: QuickSpec {
                         expect(events[7].integrationId).to(equal("other-mock-token"))
 
                         let customerUpdates = try! database.fetchTrackCustomer()
+                        var expectedDeviceProps = DeviceProperties().properties
+                        expectedDeviceProps.removeValue(forKey: "platform")
                         expect(customerUpdates.count).to(equal(3))
                         expect(customerUpdates[0].customerIds["cookie"]).to(equal(firstCustomer.uuid.uuidString))
-                        expect(customerUpdates[0].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[0].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[0].integrationId).to(equal("mock-token"))
 
                         expect(customerUpdates[1].customerIds["cookie"]).to(equal(firstCustomer.uuid.uuidString))
-                        expect(customerUpdates[1].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[1].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[1].integrationId).to(equal("mock-token"))
 
                         expect(customerUpdates[2].customerIds["cookie"]).to(equal(secondCustomer.uuid.uuidString))
-                        expect(customerUpdates[2].dataTypes).to(equal([.properties([:])]))
+                        expect(customerUpdates[2].dataTypes).to(equal([.properties(expectedDeviceProps)]))
                         expect(customerUpdates[2].integrationId).to(equal("other-mock-token"))
                     }
                 }

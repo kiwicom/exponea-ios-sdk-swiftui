@@ -66,9 +66,25 @@ public extension UIDevice {
             guard let value = element.value as? Int8, value != 0 else { return identifier }
             return identifier + String(UnicodeScalar(UInt8(value)))
         }
+        return mapDeviceIdentifier(identifier)
+    }()
+}
 
-        func mapToDevice(identifier: String) -> String {
-            switch identifier {
+// Kept as a separate (internal-by-default) extension so any helper added here fail-safes to
+// `internal` visibility instead of inheriting `public` from the extension above. External SDK
+// consumers continue to see only the resolved `modelName`; the lookup primitives stay confined
+// to the SDK and its `@testable import` test target.
+extension UIDevice {
+
+    /// Maps an Apple hardware identifier (e.g. `iPhone18,1`) to its marketing name (e.g. `"iPhone 17 Pro"`).
+    ///
+    /// Source of truth: [theapplewiki.com](https://theapplewiki.com). For identifiers not present in the
+    /// table — typically hardware released after this SDK version shipped — returns the raw identifier so
+    /// the wire `device_model` field stays debuggable. Simulator architecture identifiers
+    /// (`i386` / `x86_64` / `arm64`) route through `simulatorModelName()` and read
+    /// `SIMULATOR_MODEL_IDENTIFIER` from the process environment.
+    static func mapDeviceIdentifier(_ identifier: String) -> String {
+        switch identifier {
             // source of truth: https://theapplewiki.com/wiki/List_of_iPhones
             case "iPhone1,1":                                       return "iPhone"
             case "iPhone1,2":                                       return "iPhone 3G"
@@ -116,6 +132,13 @@ public extension UIDevice {
             case "iPhone17,4":                                      return "iPhone 16 Plus"
             case "iPhone17,1":                                      return "iPhone 16 Pro"
             case "iPhone17,2":                                      return "iPhone 16 Pro Max"
+            case "iPhone17,5":                                      return "iPhone 16e"
+            case "iPhone18,3":                                      return "iPhone 17"
+            // iPhone Air replaces the "Plus" line for the iPhone 17 generation (Apple rebrand).
+            case "iPhone18,4":                                      return "iPhone Air"
+            case "iPhone18,1":                                      return "iPhone 17 Pro"
+            case "iPhone18,2":                                      return "iPhone 17 Pro Max"
+            case "iPhone18,5":                                      return "iPhone 17e"
             // source of truth: https://theapplewiki.com/wiki/List_of_iPads
             case "iPad1,1":                                         return "iPad"
             case "iPad2,1", "iPad2,2", "iPad2,3", "iPad2,4":        return "iPad (2nd generation)"
@@ -127,6 +150,7 @@ public extension UIDevice {
             case "iPad11,6", "iPad11,7":                            return "iPad (8th generation)"
             case "iPad12,1", "iPad12,2":                            return "iPad (9th generation)"
             case "iPad13,18", "iPad13,19":                          return "iPad (10th generation)"
+            case "iPad15,7", "iPad15,8":                            return "iPad (A16)"
             // source of truth: https://theapplewiki.com/wiki/List_of_iPad_Airs
             case "iPad4,1", "iPad4,2", "iPad4,3":                   return "iPad Air"
             case "iPad5,3", "iPad5,4":                              return "iPad Air (2nd generation)"
@@ -135,6 +159,10 @@ public extension UIDevice {
             case "iPad13,16", "iPad13,17":                          return "iPad Air (5th generation)"
             case "iPad14,8", "iPad14,9":                            return "iPad Air 11-inch (M2)"
             case "iPad14,10", "iPad14,11":                          return "iPad Air 13-inch (M2)"
+            case "iPad15,3", "iPad15,4":                            return "iPad Air 11-inch (M3)"
+            case "iPad15,5", "iPad15,6":                            return "iPad Air 13-inch (M3)"
+            case "iPad16,8", "iPad16,9":                            return "iPad Air 11-inch (M4)"
+            case "iPad16,10", "iPad16,11":                          return "iPad Air 13-inch (M4)"
             // source of truth: https://theapplewiki.com/wiki/List_of_iPad_minis
             case "iPad2,5", "iPad2,6", "iPad2,7":                   return "iPad mini"
             case "iPad4,4", "iPad4,5", "iPad4,6":                   return "iPad mini (2nd generation)"
@@ -158,17 +186,28 @@ public extension UIDevice {
             case "iPad14,5", "iPad14,6":                            return "iPad Pro (12.9-inch) (6th generation)"
             case "iPad16,3", "iPad16,4":                            return "iPad Pro 11-inch (M4)"
             case "iPad16,5", "iPad16,6":                            return "iPad Pro 13-inch (M4)"
+            case "iPad17,1", "iPad17,2":                            return "iPad Pro 11-inch (M5)"
+            case "iPad17,3", "iPad17,4":                            return "iPad Pro 13-inch (M5)"
             // simulator
-            case "i386", "x86_64":                                  return getSimulatorModelName(identifier: identifier)
-            default:                                                return UIDevice.current.model
-            }
+            // `arm64` covers iOS simulators running natively on Apple Silicon Macs; `i386` / `x86_64`
+            // cover Intel-host runs and Rosetta-translated simulator profiles. All three route to the
+            // env-var lookup so the wire payload reports the *simulated* device, not the host arch.
+            case "i386", "x86_64", "arm64":                         return simulatorModelName()
+            // Return the raw hardware identifier (e.g. "iPhone20,1") rather than the generic
+            // form-factor name from `UIDevice.current.model` ("iPhone" / "iPad"). This keeps
+            // the `device_model` wire field debuggable for hardware released after this SDK
+            // version ships — analytics can still bucket the device, and the next SDK update
+            // can promote the identifier to a marketing name without backend changes.
+            default:                                                return identifier
         }
+    }
 
-        func getSimulatorModelName(identifier: String) -> String {
-            let simulatorModel = ProcessInfo().environment["SIMULATOR_MODEL_IDENTIFIER"]
-            return "Simulator \(mapToDevice(identifier: simulatorModel ?? "iOS"))"
-        }
-
-        return mapToDevice(identifier: identifier)
-    }()
+    private static func simulatorModelName() -> String {
+        let simulatorModel = ProcessInfo().environment["SIMULATOR_MODEL_IDENTIFIER"] ?? "iOS"
+        // Defensive guard: if SIMULATOR_MODEL_IDENTIFIER ever surfaces an architecture token,
+        // looking it back up would re-enter this branch and recurse indefinitely. Falls back
+        // to "iOS" so the wire payload reports "Simulator iOS" rather than blowing the stack.
+        let resolved = ["i386", "x86_64", "arm64"].contains(simulatorModel) ? "iOS" : simulatorModel
+        return "Simulator \(mapDeviceIdentifier(resolved))"
+    }
 }

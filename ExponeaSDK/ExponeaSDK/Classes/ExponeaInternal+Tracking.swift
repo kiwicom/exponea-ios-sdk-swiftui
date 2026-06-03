@@ -366,6 +366,16 @@ extension ExponeaInternal {
 
     /// Handles push notification token registration - compared to trackPushToken respects requirePushAuthorization
     public func handlePushNotificationToken(token: String) {
+        // Persist the token to a crash-survivable buffer BEFORE going
+        // through `executeSafelyWithDependencies`. The existing
+        // `ExpoInitManager.actionBlocks` path handles the
+        // pre-init in-memory queue (fires after configure) but is lost
+        // on process crash; `PreInitTokenBuffer` covers that gap.
+        // Calls made post-configure still persist, which is harmless
+        // because `PushNotificationManager.init` only drains on startup.
+        if !isConfigured {
+            PreInitTokenBuffer.shared.buffer(token: token)
+        }
         executeSafelyWithDependencies { dependencies in
             dependencies.notificationsManager.handlePushTokenRegistered(token: token)
         }
@@ -373,6 +383,10 @@ extension ExponeaInternal {
 
     /// Handles push notification token registration - compared to trackPushToken respects requirePushAuthorization
     public func handlePushNotificationToken(deviceToken: Data) {
+        // See `handlePushNotificationToken(token:)`.
+        if !isConfigured {
+            PreInitTokenBuffer.shared.buffer(token: deviceToken.tokenString)
+        }
         executeSafelyWithDependencies { dependencies in
             dependencies.notificationsManager.handlePushTokenRegistered(
                 dataObject: deviceToken as AnyObject?
@@ -509,6 +523,20 @@ extension ExponeaInternal {
 
             self?.jwtAuthManager?.clearSync()
             Exponea.logger.log(.verbose, message: "JWT token cleared during anonymization")
+
+            // Opt-in regeneration of device_id (telemetry install ID) on anonymize().
+            // Placement: AFTER the old-profile invalidation notification_state was enqueued (above, with the
+            // old device_id frozen into its payload at TrackingManager.trackInternal enqueue time), and
+            // BEFORE the new-profile re-registration / install / session events fire inside trackingManager.anonymize.
+            // This preserves the contract: pre-anonymize invalidation carries the old device_id,
+            // post-anonymize events carry the new device_id.
+            if dependencies.configuration.regenerateDeviceIdOnAnonymize {
+                TelemetryUtility.clearInstallIdFromAllStores(appGroup: dependencies.configuration.appGroup)
+                Exponea.logger.log(
+                    .verbose,
+                    message: "Anonymisation: telemetry install ID (device_id) cleared (regenerateDeviceIdOnAnonymize=true)"
+                )
+            }
 
             do {
                 try dependencies.trackingManager.anonymize(

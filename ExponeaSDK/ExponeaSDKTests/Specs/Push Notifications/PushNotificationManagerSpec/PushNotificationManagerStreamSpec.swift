@@ -84,7 +84,10 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
             requirePushAuthorization: Bool,
             currentToken: String?,
             tokenTrackFrequency: ExponeaSDK.TokenTrackFrequency,
-            lastTokenTrackDate: Date = Date()
+            lastTokenTrackDate: Date = Date(),
+            userDefaults: UserDefaults? = UserDefaults(suiteName: Constants.General.userDefaultsSuite),
+            currentAppVersion: String? = nil,
+            currentApplicationID: String? = nil
         ) {
             pushManager = PushNotificationManager(
                 trackingConsentManager: trackingConsentManager,
@@ -95,7 +98,10 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
                 tokenTrackFrequency: tokenTrackFrequency,
                 currentPushToken: currentToken,
                 lastTokenTrackDate: lastTokenTrackDate,
-                urlOpener: urlOpener
+                urlOpener: urlOpener,
+                userDefaults: userDefaults,
+                currentAppVersion: currentAppVersion,
+                currentApplicationID: currentApplicationID
             )
         }
 
@@ -129,6 +135,14 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
         beforeEach {
             IntegrationManager.shared.isStopped = false
             UserDefaults.standard.removePersistentDomain(forName: "mock-app-group")
+            // Reset SDK-suite notification_state cache so each test starts from a known state.
+            // Mirrors the Project spec to keep the permission-change scenarios deterministic.
+            if let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite) {
+                sdkDefaults.removeObject(forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.removeObject(forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.removeObject(forKey: Constants.General.notificationStateApplicationID)
+                sdkDefaults.removeObject(forKey: Constants.General.notificationStateLastPermissionFlag)
+            }
             let exponea = ExponeaInternal()
             Exponea.shared = exponea
             exponea.configure(
@@ -780,6 +794,11 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
                 )
                 trackingManager.clearCalls()
                 pushManager.handlePushTokenRegistered(dataObject: mockTokenData)
+                // The new-token track on the second event must report the OS authorization state on the wire payload's
+                // `valid` field even when the integrator opted out of authorization gating via
+                // `requirePushAuthorization=false`. Reporting `valid=true` here would contradict
+                // `description="Permission denied"` (same root-cause class as the anonymize-path
+                // inconsistency in TrackingManager).
                 expect(trackingManager.trackedEvents).to(equal([
                     MockTrackingManager.TrackedEvent(
                         type: .notificationState,
@@ -808,7 +827,7 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
                             ]),
                             .pushNotificationToken(
                                 token: "6D6F636B5F746F6B656E5F64617461",
-                                authorized: true
+                                authorized: false
                             ),
                             .eventType("notification_state")
                         ]
@@ -816,19 +835,22 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
                 ]))
             }
 
-            it("should not track token on app foreground in 'daily' frequency within one day") {
+            it("should not track token on app foreground in 'daily' frequency on the same calendar day") {
+                // Contract: dedup is by local calendar day, not a rolling 24h window.
+                // lastTokenTrackDate = Date() is by construction the same calendar day as `now`,
+                // so the .daily branch must skip.
                 createPushManager(
                     requirePushAuthorization: true,
                     currentToken: "mock-token",
                     tokenTrackFrequency: .daily,
-                    lastTokenTrackDate: Date(timeIntervalSince1970: Date().timeIntervalSince1970 - 60 * 60 * 24 + 10)
+                    lastTokenTrackDate: Date()
                 )
                 trackingManager.clearCalls()
                 pushManager.verifyPushStatusAndTrackPushToken()
                 expect(trackingManager.trackedEvents).to(beEmpty())
             }
 
-            it("should track token on app foreground in 'daily' frequency after one day") {
+            it("should track token on app foreground in 'daily' frequency on a previous calendar day") {
                 createPushManager(
                     requirePushAuthorization: true,
                     currentToken: "mock-token",
@@ -853,6 +875,63 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
                         ]
                     )
                 ]))
+            }
+
+            it("should track token on app foreground in 'daily' frequency on a new calendar day even if less than 24h elapsed") {
+                // Regression: the OLD `abs(timeIntervalSince) >= 86400` check skipped this case
+                // because only ~60s plus the time elapsed since the test started (well under 24h)
+                // had passed. The fixed code uses `Calendar.current.isDate(_:inSameDayAs:)` so a
+                // track at yesterday 23:59 followed by an open at today 00:0X correctly emits a
+                // fresh notification_state.
+                let calendar = Calendar.current
+                let startOfToday = calendar.startOfDay(for: Date())
+                let yesterdayJustBeforeMidnight = startOfToday.addingTimeInterval(-60)
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .daily,
+                    lastTokenTrackDate: yesterdayJustBeforeMidnight
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+            }
+
+            it("'daily' frequency check honours DST transitions via calendar-day semantics") {
+                // Contract test: `checkForPushTokenFrequency` relies on
+                // `Calendar.current.isDate(_:inSameDayAs:)` to compute the day boundary.
+                // The point of this test is to guard against future refactors that
+                // replace the API call with manual time arithmetic (`abs(timeIntervalSince) ...`,
+                // dateComponents day-counting, etc.), all of which fail in subtly different
+                // ways around DST. We construct two timestamps in the same wall-clock day
+                // but on opposite sides of a DST transition (spring-forward and fall-back)
+                // in a DST-observing locale (Europe/Prague), and assert that the calendar
+                // correctly treats them as the same day.
+                let dstCalendar: Calendar = {
+                    var cal = Calendar(identifier: .gregorian)
+                    cal.timeZone = TimeZone(identifier: "Europe/Prague")!
+                    return cal
+                }()
+
+                // Spring-forward: 2026-03-29 02:00 CET → 03:00 CEST (the hour 02:xx does not exist).
+                let preSpringForward = dstCalendar.date(from:
+                    DateComponents(year: 2026, month: 3, day: 29, hour: 1, minute: 30))!
+                let postSpringForward = dstCalendar.date(from:
+                    DateComponents(year: 2026, month: 3, day: 29, hour: 4, minute: 30))!
+                expect(dstCalendar.isDate(preSpringForward, inSameDayAs: postSpringForward))
+                    .to(beTrue(), description: "spring-forward: same wall-clock day must be same calendar day")
+
+                // Fall-back: 2026-10-25 03:00 CEST → 02:00 CET (the hour 02:xx happens twice).
+                let preFallBack = dstCalendar.date(from:
+                    DateComponents(year: 2026, month: 10, day: 25, hour: 1, minute: 30))!
+                let postFallBack = dstCalendar.date(from:
+                    DateComponents(year: 2026, month: 10, day: 25, hour: 3, minute: 30))!
+                expect(dstCalendar.isDate(preFallBack, inSameDayAs: postFallBack))
+                    .to(beTrue(), description: "fall-back: same wall-clock day must be same calendar day")
+
+                // Cross-day across spring-forward: 23:59 the night before → 04:30 next morning post-DST.
+                let nightBeforeSpringForward = dstCalendar.date(from:
+                    DateComponents(year: 2026, month: 3, day: 28, hour: 23, minute: 59))!
+                expect(dstCalendar.isDate(nightBeforeSpringForward, inSameDayAs: postSpringForward))
+                    .to(beFalse(), description: "spring-forward: different wall-clock day must NOT be same calendar day")
             }
 
             it("should track token on app foreground in 'everyLaunch' frequency") {
@@ -955,6 +1034,177 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
                 expect(nonAuthorizedTokenAsArray).to(equal(nonAuthorizedTokenAsArray))
             }
 
+            it("should emit notification_state on .onTokenChange when permission flips from granted to denied between launches with an unchanged token") {
+                trackingManager.customerPushToken = "stable-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .denied)
+
+                createPushManager(
+                    requirePushAuthorization: false,
+                    currentToken: "stable-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: Date(),
+                    currentAppVersion: "1.0.0"
+                )
+
+                expect(trackingManager.trackedEvents).to(haveCount(1))
+                expect(trackingManager.trackedEvents.first?.type).to(equal(.notificationState))
+                expect(trackingManager.trackedEvents.first?.data).to(contain(
+                    DataType.properties([
+                        "platform": .string("ios"),
+                        "application_id": .string("default-application"),
+                        "device_id": .string("device-id"),
+                        "description": .string("Permission denied")
+                    ])
+                ))
+                expect(sdkDefaults.object(forKey: Constants.General.notificationStateLastPermissionFlag) as? Bool).to(equal(false))
+            }
+
+            it("should not emit notification_state on .onTokenChange when neither token nor permission changed between launches") {
+                trackingManager.customerPushToken = "stable-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "stable-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: Date(),
+                    currentAppVersion: "1.0.0"
+                )
+
+                expect(trackingManager.trackedEvents).to(haveCount(0))
+                expect(sdkDefaults.object(forKey: Constants.General.notificationStateLastPermissionFlag) as? Bool).to(equal(true))
+            }
+
+            // Priority-1 permission-flip short-circuit applied under `.daily`. Mirrors the
+            // .onTokenChange Stream anchor above but proves the priority hoist (permission
+            // change > token frequency > token change) emits regardless of the configured
+            // mode. The .daily gate would otherwise silence a same-day permission revocation.
+            it("should emit notification_state on .daily when permission flips within the same calendar day") {
+                trackingManager.customerPushToken = "stable-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .denied)
+
+                createPushManager(
+                    requirePushAuthorization: false,
+                    currentToken: "stable-token",
+                    tokenTrackFrequency: .daily,
+                    lastTokenTrackDate: Date(),
+                    currentAppVersion: "1.0.0"
+                )
+
+                expect(trackingManager.trackedEvents).to(haveCount(1))
+                expect(trackingManager.trackedEvents.first?.type).to(equal(.notificationState))
+                expect(trackingManager.trackedEvents.first?.data).to(contain(
+                    DataType.properties([
+                        "platform": .string("ios"),
+                        "application_id": .string("default-application"),
+                        "device_id": .string("device-id"),
+                        "description": .string("Permission denied")
+                    ])
+                ))
+                expect(sdkDefaults.object(forKey: Constants.General.notificationStateLastPermissionFlag) as? Bool).to(equal(false))
+            }
+
+            it("should not emit notification_state on .daily when token and permission are both unchanged within the same day") {
+                trackingManager.customerPushToken = "stable-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "stable-token",
+                    tokenTrackFrequency: .daily,
+                    lastTokenTrackDate: Date(),
+                    currentAppVersion: "1.0.0"
+                )
+
+                expect(trackingManager.trackedEvents).to(haveCount(0))
+                expect(sdkDefaults.object(forKey: Constants.General.notificationStateLastPermissionFlag) as? Bool).to(equal(true))
+            }
+
+            it("should emit notification_state on .onTokenChange when permission flips from denied to granted between launches with an unchanged token") {
+                trackingManager.customerPushToken = "stable-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.set(false, forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "stable-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: Date(),
+                    currentAppVersion: "1.0.0"
+                )
+
+                expect(trackingManager.trackedEvents).to(haveCount(1))
+                expect(trackingManager.trackedEvents.first?.type).to(equal(.notificationState))
+                expect(trackingManager.trackedEvents.first?.data).to(contain(
+                    DataType.properties([
+                        "platform": .string("ios"),
+                        "application_id": .string("default-application"),
+                        "device_id": .string("device-id"),
+                        "description": .string("Permission granted")
+                    ])
+                ))
+                expect(sdkDefaults.object(forKey: Constants.General.notificationStateLastPermissionFlag) as? Bool).to(equal(true))
+            }
+
+            it("should not synthesise a permission-driven notification_state on .onTokenChange when no baseline exists") {
+                trackingManager.customerPushToken = "stable-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.removeObject(forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .denied)
+
+                createPushManager(
+                    requirePushAuthorization: false,
+                    currentToken: "stable-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: Date(),
+                    currentAppVersion: "1.0.0"
+                )
+
+                expect(trackingManager.trackedEvents).to(haveCount(0))
+                expect(sdkDefaults.object(forKey: Constants.General.notificationStateLastPermissionFlag)).to(beNil())
+            }
+
+            it("should not synthesise a permission-driven notification_state on .daily when no baseline exists") {
+                trackingManager.customerPushToken = "stable-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                sdkDefaults.removeObject(forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .denied)
+
+                createPushManager(
+                    requirePushAuthorization: false,
+                    currentToken: "stable-token",
+                    tokenTrackFrequency: .daily,
+                    lastTokenTrackDate: Date(),
+                    currentAppVersion: "1.0.0"
+                )
+
+                expect(trackingManager.trackedEvents).to(haveCount(0))
+                expect(sdkDefaults.object(forKey: Constants.General.notificationStateLastPermissionFlag)).to(beNil())
+            }
+
             it("should track token if authorization swaps") {
                 // first run, authorization is given, app starts
                 UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
@@ -1026,6 +1276,147 @@ final class PushNotificationManagerStreamSpec: QuickSpec {
                         ]
                     )])
                 )
+            }
+
+            it("should force-track notification_state on .onTokenChange when lastTokenTrackDate is older than the staleness window") {
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                // Simulate the persisted customer DB token already matching `currentPushToken`
+                // (the long-running install scenario where the APNs token has not rotated). This
+                // forces the init's .onTokenChange check to take the unchanged-token branch so
+                // the staleness gate is the only thing that can produce a notification_state.
+                trackingManager.customerPushToken = "mock-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                let staleDate = Date(timeIntervalSinceNow: -TimeInterval(
+                    (Constants.Notifications.maxNotificationStateStalenessDays + 10) * 24 * 60 * 60
+                ))
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: staleDate,
+                    currentAppVersion: "1.0.0"
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+            }
+
+            it("should not track notification_state on .onTokenChange when token unchanged and lastTokenTrackDate is recent") {
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                trackingManager.customerPushToken = "mock-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                let recentDate = Date(timeIntervalSinceNow: -TimeInterval(5 * 24 * 60 * 60))
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: recentDate,
+                    currentAppVersion: "1.0.0"
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(beEmpty())
+            }
+
+            it("should force-track notification_state on .daily when lastTokenTrackDate is older than the staleness window") {
+                // .daily already gates at 24h so the staleness gate is functionally redundant
+                // here, but the test pins the symmetric behaviour so a future regression in the
+                // .daily branch is caught by this spec rather than only by the .onTokenChange one.
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                let staleDate = Date(timeIntervalSinceNow: -TimeInterval(
+                    (Constants.Notifications.maxNotificationStateStalenessDays + 10) * 24 * 60 * 60
+                ))
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .daily,
+                    lastTokenTrackDate: staleDate,
+                    currentAppVersion: "1.0.0"
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+            }
+
+            it("should force-track notification_state on .onTokenChange when lastTokenTrackDate is in the future (clock rollback)") {
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                trackingManager.customerPushToken = "mock-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                let futureDate = Date(timeIntervalSinceNow: TimeInterval(
+                    (Constants.Notifications.maxNotificationStateStalenessDays + 10) * 24 * 60 * 60
+                ))
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: futureDate,
+                    currentAppVersion: "1.0.0"
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+            }
+
+            it("should not advance lastTokenTrackDate when staleness-triggered track fails") {
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                trackingManager.customerPushToken = "mock-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                let staleDate = Date(timeIntervalSinceNow: -TimeInterval(
+                    (Constants.Notifications.maxNotificationStateStalenessDays + 10) * 24 * 60 * 60
+                ))
+                IntegrationManager.shared.isStopped = true
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: staleDate,
+                    currentAppVersion: "1.0.0"
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(beEmpty())
+                IntegrationManager.shared.isStopped = false
+                pushManager.applicationDidBecomeActive()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+            }
+
+            it("should track notification_state on .onTokenChange when token changed regardless of staleness age") {
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                trackingManager.customerPushToken = "old-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                let staleDate = Date(timeIntervalSinceNow: -TimeInterval(
+                    (Constants.Notifications.maxNotificationStateStalenessDays + 10) * 24 * 60 * 60
+                ))
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "new-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: staleDate,
+                    currentAppVersion: "1.0.0"
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+            }
+
+            it("should trigger staleness at exactly the threshold boundary (>= semantics)") {
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+                trackingManager.customerPushToken = "mock-token"
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set("1.0.0", forKey: Constants.General.notificationStateAppVersion)
+                let exactBoundaryDate = Date(timeIntervalSinceNow: -TimeInterval(
+                    Constants.Notifications.maxNotificationStateStalenessDays * 24 * 60 * 60
+                ))
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .onTokenChange,
+                    lastTokenTrackDate: exactBoundaryDate,
+                    currentAppVersion: "1.0.0"
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
             }
         }
 

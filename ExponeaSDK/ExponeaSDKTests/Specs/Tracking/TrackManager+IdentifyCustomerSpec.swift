@@ -190,7 +190,7 @@ class TrackingManagerForIdentifyCustomerProjectSpec: QuickSpec {
                 }
                 let threadRunsMaxCount = 10
                 var threadRunsCounter = threadRunsMaxCount
-                waitUntil { trackingDone in
+                waitUntil(timeout: .seconds(10)) { trackingDone in
                     for i in 0..<threadRunsMaxCount {
                         DispatchQueue.global().async {
                             try? trackingManager.track(EventType.identifyCustomer, with: [
@@ -203,7 +203,13 @@ class TrackingManagerForIdentifyCustomerProjectSpec: QuickSpec {
                         }
                     }
                 }
-                Thread.sleep(forTimeInterval: 10)
+                for _ in 0..<5 {
+                    Thread.sleep(forTimeInterval: 1)
+                    if networkRequests.count >= threadRunsMaxCount { break }
+                    waitUntil(timeout: .seconds(5)) { flushDone in
+                        flushingManager.flushData { _ in flushDone() }
+                    }
+                }
                 expect { networkRequests.count }.to(equal(threadRunsMaxCount))
             }
         }
@@ -387,7 +393,7 @@ class TrackingManagerForIdentifyCustomerStreamSpec: QuickSpec {
                 }
                 let threadRunsMaxCount = 10
                 var threadRunsCounter = threadRunsMaxCount
-                waitUntil { trackingDone in
+                waitUntil(timeout: .seconds(10)) { trackingDone in
                     for i in 0..<threadRunsMaxCount {
                         DispatchQueue.global().async {
                             try? trackingManager.track(EventType.identifyCustomer, with: [
@@ -400,7 +406,13 @@ class TrackingManagerForIdentifyCustomerStreamSpec: QuickSpec {
                         }
                     }
                 }
-                Thread.sleep(forTimeInterval: 10)
+                for _ in 0..<5 {
+                    Thread.sleep(forTimeInterval: 1)
+                    if networkRequests.count >= threadRunsMaxCount { break }
+                    waitUntil(timeout: .seconds(5)) { flushDone in
+                        flushingManager.flushData { _ in flushDone() }
+                    }
+                }
                 expect { networkRequests.count }.to(equal(threadRunsMaxCount))
             }
         }

@@ -26,11 +26,16 @@ final class TelemetryManager {
         upload: TelemetryUpload? = nil
     ) {
         self.userDefaults = TelemetryUtility.getUserDefaults(appGroup: appGroup)
-        let installId = TelemetryUtility.getInstallId(userDefaults: userDefaults)
         self.storage = storage ?? FileTelemetryStorage()
-        self.upload = upload ?? SentryTelemetryUpload(installId: installId) {
-            Exponea.shared.configuration
-        }
+        // The install ID provider re-reads UserDefaults on every Sentry envelope build, so
+        // anonymize() with `Configuration.regenerateDeviceIdOnAnonymize = true`
+        // and other reset paths (stopIntegration, clearLocalCustomerData) propagate to Sentry
+        // tags without requiring this TelemetryManager (or its upload) to be recreated.
+        let userDefaultsForUpload = self.userDefaults
+        self.upload = upload ?? SentryTelemetryUpload(
+            installIdProvider: { TelemetryUtility.getInstallId(userDefaults: userDefaultsForUpload) },
+            configGetter: { Exponea.shared.configuration }
+        )
         crashManager = CrashManager(storage: self.storage, upload: self.upload, launchDate: Date(), runId: runId)
     }
 

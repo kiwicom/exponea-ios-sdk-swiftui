@@ -82,18 +82,26 @@ This page provides an overview of all configuration parameters for the SDK and s
   * **Required** for the SDK to track delivered push notifications automatically. Refer to the [Push notifications for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-push-notifications) documentation for details.
 
 * `requirePushAuthorization`
-  * The SDK can check push notification authorization status ([Apple documentation](https://developer.apple.com/documentation/usernotifications/unnotificationsettings/1648391-authorizationstatus)) and only track the push token if the user is authorized to receive push notifications.
-  * When disabled, the SDK will automatically register for push notifications on app start and track the token to Engagement so your app can receive silent push notifications. 
-  * When enabled, the SDK will automatically register for push notifications if the app is authorized to show push notifications to the user.
+  * Controls whether the SDK calls `UIApplication.shared.registerForRemoteNotifications()` automatically based on the OS-reported notification authorization status. Your app is responsible for requesting notification permission from the user — the SDK never triggers the permission prompt itself.
+  * When `true` (default), the SDK only calls `registerForRemoteNotifications()` once the OS reports `UNAuthorizationStatus.authorized` or `.provisional` ([Apple documentation](https://developer.apple.com/documentation/usernotifications/unnotificationsettings/1648391-authorizationstatus)). Use this when your app prefers not to receive an APNs token (and therefore not to track one) until the user has explicitly granted notification permission.
+  * When `false`, the SDK calls `registerForRemoteNotifications()` unconditionally on every launch so the app keeps receiving silent (background) pushes regardless of the user's visible push permission state.
+  * This flag doesn't affect the `valid` field in `notification_state` events — `valid` reflects the OS-reported authorization status directly. A token tracked before the user grants permission is reported as `valid=false/description=Permission denied`, and updates to `valid=true/description=Permission granted` once the OS reports `.authorized` or `.provisional`, regardless of how `requirePushAuthorization` is configured.
   * Default value: `true`
 
 * `tokenTrackFrequency`
   * Indicates the frequency with which the APNs token should be tracked to Engagement.
   * Default value: `onTokenChange`
   * Possible values:
-    * `onTokenChange` - tracks push token if it differs from a previously tracked one
-    * `everyLaunch` - always tracks push token
-    * `daily` - tracks push token once per day
+    * `onTokenChange` — tracks the push token whenever it differs from the previously tracked one. The SDK also automatically tracks a new `notification_state` event every 30 days, even when the token hasn't changed, to keep customers within the validity window.
+    * `everyLaunch` — tracks the push token every time the app becomes active. This includes both the initial cold launch and every subsequent background-to-foreground transition while the process is alive, because the SDK re-evaluates `verifyPushStatusAndTrackPushToken` on each `UIApplication.didBecomeActiveNotification`. Use this only when you explicitly want a fresh `notification_state` per session resume; otherwise prefer `onTokenChange`.
+    * `daily` - tracks the push token at most once per local calendar day. The day boundary follows the device's current calendar/timezone, so a track at 23:59 followed by an app open at 00:05 the next day correctly tracks a fresh `notification_state` event.
+  * Regardless of the configured frequency, the SDK always tracks a fresh `notification_state` event when the OS push authorization status flips (granted ↔ denied) so the resulting `valid` flag stays in sync with the user's actual permission state.
+
+* `regenerateDeviceIdOnAnonymize`
+  * When `true`, calling `Exponea.shared.anonymize()` clears the SDK's persisted telemetry `device_id` (a UUID stored in `UserDefaults`) in addition to creating a new customer profile. The next event tracked after anonymization carries a freshly-generated `device_id`, so the new profile can't be linked back to the previous customer's events through the device identifier.
+  * Set this to `true` when your privacy requirements call for a sign-out + sign-in flow that produces two unlinkable customer profiles. The default (`false`) preserves the existing behavior where `device_id` persists across `anonymize()` calls for telemetry continuity (for example, crash-rate dashboards keyed on `device_id`).
+  * The flag only affects `anonymize()`. The full-teardown behavior `stopIntegration()` always rotates the `device_id` regardless of this flag, as part of its broader teardown contract.
+  * Default value: `false`
 
 * `flushEventMaxRetries`
   * Controls how many times an event should be flushed before aborting. Useful for example in case the API is down or some other temporary error happens.
@@ -138,6 +146,7 @@ After configuration, provide the Stream JWT token via `Exponea.shared.setSdkAuth
 | `automaticSessionTracking` | Optional | Optional |
 | `sessionTimeout` | Optional | Optional |
 | `flushEventMaxRetries` | Optional | Optional |
+| `regenerateDeviceIdOnAnonymize` | Optional | Optional |
 | `inAppContentBlocksPlaceholders` | Optional | Optional |
 | `manualSessionAutoClose` | Optional | Optional |
 
@@ -244,6 +253,10 @@ Exponea.shared.configure(
 )
 ```
 
+> 📘 Configuration-only flags
+>
+> `regenerateDeviceIdOnAnonymize` and similar advanced flags aren't available as parameters on `Exponea.shared.configure(_:)`. To enable them, construct a `Configuration` object directly and pass it to `Exponea.shared.configure(with:)`. See [Using a Configuration object](#using-a-configuration-object) below for details.
+
 #### Stream/Data hub examples
 
 Simple Stream configuration:
@@ -317,6 +330,49 @@ Exponea.shared.setSdkAuthToken("YOUR_STREAM_JWT_TOKEN")
 > ❗️
 >
 > In Stream mode, always call `setJwtErrorHandler` before `setSdkAuthToken` so that proactive refresh notifications are handled from the start. See [Stream JWT authorization](https://documentation.bloomreach.com/engagement/docs/ios-sdk-authorization#stream-jwt-authorization-data-hub) for details on JWT lifecycle management.
+
+#### Using a Configuration object
+
+`regenerateDeviceIdOnAnonymize` and similar advanced flags aren't available as parameters on `Exponea.shared.configure(_:)`. To enable them, construct a `Configuration` object directly and pass it to `Exponea.shared.configure(with:)`.
+
+Project/Engagement:
+
+``` swift
+let configuration = try Configuration(
+    integrationConfig: Exponea.ProjectSettings(
+        projectToken: "YOUR PROJECT TOKEN",
+        authorization: .token("YOUR ACCESS TOKEN")
+    ),
+    appGroup: "YOUR APP GROUP",
+    regenerateDeviceIdOnAnonymize: true // opt-in; default `false` preserves legacy behavior
+)
+Exponea.shared.configure(with: configuration)
+
+// If you relied on the convenience overload's `pushNotificationTracking:` parameter to
+// auto-wire a delegate, set `Exponea.shared.pushNotificationsDelegate = self` explicitly
+// when using the Configuration-object path.
+```
+
+Stream/Data hub:
+
+``` swift
+let configuration = try Configuration(
+    integrationConfig: Exponea.StreamSettings(
+        streamId: "YOUR_STREAM_ID",
+        baseUrl: "https://api.exponea.com"
+    ),
+    appGroup: "YOUR APP GROUP",
+    regenerateDeviceIdOnAnonymize: true
+)
+Exponea.shared.configure(with: configuration)
+
+Exponea.shared.setJwtErrorHandler { context in
+    yourBackend.fetchNewJwt { newToken in
+        Exponea.shared.setSdkAuthToken(newToken)
+    }
+}
+Exponea.shared.setSdkAuthToken("YOUR_STREAM_JWT_TOKEN")
+```
 
 
 ### Using a configuration file - LEGACY

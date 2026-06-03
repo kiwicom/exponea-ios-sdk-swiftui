@@ -298,6 +298,12 @@ public class ExponeaInternal: ExponeaType {
                 let database = try DatabaseManager()
                 databaeManagerCopy = database
                 if !Exponea.isBeingTested {
+                    // Install the real UNUserNotificationCenter-backed
+                    // DeliveryAuthorizationProvider on the first production configure.
+                    // Test bundles skip this and keep the NoopProvider default so
+                    // `getNotificationSettings` is never invoked from XCTest context
+                    // (which crashes without the UN entitlement).
+                    DeliveryAuthorizationProvider.installProductionBackend()
                     telemetryManager = TelemetryManager(
                         appGroup: configuration.appGroup,
                         userId: database.currentCustomer.uuid.uuidString
@@ -780,6 +786,7 @@ public extension ExponeaInternal {
             defaults.removeObject(forKey: Constants.General.notificationStateTracked)
             defaults.removeObject(forKey: Constants.General.notificationStateAppVersion)
             defaults.removeObject(forKey: Constants.General.notificationStateApplicationID)
+            defaults.removeObject(forKey: Constants.General.notificationStateLastPermissionFlag)
             Configuration.deleteLastKnownConfig(appGroup: appGroup)
             defaults.synchronize()
         } else {
@@ -794,10 +801,21 @@ public extension ExponeaInternal {
                 defaults.removeObject(forKey: Constants.General.notificationStateTracked)
                 defaults.removeObject(forKey: Constants.General.notificationStateAppVersion)
                 defaults.removeObject(forKey: Constants.General.notificationStateApplicationID)
+                defaults.removeObject(forKey: Constants.General.notificationStateLastPermissionFlag)
                 Configuration.deleteLastKnownConfig(appGroup: Constants.General.userDefaultsSuite)
                 defaults.synchronize()
             }
         }
+        // The pre-init token buffer is always written to the SDK suite
+        // (Constants.General.userDefaultsSuite), not to the app-group suite,
+        // because the app group is unknown until configure() completes. The
+        // app-group branch above only clears its own suite, and
+        // clearKnownSDKKeysFromStandard below only clears .standard, so
+        // neither would remove a buffered token from the SDK suite. Without
+        // this explicit removal a stale pre-init token could survive
+        // anonymize/stopIntegration and be replayed on the next configure().
+        UserDefaults(suiteName: Constants.General.userDefaultsSuite)?
+            .removeObject(forKey: Constants.General.preInitPushTokenBufferKey)
         clearKnownSDKKeysFromStandard()
     }
 
@@ -820,6 +838,8 @@ public extension ExponeaInternal {
         standard.removeObject(forKey: Constants.General.telemetryEvents)
         standard.removeObject(forKey: Constants.General.notificationStateTracked)
         standard.removeObject(forKey: Constants.General.notificationStateAppVersion)
+        standard.removeObject(forKey: Constants.General.notificationStateLastPermissionFlag)
+        standard.removeObject(forKey: Constants.General.preInitPushTokenBufferKey)
         for key in standard.dictionaryRepresentation().keys where key.hasPrefix(Constants.Keys.installTracked) {
             standard.removeObject(forKey: key)
         }

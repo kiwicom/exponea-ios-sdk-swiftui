@@ -8,9 +8,24 @@
 
 import Quick
 import Nimble
+import UserNotifications
 
 @testable import ExponeaSDK
 @testable import ExponeaSDKNotifications
+@testable import ExponeaSDKShared
+
+/// Synchronous stub backing `DeliveryAuthorizationProvider.current` so the
+/// NSE-end-to-end specs can pin the resolver's input without invoking
+/// `UNUserNotificationCenter.current()` (not safe under XCTest).
+private struct StubDeliveryAuthorizationProvider: DeliveryAuthorizationProviding {
+    let snapshot: DeliveryAuthorizationSnapshot?
+
+    func currentDeliveryAuthorization(
+        completion: @escaping (DeliveryAuthorizationSnapshot?) -> Void
+    ) {
+        completion(snapshot)
+    }
+}
 
 final class ExponeaNotificationServiceSpec: QuickSpec {
 
@@ -238,6 +253,106 @@ final class ExponeaNotificationServiceSpec: QuickSpec {
                                 // for existing SDK conf, delivered events has to be created and stored
                                 let deliveredEvents = self.getRecordedNotificationEvents()
                                 expect(deliveredEvents.count).to(equal(1))
+                                done()
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Pins the wire-up between
+            // `ExponeaNotificationService.trackDeliveredNotification` and
+            // `DeliveredNotificationStateResolver`. The NSE init's
+            // production-backend install is a no-op under XCTest, so the
+            // resolver's input is sourced entirely from the stub installed
+            // in each example. Tracking is forced to fail (400 stub) so
+            // the delivered event is persisted via
+            // `saveNotificationEventsForLaterTracking`, which is the only
+            // way to inspect the emitted payload from a unit test. A
+            // deterministic 400 stub also isolates this context from
+            // earlier tests in the same `describe` that leave 200-stubs
+            // active for the same integration type.
+            context("should propagate the resolved authorization state onto the recorded delivered event") {
+                let configuration = self.testConfigurations[0]
+
+                beforeEach {
+                    NetworkStubbing.unstubNetwork()
+                    NetworkStubbing.stubNetwork(
+                        forIntegrationType: configuration.integrationConfig.type,
+                        withStatusCode: 400
+                    )
+                }
+
+                afterEach {
+                    NetworkStubbing.unstubNetwork()
+                }
+
+                struct StateCase {
+                    let description: String
+                    let snapshot: DeliveryAuthorizationSnapshot?
+                    let expectedState: String
+                }
+
+                let cases: [StateCase] = [
+                    StateCase(
+                        description: "authorized + alerts enabled => shown",
+                        snapshot: DeliveryAuthorizationSnapshot(
+                            authorizationStatus: .authorized,
+                            alertSetting: .enabled
+                        ),
+                        expectedState: DeliveredNotificationStateResolver.shownValue
+                    ),
+                    StateCase(
+                        description: "denied + alerts disabled => not_shown",
+                        snapshot: DeliveryAuthorizationSnapshot(
+                            authorizationStatus: .denied,
+                            alertSetting: .disabled
+                        ),
+                        expectedState: DeliveredNotificationStateResolver.notShownValue
+                    ),
+                    StateCase(
+                        description: "authorized but alerts disabled => not_shown",
+                        snapshot: DeliveryAuthorizationSnapshot(
+                            authorizationStatus: .authorized,
+                            alertSetting: .disabled
+                        ),
+                        expectedState: DeliveredNotificationStateResolver.notShownValue
+                    ),
+                    StateCase(
+                        description: "nil snapshot => legacy shown fallback",
+                        snapshot: nil,
+                        expectedState: DeliveredNotificationStateResolver.shownValue
+                    )
+                ]
+
+                for testCase in cases {
+                    it(testCase.description) {
+                        configuration.saveToUserDefaults()
+
+                        guard let userDefaults = UserDefaults(suiteName: "mock-app-group"),
+                              let data = try? JSONEncoder().encode(
+                                  ["uuid": ExponeaSDK.JSONValue.string("mock-uuid")]
+                              ) else {
+                            fail("unable to seed customer ids")
+                            return
+                        }
+                        userDefaults.set(data, forKey: Constants.General.lastKnownCustomerIds)
+
+                        let originalProvider = DeliveryAuthorizationProvider.current
+                        DeliveryAuthorizationProvider.current =
+                            StubDeliveryAuthorizationProvider(snapshot: testCase.snapshot)
+                        defer { DeliveryAuthorizationProvider.current = originalProvider }
+
+                        let service = ExponeaNotificationService(appGroup: "mock-app-group")
+                        service.telemetry = nil
+                        waitUntil(timeout: .seconds(5)) { done in
+                            service.process(request: request) { _ in
+                                let deliveredEvents = self.getRecordedNotificationEvents()
+                                expect(deliveredEvents.count).to(equal(1))
+                                let event = EventTrackingObject.deserialize(from: deliveredEvents[0])
+                                let state = event?.dataTypes.properties["state"]?
+                                    .unsafelyUnwrapped.jsonValue.rawValue as? String
+                                expect(state).to(equal(testCase.expectedState))
                                 done()
                             }
                         }

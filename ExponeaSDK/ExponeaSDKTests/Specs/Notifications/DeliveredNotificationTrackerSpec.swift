@@ -200,6 +200,33 @@ final class DeliveredNotificationTrackerSpec: QuickSpec {
                 ]))
             }
             
+            // State is now caller-provided and defaults to "shown" to preserve
+            // legacy callers. The NSE resolves the real value via
+            // UNUserNotificationCenter.getNotificationSettings before calling
+            // into the tracker; this test pins the resolved value manually to
+            // prove the override flows through.
+            context("state override propagation") {
+                let configurations = getTestConfigurations()
+                for configuration in configurations {
+                    it("\(configuration.integrationConfig.type.rawValue) - forwards state=not_shown onto the event payload") {
+                        let notificationData = NotificationData()
+                        let events = DeliveredNotificationTracker.generateTrackingObjects(
+                            configuration: configuration,
+                            customerIds: ["cookie": "mock-cookie"],
+                            notification: notificationData,
+                            state: DeliveredNotificationStateResolver.notShownValue
+                        )
+                        expect(events.count).to(equal(1))
+                        guard case .properties(let props)? = events.first?.dataTypes.first else {
+                            fail("no properties data type on the emitted event")
+                            return
+                        }
+                        expect(props["state"]).to(equal(.string("not_shown")))
+                        expect(props["status"]).to(equal(.string("delivered")))
+                    }
+                }
+            }
+
             it("should generate events for stream ID mapping") {
                 let configuration = try! Configuration(
                     integrationConfig: Exponea.StreamSettings(

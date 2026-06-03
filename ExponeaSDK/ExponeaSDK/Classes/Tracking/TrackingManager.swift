@@ -203,9 +203,15 @@ extension TrackingManager: TrackingManagerType {
                 "platform": .string("ios"),
                 "description": .string(description)
             ]
+            // Carry the SDK-collected device snapshot (sdk_version, os_version, app_version,
+            // device_model, …) on notification_state events so backend & analytics can
+            // correlate token reachability issues with the originating device. Default
+            // properties remain gated by `canUseDefaultProperties`; only the SDK-owned
+            // device snapshot is attached here.
             try trackInternal(
                 .notificationState,
                 with: [
+                    .properties(device.properties),
                     .properties(data),
                     .pushNotificationToken(
                         token: pushToken,
@@ -712,9 +718,14 @@ extension TrackingManager {
         UNAuthorizationStatusProvider.current.isAuthorized { authorized in
             Exponea.shared.executeSafely { [weak self] in
                 guard let self else { return }
+                // The anonymize re-registration track must reflect the actual
+                // authorization status, matching the normal tracking flow in
+                // PushNotificationManager.trackCurrentPushToken. The previous expression
+                // `!requirePushAuthorization || authorized` reported `valid=true` when
+                // requirePushAuthorization=false regardless of the real permission state.
                 try self.trackNotificationState(
                     pushToken: pushToken,
-                    isValid: !self.requirePushAuthorization || authorized,
+                    isValid: authorized,
                     description: authorized ? "Permission granted" : "Permission denied"
                 )
             }

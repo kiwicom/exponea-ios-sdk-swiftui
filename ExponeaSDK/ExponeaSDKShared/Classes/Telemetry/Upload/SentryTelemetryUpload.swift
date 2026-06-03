@@ -18,7 +18,17 @@ public class SentryTelemetryUpload: TelemetryUpload {
     #endif
 
     let session: URLSession
-    let installId: String
+
+    /// Closure that returns the current telemetry install ID. Resolved lazily on every read so
+    /// callers (e.g. anonymize() with `Configuration.regenerateDeviceIdOnAnonymize = true`,
+    /// stopIntegration, clearLocalCustomerData) that clear the canonical store mid-process
+    /// are reflected in the very next Sentry envelope without needing to recreate this upload
+    /// or invalidate any cached state.
+    private let installIdProvider: () -> String
+
+    /// Resolves the current install ID from the configured source on every read.
+    /// Use this in any envelope-build path that needs the current device identifier.
+    var installId: String { installIdProvider() }
 
     private let dateFormat = ISO8601DateFormatter()
     private let dsn: String
@@ -31,9 +41,9 @@ public class SentryTelemetryUpload: TelemetryUpload {
     private let sentryClientVersion = "sentry.cocoa/8.52.1"
     private let sdkConfigGetter: () -> Configuration?
 
-    public init(installId: String, configGetter: @escaping () -> Configuration?) {
+    public init(installIdProvider: @escaping () -> String, configGetter: @escaping () -> Configuration?) {
         self.session = URLSession(configuration: .default)
-        self.installId = installId
+        self.installIdProvider = installIdProvider
         self.dsn = SentryTelemetryUpload.chooseDsn()
         let dsnUrl = URL(sharedSafeString: dsn)
         self.sentryUserinfo = dsnUrl?.user ?? ""

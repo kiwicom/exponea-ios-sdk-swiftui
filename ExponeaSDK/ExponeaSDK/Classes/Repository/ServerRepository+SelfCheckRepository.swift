@@ -26,7 +26,10 @@ extension ServerRepository: SelfCheckRepository {
         executeRequest = { setRequestHadJwt in
             do {
                 let request = try router.prepareRequest(
-                    parameters: PushSelfCheckRequest(pushToken: pushToken),
+                    parameters: PushSelfCheckRequest(
+                        pushToken: pushToken,
+                        applicationID: self.configuration.applicationID
+                    ),
                     customerIds: customerIds
                 )
                 setRequestHadJwt(request.value(forHTTPHeaderField: Constants.Repository.headerAuthorization) != nil)

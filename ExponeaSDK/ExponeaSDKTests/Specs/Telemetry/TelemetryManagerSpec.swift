@@ -21,12 +21,10 @@ final class TelemetryManagerSpec: QuickSpec {
             Exponea.shared = ExponeaInternal()
             IntegrationManager.shared.isStopped = false
             let userDefaults = TelemetryUtility.getUserDefaults(appGroup: nil)
-            let installId = TelemetryUtility.getInstallId(userDefaults: userDefaults)
             self.storage = MockTelemetryStorage()
             self.upload = MockTelemetryUpload(
-                installId: installId, configGetter: {
-                    Exponea.shared.configuration
-                }
+                installIdProvider: { TelemetryUtility.getInstallId(userDefaults: userDefaults) },
+                configGetter: { Exponea.shared.configuration }
             )
             self.manager = TelemetryManager(
                 appGroup: nil,

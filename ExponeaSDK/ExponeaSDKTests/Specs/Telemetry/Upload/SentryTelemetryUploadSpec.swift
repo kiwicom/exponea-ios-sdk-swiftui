@@ -51,9 +51,11 @@ final class SentryTelemetryUploadSpec: QuickSpec {
         var upload: SentryTelemetryUpload!
         beforeEach {
             IntegrationManager.shared.isStopped = false
-            upload = SentryTelemetryUpload(installId: UUID().uuidString) {
-                try? Configuration(projectToken: "mock-token")
-            }
+            let fixedInstallId = UUID().uuidString
+            upload = SentryTelemetryUpload(
+                installIdProvider: { fixedInstallId },
+                configGetter: { try? Configuration(projectToken: "mock-token") }
+            )
             self.stubNetwork(statusCode: 200)
         }
         afterEach {

@@ -175,6 +175,12 @@ Make sure that:
  - [ ] You call `UNUserNotificationCenter.current().delegate = self`
  - [ ] When you start your application, self-check should be able to receive and track the push notification token.
 
+> 👍 **Pre-init APNs token buffering**
+>
+> If `application:didRegisterForRemoteNotificationsWithDeviceToken:` fires before `Exponea.shared.configure(...)` completes — a common timing issue during cold launch — the SDK buffers the token to local storage and replays it through the normal tracking path once configuration is initialized. The buffer persists to disk, so the first APNs token is never lost even if the app crashes between the APNs callback and SDK initialization.
+>
+> No action is required from the host app — the behavior is automatic. The SDK's token-registration path and [`tokenTrackFrequency`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) rules handle duplicate replays, so no duplicate `notification_state` events are tracked regardless of which frequency mode is active.
+
 ### Step 4: Register to receive push notifications
 
 Your app needs to register to receive push notifications. It’s important to ensure you have the correct authorization to receive push notifications. You require explicit permission from the user to receive "alert" notifications visible to the user. You don't need authorization to receive [silent push notifications](#silent-push-notifications) (background updates).
@@ -283,6 +289,10 @@ To receive push notifications, the app must track the push token to the Engageme
 
 Silent push notifications don't require authorization. To track the push token even when the app isn't authorized, set the configuration variable `requirePushAuthorization` to `false`. This causes the SDK to register for push notifications and track the push token at application startup.
 
+> 📘
+>
+> The token is still tracked, but the `valid` field on the resulting `notification_state` event reflects the OS authorization status directly — if the user has not granted (or has revoked) push permission, the event carries `valid=false` / `description="Permission denied"` regardless of `requirePushAuthorization`. See the [`valid` / `description` truth table](#understanding-token-states) for all combinations.
+
 ``` swift
     Exponea.shared.configure(
         Exponea.ProjectSettings(
@@ -344,6 +354,20 @@ To track the delivery of push notifications, implement a **Notification Service 
 
 Calling `ExponeaNotificationService.process` in `didReceive` will track the notification delivery as a `campaign` event in Engagement.
 
+> 📘 **Delivered event `state` semantics**
+>
+> The `campaign` event includes a `state` property that indicates whether the notification was visible to the user. The value is determined at delivery time by the Notification Service Extension.
+
+| Value | Meaning |
+|-------|---------|
+| `shown` | The notification was displayed to the user. |
+| `not_shown` | The notification was delivered silently — either a silent-push payload or the user has revoked notification permission. |
+
+
+> ⚠️ **Upgrading from an earlier SDK version**
+>
+> After upgrading, `state == "shown"` filters in your scenarios or analytics may return fewer results. Silent and permission-denied deliveries now correctly report `state = "not_shown"`. Review any `state == "shown"` filters and either accept the more accurate behavior or broaden the filter (for example, `state IN ("shown", "not_shown")`) if you need the previous behavior.
+
 ### Retrieve push notification token manually
 
 Sometimes, your application may need to retrieve the current push token while running. You can do this using the `Exponea.shared.trackPushToken` method. Refer to [Tracking for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-tracking#track-token-manually) for details.
@@ -398,9 +422,12 @@ The SDK automatically tracks `notification_state` events in the following scenar
 * New token received from APNs
 * Manual token tracking using `Exponea.trackPushToken(...)` (this method allows you to force tracking/sending the current push token via notification_state event)
 * User anonymization via `Exponea.anonymize()`
-* Notification permission requested via `UNAuthorizationStatusProvider.current.isAuthorized()`
+* OS push authorization status flips (granted ↔ denied) since the last tracked `notification_state` — this happens regardless of the configured `tokenTrackFrequency`, so the `valid` flag always reflects the current OS permission.
 * SDK version changes (app update)
 * `application_id` changes in the SDK configuration
+* 30 days have passed since the last successful `notification_state` track — this ensures `onTokenChange` users stay within the validity window when their APNs token hasn't changed. `daily` and `everyLaunch` modes track frequently enough that this doesn't apply in practice.
+
+You can inspect the current authorization state at any time using `UNAuthorizationStatusProvider.current.isAuthorized(...)`; this call only reads the OS-reported status and does not by itself track a `notification_state` event.
 
 ```swift
 UNAuthorizationStatusProvider.current.isAuthorized { granted ->
@@ -415,11 +442,18 @@ The frequency of `notification_state` event tracking depends on the `tokenTrackF
 | Property                | Description                              | Example values                          |
 |-------------------------|------------------------------------------|-----------------------------------------|
 | `push_notification_token` | Current push notification token          | Token string                            |
-| `platform`                | Mobile platform                          | `iOS`                       |
+| `platform` | Mobile platform. Lowercase counterpart of `os_name` — kept on the wire for cross-platform parity and reserved for future multi-OS support. | `ios` |
 | `valid`                   | Token validity status                    | `true` or `false`                           |
 | `description`             | Token state description                  | `Permission granted`, `Permission denied`, or `Invalidated` |
 | `application_id`          | Application identifier from SDK configuration | Custom ID or `default-application` (default) |
 | `device_id`               | Unique device identifier                 | UUID string                             |
+| `sdk`                     | SDK identifier (constant string tracked by the iOS SDK) | `Exponea iOS SDK`                       |
+| `sdk_version`             | Version of the Bloomreach iOS SDK        | `4.1.0`                                 |
+| `os_name`                 | Operating-system name                    | `iOS`                                   |
+| `os_version`              | Operating-system version                 | `17.4`                                  |
+| `device_model`            | Device model name resolved from the hardware identifier. Devices released after the SDK version in use report the raw hardware identifier (for example, `iPhone20,1`) instead of the model name, retaining device-specific signal until the SDK is updated. | `iPhone 15 Pro`, `iPad Air (5th generation)` |
+| `device_type`             | Device form factor                       | `mobile` or `tablet`                    |
+| `app_version`             | Host app version from `CFBundleShortVersionString` | `1.0`, `2.3.1`                |
 
 > 📘 Note
 >
@@ -431,14 +465,18 @@ The combination of `valid` and `description` properties indicates the token's cu
 | Valid | Description         | When this occurs                                                        |
 |-------|---------------------|------------------------------------------------------------------------|
 | `false` | `Invalidated`         | New token received \(old token becomes invalid\) or `Exponea.anonymize()` called |
-| `false` | `Permission denied`   | [requirePushAuthorization](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) is `true` and user denied notification permission |
-| `true`  | `Permission granted`  | Valid token tracked successfully \(all other cases\)                     |
+| `false` | `Permission denied`   | The OS push authorization status is neither `authorized` nor `provisional` (for example, the user denied the permission prompt, or hasn't been prompted yet). The `valid` flag reflects the OS authorization state directly and no longer depends on [`requirePushAuthorization`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration). |
+| `true`  | `Permission granted`  | The OS push authorization status is either `authorized` or `provisional` and a token is available \(all other cases\) |
 
 ### Configuring Application ID
 
 Each mobile app integrated with the SDK requires an `application_id` that matches the Application ID configured in Bloomreach Engagement. 
 
 For configuration instructions, see [Configure Application ID](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#configure-application-id).
+
+> 📘 Note
+>
+> The push setup self-check (`Exponea.shared.checkPushSetup = true`) also carries the configured `application_id` in its request to the Bloomreach backend. In multi-mobile-app projects, this lets the backend route the test silent push to the correct app/bundle even when several apps in the same Bloomreach workspace are running self-check concurrently. If `application_id` is left unset, the default `default-application` value is used.
 
 #### Event creation requirements
 

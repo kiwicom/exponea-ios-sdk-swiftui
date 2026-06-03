@@ -70,6 +70,7 @@ final class TelemetryUtilitySpec: QuickSpec {
                         "isDarkModeEnabled": "false [default]",
                         "appInboxDetailImageInset": "56.0 [default]",
                         "manualSessionAutoClose": "true [default]",
+                        "regenerateDeviceIdOnAnonymize": "false [default]",
                         "automaticSessionTracking": "true [default]",
                         "projectMapping": "",
                         "sessionTimeout": "60.0 [default]",
@@ -95,7 +96,8 @@ final class TelemetryUtilitySpec: QuickSpec {
                     tokenTrackFrequency: TokenTrackFrequency.daily,
                     flushEventMaxRetries: 123,
                     allowDefaultCustomerProperties: true,
-                    advancedAuthEnabled: false
+                    advancedAuthEnabled: false,
+                    regenerateDeviceIdOnAnonymize: true
                 )
                 expect(TelemetryUtility.formatConfigurationForTracking(configuration)).to(
                     equal([
@@ -115,6 +117,7 @@ final class TelemetryUtilitySpec: QuickSpec {
                         "sessionTimeout": "12345.0",
                         "authorization": "[REDACTED]",
                         "manualSessionAutoClose": "true [default]",
+                        "regenerateDeviceIdOnAnonymize": "true",
                         "projectMapping": "[REDACTED]",
                         "appInboxDetailImageInset": "56.0 [default]",
                         "defaultProperties": "[REDACTED]"

@@ -29,7 +29,20 @@ class TrackingConsentManager: TrackingConsentManagerType {
         // Create payload
         var properties: [String: JSONValue] = data.properties
         properties["status"] = .string("delivered")
-        properties["state"] = .string("shown")
+        // `state` now reflects the user's current permission state at the time
+        // the main-app picks up the persisted delivery (typically NSE-fallback
+        // path in applicationDidBecomeActive). We read a cached authorization
+        // snapshot rather than blocking on `getNotificationSettings` here
+        // because the surrounding code path is synchronous and several
+        // production callers (and the legacy test suite) assume immediate
+        // tracking. When no snapshot has been refreshed yet the resolver
+        // returns `"shown"` to preserve the legacy event shape.
+        properties["state"] = .string(
+            DeliveredNotificationStateResolver.resolve(
+                authorization: DeliveryAuthorizationProvider.lastSnapshot,
+                silent: false
+            )
+        )
         if data.consentCategoryTracking != nil {
             properties["consent_category_tracking"] = .string(data.consentCategoryTracking!)
         }

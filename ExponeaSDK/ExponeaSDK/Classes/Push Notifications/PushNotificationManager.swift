@@ -9,6 +9,9 @@
 import Foundation
 import UserNotifications
 import UIKit
+#if canImport(ExponeaSDKShared)
+import ExponeaSDKShared
+#endif
 
 public protocol PushNotificationManagerDelegate: AnyObject {
 
@@ -48,6 +51,12 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
     private var isFirstNotificationStateTracking: Bool
     private let appVersion: String?
     private let currentApplicationID: String?
+    /// Last successful `notification_state` track's OS push-authorization flag. `nil`
+    /// means "never persisted" — distinguishable from a persisted `false` so the very
+    /// first denied → granted (or granted → denied) flip after install is not silenced
+    /// by `bool(forKey:)`'s missing-key collapse. Hydrated from `UserDefaults` in
+    /// `init` and refreshed inside `trackCurrentPushToken`'s success path.
+    private var lastPermissionFlag: Bool?
     /// Serial queue for notification state and frequency checks to avoid races from auth callbacks.
     private let stateQueue = DispatchQueue(label: "com.exponea.pushNotificationManager.state")
 
@@ -116,6 +125,10 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
         let hasTracked = userDefaults?.bool(forKey: Constants.General.notificationStateTracked) ?? false
         let storedAppVersion = userDefaults?.string(forKey: Constants.General.notificationStateAppVersion)
         let storedApplicationID = userDefaults?.string(forKey: Constants.General.notificationStateApplicationID)
+        // Tri-state read: `object(forKey:)` returns nil when the key was never written,
+        // which is the signal `.onTokenChange` needs to suppress a spurious "permission
+        // changed" emission on the very first launch (no baseline to compare against).
+        self.lastPermissionFlag = userDefaults?.object(forKey: Constants.General.notificationStateLastPermissionFlag) as? Bool
         
         // appVersionChanged is true when:
         //   • hasTracked = true (flag exists) AND
@@ -140,9 +153,46 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
             pushNotificationSwizzler = PushNotificationSwizzler(self)
             pushNotificationSwizzler?.addAutomaticPushTracking()
         }
-        checkForDeliveredPushMessages()
+        // Refresh the shared DeliveryAuthorizationProvider snapshot before
+        // consuming any stored delivered pushes. TrackingConsentManager.trackDeliveredPush
+        // runs synchronously and cannot afford to block on
+        // getNotificationSettings; it reads `lastSnapshot` instead. Chaining
+        // the consume off `refresh(completion:)` guarantees the synchronous
+        // read sees the just-refreshed snapshot rather than the pre-refresh
+        // one — without this, the first delivered event after a cold start
+        // would be resolved against whatever (possibly stale) snapshot
+        // happened to be cached by the prior process.
+        //
+        // The real UNUserNotificationCenter-backed provider is installed by
+        // ExponeaInternal.sharedInitializer on production configure; test
+        // bundles keep the NoopProvider default (NoopProvider fires the
+        // completion synchronously with `nil`, preserving the original
+        // call ordering in specs that don't substitute their own provider).
+        DeliveryAuthorizationProvider.refresh { [weak self] in
+            self?.checkForDeliveredPushMessages()
+        }
         processStoredPushOpens()
         verifyPushStatusAndTrackPushToken()
+        // Crash-survival drain. If a pre-init APNs token
+        // was persisted by `Exponea.shared.handlePushNotificationToken`
+        // and the process crashed before `configure()` completed, the
+        // in-memory `ExpoInitManager.actionBlocks` queue was lost; the
+        // persisted buffer covers that gap. In the happy path the
+        // action-block also fires, but the second call is deduplicated
+        // by `handlePushTokenRegisteredUnsafe`'s currentPushToken check,
+        // so no duplicate `notification_state` is emitted.
+        //
+        // Ordering: drain runs AFTER `verifyPushStatusAndTrackPushToken()`,
+        // not before, so the verify path uses whatever token CoreData
+        // already has (typically nil on a true crash-recovery launch and
+        // last-known-good on a warm reconfigure). Replaying earlier would
+        // synthesize a `currentPushToken` that verify would then re-emit,
+        // producing a duplicate `notification_state` on top of the one
+        // `handlePushTokenRegisteredUnsafe` will emit from inside the
+        // drain. With drain-after-verify, the buffered token is the
+        // single source of truth for the post-init track and dedup
+        // collapses any redundant call from `ExpoInitManager.actionBlocks`.
+        drainPreInitTokenBufferIfNeeded()
 
         // We need to register for silent push notifications, but let's only do it when visible pushes are allowed
         // so we don't track push token to exponea without permission to show
@@ -285,6 +335,21 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
         }
     }
 
+    /// Reads and clears any APNs token persisted by
+    /// `PreInitTokenBuffer` before `configure()` completed, then replays
+    /// it through the standard token-registration path. No-op when the
+    /// buffer is empty.
+    private func drainPreInitTokenBufferIfNeeded() {
+        guard let entry = PreInitTokenBuffer.shared.drain() else {
+            return
+        }
+        Exponea.logger.log(
+            .verbose,
+            message: "Replaying persisted pre-init APNs token (receivedAt=\(entry.receivedAt))."
+        )
+        handlePushTokenRegistered(token: entry.token)
+    }
+
     func handlePushTokenRegistered(dataObject: AnyObject?) {
         guard let tokenData = dataObject as? Data else {
             return
@@ -325,9 +390,17 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
     }
     
     private func setPushTokenType(token: String, authorized: Bool) {
+        // `isTokenValid` reflects the OS push-authorization state, not the integrator's
+        // `requirePushAuthorization` configuration choice. The latter governs *whether*
+        // to track on this entry path (already enforced one level up); it must not
+        // distort *what* the wire payload says about the token's deliverability —
+        // otherwise SDK-initiated re-emissions on the cold-start / first-token path
+        // can emit the contradictory pair `valid=true` + `description="Permission denied"`
+        // when the integrator opted out of authorization gating but the OS still denies
+        // delivery. Same fix shape as the anonymize-path correction in TrackingManager.
         let pushTokenType = PushTokenType(
             pushToken: token,
-            isTokenValid: !self.requirePushAuthorization || authorized
+            isTokenValid: authorized
         )
         self.lastKnownPushToken = pushTokenType
         self.currentPushToken = pushTokenType
@@ -480,6 +553,14 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
             )
             // Only mark when we actually sent: trackNotificationState sends only when pushToken is non-nil.
             if pushToken != nil {
+                // Commit the OS permission flag that accompanied this successful emission so
+                // the next launch's `.onTokenChange` gate can detect a permission flip even
+                // when the APNs token string itself has not rotated. Persisting only on
+                // success (not on caller intent) keeps the cache in lockstep with what the
+                // backend last received — a failed network track leaves the flag untouched,
+                // so the next launch will still observe a delta and retry.
+                lastPermissionFlag = isAuthorized
+                userDefaults?.set(isAuthorized, forKey: Constants.General.notificationStateLastPermissionFlag)
                 onSuccess?()
             }
         } catch {
@@ -504,6 +585,35 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
     }
 
     private func checkForPushTokenFrequency(isAuthorized authorized: Bool) {
+        // Priority 1 — permission flip always emits, regardless of `tokenTrackFrequency`.
+        // A permission change is a fundamental change in push reachability, so the backend
+        // must observe it irrespective of the configured emission rhythm. Without this
+        // hoist, `.daily` would silence a same-day permission revocation (the calendar-day
+        // gate has not rolled), and `.onTokenChange` would only catch it via the
+        // token-equality branch below.
+        //
+        // Gated on `lastPermissionFlag != nil` so the very first launch — where
+        // `isFirstNotificationStateTracking` is already responsible for the initial emit
+        // — does not fabricate a delta against `bool(forKey:)`'s missing-key collapse
+        // to `false`. The persisted flag is compared rather than the current
+        // `currentPushToken?.isTokenValid` so the signal stays anchored to "what the
+        // backend last received".
+        let permissionChanged = lastPermissionFlag != nil && lastPermissionFlag != authorized
+        if permissionChanged {
+            Exponea.logger.log(
+                .verbose,
+                message: "notification_state track reason: permission state changed to \(authorized)"
+            )
+            lastTokenTrackDate = .init()
+            trackCurrentPushToken(isAuthorized: authorized, onSuccess: { [weak self] in
+                self?.markNotificationStateTracked()
+            })
+            return
+        }
+
+        // Priority 2 — per-mode frequency rhythm. Each mode keeps its own staleness or
+        // token-equality fallback so a long-running install never silently drops out of
+        // the backend's 90-day validity window.
         switch tokenTrackFrequency {
         case .everyLaunch:
             // Track push token; mark state only after successful track so failed sends retry.
@@ -513,33 +623,120 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
             })
 
         case .daily:
-            // Compare last track dates, if equal or more than a day, track
+            // Calendar-day semantics for the primary gate: the previous
+            // `abs(timeIntervalSince) >= 86400` measured a rolling 24h window, which
+            // under-fires whenever the user opens the app on a new calendar day less than
+            // 24h after the previous track (e.g. tracked at 23:55, re-opened at 00:05 the
+            // next day → only 10 minutes elapsed → no track even though it is a new day).
+            // `Calendar.current.isDate(_:inSameDayAs:)` makes the heartbeat fire once per
+            // local calendar day, honouring the user's timezone and calendar locale.
+            //
+            // Staleness force-track is the secondary safety net. It is
+            // functionally redundant for `.daily` under today's calendar-day gate (the
+            // daily gate fires far earlier than the 30-day staleness window) but is kept
+            // here as a regression guard so a future weakening of the daily gate (e.g.
+            // switching to a configurable threshold) is still backed by the force-track.
+            //
+            // Note on `lastTokenTrackDate`: the assignment is intentionally inside the
+            // `onSuccess` closure only, so a failed track does not advance the daily /
+            // staleness clock and the next launch will retry — otherwise a transient
+            // network failure during the staleness force-track would silence the user
+            // for another full window, which is the exact bug this gate prevents.
             let now = Date()
-            if abs(lastTokenTrackDate.timeIntervalSince(now)) >= 60 * 60 * 24 {
-                lastTokenTrackDate = now
+            let isNewDay = !Calendar.current.isDate(lastTokenTrackDate, inSameDayAs: now)
+            let isStale = isNotificationStateStale(at: now)
+            if isNewDay || isStale {
+                // Log the firing reason for consistent diagnostic output across modes.
+                // The calendar-day gate wins because the staleness check is the redundant
+                // fallback here.
+                let trackReason: String
+                if isNewDay {
+                    trackReason = "new calendar day"
+                } else {
+                    trackReason = "\(Constants.Notifications.maxNotificationStateStalenessDays) days refresh threshold reached"
+                }
+                Exponea.logger.log(
+                    .verbose,
+                    message: "notification_state .daily track reason: \(trackReason)"
+                )
                 trackCurrentPushToken(isAuthorized: authorized, onSuccess: { [weak self] in
+                    self?.lastTokenTrackDate = Date()
                     self?.markNotificationStateTracked()
                 })
             }
 
         case .onTokenChange:
             // On first launch in new system treat stored CoreData token as nil to force tracking.
+            // Permission-flip detection lives in the priority-1 short-circuit above;
+            // this branch handles token-equality plus the staleness fallback for
+            // long-lived installs.
             let effectiveLastToken = isFirstNotificationStateTracking
                 ? nil
                 : trackingManager.customerPushToken
-            if effectiveLastToken != currentPushToken?.pushToken {
-                lastTokenTrackDate = .init()
+            // Even when the APNs token has not changed, force-track once the persisted
+            // lastTokenTrackDate is older than `maxNotificationStateStalenessDays` so long-lived
+            // installs do not fall out of the backend's 90-day validity window.
+            //
+            // Note on `lastTokenTrackDate`: the assignment is intentionally inside the
+            // `onSuccess` closure only, so a failed track does not advance the staleness clock —
+            // otherwise a transient network failure during the staleness force-track would
+            // silence the user for another full window, which is the exact bug this gate prevents.
+            let now = Date()
+            let tokenChanged = effectiveLastToken != currentPushToken?.pushToken
+            let isStale = isNotificationStateStale(at: now)
+            if tokenChanged || isStale {
+                // Log the firing reason for consistent diagnostic output across modes.
+                // Token change takes precedence over staleness because the staleness
+                // check is the redundant fallback.
+                let trackReason: String
+                if tokenChanged {
+                    trackReason = "token changed"
+                } else {
+                    trackReason = "\(Constants.Notifications.maxNotificationStateStalenessDays) days refresh threshold reached"
+                }
+                Exponea.logger.log(
+                    .verbose,
+                    message: "notification_state .onTokenChange track reason: \(trackReason)"
+                )
                 trackCurrentPushToken(isAuthorized: authorized, onSuccess: { [weak self] in
+                    self?.lastTokenTrackDate = Date()
                     self?.markNotificationStateTracked()
                 })
             }
         }
     }
+
+    /// Returns `true` when the time since the last successful `notification_state` track
+    /// equals or exceeds `Constants.Notifications.maxNotificationStateStalenessDays`. Uses
+    /// `abs(...)` mirroring the existing `.daily` gate so a future-dated `lastTokenTrackDate`
+    /// (clock rollback / restored backup) is also treated as stale and re-tracked.
+    private func isNotificationStateStale(at now: Date) -> Bool {
+        let stalenessSeconds = TimeInterval(
+            Constants.Notifications.maxNotificationStateStalenessDays * 24 * 60 * 60
+        )
+        return abs(lastTokenTrackDate.timeIntervalSince(now)) >= stalenessSeconds
+    }
 }
 
 extension PushNotificationManager {
     func applicationDidBecomeActiveUnsafe() {
-        checkForDeliveredPushMessages()
+        // Refresh the delivery authorization snapshot on every foreground
+        // so the synchronous `state` resolution in
+        // TrackingConsentManager.trackDeliveredPush reflects the user's
+        // current settings (they may have toggled permissions from the
+        // system Settings app while the SDK was backgrounded).
+        //
+        // The consume must run inside the refresh completion: refresh is
+        // async and the consume reads `lastSnapshot` synchronously, so
+        // without chaining the first delivered event after a permission
+        // flip mid-foreground would still be resolved against the stale
+        // pre-flip snapshot. verifyPushStatusAndTrackPushToken does not
+        // depend on `lastSnapshot` and stays outside the completion to
+        // keep its own async authorization path independent of the
+        // delivery-authorization refresh.
+        DeliveryAuthorizationProvider.refresh { [weak self] in
+            self?.checkForDeliveredPushMessages()
+        }
         // we don't have to check for opened pushes here, Exponea SDK was initialized so it will be tracked directly
         verifyPushStatusAndTrackPushToken()
     }

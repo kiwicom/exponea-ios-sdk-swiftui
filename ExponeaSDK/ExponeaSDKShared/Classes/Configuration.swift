@@ -117,6 +117,12 @@ public struct Configuration: Codable, Equatable {
     ///  Manual session autoclose
     public internal(set) var manualSessionAutoClose: Bool = true
 
+    /// When `true`, `anonymize()` regenerates the telemetry install ID (`device_id`) so the
+    /// pre-anonymize identified profile cannot be linked to the new anonymous profile via a
+    /// `device_id` join in backend analytics. Default `false` preserves the historical
+    /// behavior (install ID is preserved across anonymize).
+    public internal(set) var regenerateDeviceIdOnAnonymize: Bool = false
+
     enum CodingKeys: String, CodingKey {
         case projectMapping
         case projectToken
@@ -136,6 +142,7 @@ public struct Configuration: Codable, Equatable {
         case appInboxDetailImageInset
         case applicationID
         case streamId
+        case regenerateDeviceIdOnAnonymize
     }
 
     /// Creates the configuration object with the provided properties.
@@ -159,7 +166,8 @@ public struct Configuration: Codable, Equatable {
         isDarkModeEnabled: Bool? = nil,
         appInboxDetailImageInset: CGFloat? = nil,
         manualSessionAutoClose: Bool? = nil,
-        applicationID: String? = nil
+        applicationID: String? = nil,
+        regenerateDeviceIdOnAnonymize: Bool? = nil
     ) throws {
         self.projectToken = projectToken
         self.projectMapping = projectMapping
@@ -171,6 +179,7 @@ public struct Configuration: Codable, Equatable {
         self.inAppContentBlocksPlaceholders = inAppContentBlocksPlaceholders
         self.appInboxDetailImageInset = appInboxDetailImageInset ?? 56
         self.manualSessionAutoClose = manualSessionAutoClose ?? true
+        self.regenerateDeviceIdOnAnonymize = regenerateDeviceIdOnAnonymize ?? false
         if let applicationID, !applicationID.isEmpty {
             self.applicationID = applicationID
         }
@@ -213,7 +222,8 @@ public struct Configuration: Codable, Equatable {
         isDarkModeEnabled: Bool? = nil,
         appInboxDetailImageInset: CGFloat? = nil,
         manualSessionAutoClose: Bool? = nil,
-        applicationID: String? = nil
+        applicationID: String? = nil,
+        regenerateDeviceIdOnAnonymize: Bool? = nil
     ) throws {
         self.integrationConfig = integrationConfig
         self.appGroup = appGroup
@@ -223,6 +233,7 @@ public struct Configuration: Codable, Equatable {
         self.inAppContentBlocksPlaceholders = inAppContentBlocksPlaceholders
         self.appInboxDetailImageInset = appInboxDetailImageInset ?? 56
         self.manualSessionAutoClose = manualSessionAutoClose ?? true
+        self.regenerateDeviceIdOnAnonymize = regenerateDeviceIdOnAnonymize ?? false
         if let applicationID, !applicationID.isEmpty {
             self.applicationID = applicationID
         }
@@ -406,6 +417,13 @@ public struct Configuration: Codable, Equatable {
             self.advancedAuthEnabled = false
         }
 
+        if let regenerateDeviceIdOnAnonymize = try container.decodeIfPresent(
+            Bool.self, forKey: .regenerateDeviceIdOnAnonymize) {
+            self.regenerateDeviceIdOnAnonymize = regenerateDeviceIdOnAnonymize
+        } else {
+            self.regenerateDeviceIdOnAnonymize = false
+        }
+
         // Advanced auth provider - only for Project mode (Stream uses JWT instead)
         if case .project = self.integrationConfig.type, self.advancedAuthEnabled {
             self.customAuthProvider = try loadCustomAuthProvider()
@@ -442,6 +460,7 @@ public struct Configuration: Codable, Equatable {
         try container.encode(allowDefaultCustomerProperties, forKey: .allowDefaultCustomerProperties)
         try container.encode(advancedAuthEnabled, forKey: .advancedAuthEnabled)
         try container.encode(applicationID, forKey: .applicationID)
+        try container.encode(regenerateDeviceIdOnAnonymize, forKey: .regenerateDeviceIdOnAnonymize)
     }
 
     public static func == (lhs: Configuration, rhs: Configuration) -> Bool {
@@ -476,7 +495,8 @@ public struct Configuration: Codable, Equatable {
             lhs.flushEventMaxRetries == rhs.flushEventMaxRetries &&
             lhs.allowDefaultCustomerProperties == rhs.allowDefaultCustomerProperties &&
             lhs.advancedAuthEnabled == rhs.advancedAuthEnabled &&
-            lhs.applicationID == rhs.applicationID
+            lhs.applicationID == rhs.applicationID &&
+            lhs.regenerateDeviceIdOnAnonymize == rhs.regenerateDeviceIdOnAnonymize
     }
 }
 
@@ -589,6 +609,7 @@ extension Configuration: CustomStringConvertible {
         Default Customer Props allowed: \(allowDefaultCustomerProperties)
         Advanced authorization Enabled: \(advancedAuthEnabled)
         Application ID: \(applicationID)
+        Regenerate Device ID On Anonymize: \(regenerateDeviceIdOnAnonymize)
         """
 
         return text

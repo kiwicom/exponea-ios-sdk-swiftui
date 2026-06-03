@@ -49,11 +49,9 @@ final class CrashManagerSpec: QuickSpec {
         beforeEach {
             storage = MockTelemetryStorage()
             let userDefaults = TelemetryUtility.getUserDefaults(appGroup: nil)
-            let installId = TelemetryUtility.getInstallId(userDefaults: userDefaults)
             upload = MockTelemetryUpload(
-                installId: installId, configGetter: {
-                    Exponea.shared.configuration
-                }
+                installIdProvider: { TelemetryUtility.getInstallId(userDefaults: userDefaults) },
+                configGetter: { Exponea.shared.configuration }
             )
             MockExceptionHandler.called = false
             NSSetUncaughtExceptionHandler(nil)

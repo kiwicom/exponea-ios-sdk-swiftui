@@ -103,6 +103,33 @@ class TrackingManagerSpec: QuickSpec {
                 ]))
             }
 
+            // Regression guard: device-property snapshot must be attached to notification_state
+            // events. The wire payload should carry sdk_version / os_version / app_version / etc.
+            // so backend & analytics can correlate token reachability issues with the originating
+            // device. The check uses key-by-key assertions (not full equality) so the test stays
+            // resilient to future SDK / OS version bumps.
+            it("should attach device properties to notification_state events") {
+                expect {
+                    try trackingManager.trackNotificationState(
+                        pushToken: "device-token",
+                        isValid: true,
+                        description: "Permission granted"
+                    )
+                }.notTo(raiseException())
+                let stored = try! database.fetchTrackEvent()
+                expect(stored).notTo(beEmpty())
+                let properties = stored[0].dataTypes.properties
+                expect(properties["sdk_version"] as? String).to(equal(Exponea.version))
+                expect(properties["os_name"] as? String).to(equal(Constants.DeviceInfo.osName))
+                expect((properties["os_version"] as? String) ?? "").notTo(beEmpty())
+                expect((properties["app_version"] as? String) ?? "").notTo(beEmpty())
+                expect((properties["device_model"] as? String) ?? "").notTo(beEmpty())
+                expect((properties["device_type"] as? String) ?? "").notTo(beEmpty())
+                expect(properties["platform"] as? String).to(equal("ios"))
+                expect(properties["description"] as? String).to(equal("Permission granted"))
+                expect(properties["application_id"] as? String).to(equal("default-application"))
+            }
+
             context("updateLastEvent") {
                 it("should do nothing without events") {
                     let updateData = DataType.properties(["testkey": .string("testvalue")])

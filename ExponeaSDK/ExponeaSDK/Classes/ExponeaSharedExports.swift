@@ -43,6 +43,10 @@ public typealias IntegrationSourceType = ExponeaSDKShared.IntegrationSourceType
 public typealias CustomerIds = ExponeaSDKShared.CustomerIds
 public typealias CustomerIdentity = ExponeaSDKShared.CustomerIdentity
 public typealias JwtErrorContext = ExponeaSDKShared.JwtErrorContext
+public typealias DeliveryAuthorizationSnapshot = ExponeaSDKShared.DeliveryAuthorizationSnapshot
+public typealias DeliveryAuthorizationProviding = ExponeaSDKShared.DeliveryAuthorizationProviding
+public typealias DeliveryAuthorizationProvider = ExponeaSDKShared.DeliveryAuthorizationProvider
+public typealias DeliveredNotificationStateResolver = ExponeaSDKShared.DeliveredNotificationStateResolver
 
 /*
  Instead of including ExponeaSDKShared in every file and conditionally

@@ -208,17 +208,28 @@ Invoking this method will cause the SDK to:
 4. Remove the push notification token for the current customer from local device storage and the customer profile in Engagement.
 5. Clear local repositories and caches, excluding tracked events.
 6. Clear the JWT from the Keychain (Stream mode).
-7. Create a new customer record in Engagement (a new `cookie` soft ID is generated).
-8. Assign the previous push notification token to the new customer record.
-9. Preload in-app messages, in-app content blocks, and app inbox for the new customer.
-10. Track a new `installation` event for the new customer.
-11. Track a new session start if `automaticSessionTracking` is enabled.
+7. If [`regenerateDeviceIdOnAnonymize`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) is set to `true`, regenerate the SDK's persisted telemetry `device_id` so subsequent events for the new customer carry a freshly-generated identifier (see the callout below for the full data flow). This step runs before the new customer record is created so the new `device_id` is in place for steps 8–12.
+8. Create a new customer record in Engagement (a new `cookie` soft ID is generated).
+9. Assign the previous push notification token to the new customer record.
+10. Preload in-app messages, in-app content blocks, and app inbox for the new customer.
+11. Track a new `installation` event for the new customer.
+12. Track a new session start if `automaticSessionTracking` is enabled.
 
 You can also use the `anonymize` method to switch to a different integration. The SDK will then track events to a new customer record, similar to the first app session after installation on a new device.
 
 > ⚠️ **Stream/JWT integrators**
 >
 > `anonymize()` creates a new anonymous customer profile. If your integration requires that every event is associated with an authenticated customer and valid JWT, use [`stopIntegration(completion:)`](#stop-sdk-integration) on logout instead. `stopIntegration` does not generate anonymous events.
+
+> 📘 **Telemetry `device_id` behavior on `anonymize()`**
+>
+> The SDK's locally-stored telemetry `device_id` is the same UUID that appears as the `device_id` property on tracked events (`notification_state`, `installation`, `session_*`, etc.) — it's the bridge between local SDK telemetry and backend analytics.
+>
+> By default, `anonymize()` preserves this `device_id` across the call, so platform diagnostics keyed on `device_id` (for example, crash-rate dashboards) remain continuous through a sign-out + sign-in flow. The new customer profile carries the same `device_id` as the previous one.
+>
+> If your privacy requirements mean that the new profile can't be linked back to the previous customer through the device identifier, set [`regenerateDeviceIdOnAnonymize`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) to `true` in your `Configuration`. The next event tracked after `anonymize()` carries a freshly-generated `device_id`. The pre-anonymize `notification_state(valid=false, description="Invalidated")` event (step 2 above) still carries the OLD `device_id` so the invalidation lands on the previous customer profile; all post-anonymize events carry the NEW `device_id`.
+>
+> The full-teardown alternative [`stopIntegration()`](#stop-sdk-integration) rotates the `device_id` unconditionally regardless of this flag.
 
 #### Overloads
 
@@ -316,7 +327,7 @@ Use the `trackPushToken()` method to manually track the token for receiving push
 
 Invoking this method will track a push token immediately regardless of the value of `tokenTrackFrequency` (refer to the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) documentation for details).
 
-Each time the app becomes active, the SDK calls `verifyPushStatusAndTrackPushToken` and tracks the token.
+Each time the app becomes active, the SDK invokes `verifyPushStatusAndTrackPushToken`, which re-evaluates the configured [`tokenTrackFrequency`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) and tracks the token again only when the condition is met (or when an OS push authorization flip is detected, which always forces a fresh `notification_state` regardless of frequency).
 
 #### Arguments
 

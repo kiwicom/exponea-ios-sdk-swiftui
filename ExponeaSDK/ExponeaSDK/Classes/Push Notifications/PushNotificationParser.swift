@@ -33,6 +33,13 @@ struct PushNotificationParser {
             "cta": .string("notification"),
             "url": .string("app")
         ]
+        // Silent pushes never surface UI to the user, so the emitted
+        // `pushDelivered` event is always `state = "not_shown"`. Click events
+        // (`pushOpened`) intentionally do not carry `state` because state is a
+        // delivery-time property, not a click-time one.
+        if silent {
+            properties["state"] = .string(DeliveredNotificationStateResolver.notShownValue)
+        }
         if let consentCategoryTracking = userInfo["consent_category_tracking"] as? String {
             properties["consent_category_tracking"] = .string(consentCategoryTracking)
         }

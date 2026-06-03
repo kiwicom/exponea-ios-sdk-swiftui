@@ -553,6 +553,74 @@ class ConfigurationSpec: QuickSpec {
                     }
                 }
             }
+
+            context("regenerateDeviceIdOnAnonymize Codable round-trip") {
+                it("should default to false when not specified in plist data") {
+                    let config = try! Configuration(
+                        projectToken: "project-token",
+                        authorization: Authorization.none,
+                        baseUrl: "baseUrl",
+                        appGroup: appGroup
+                    )
+                    expect(config.regenerateDeviceIdOnAnonymize).to(beFalse())
+
+                    let encoded = try! PropertyListEncoder().encode(config)
+                    let decoded = try! PropertyListDecoder().decode(Configuration.self, from: encoded)
+                    expect(decoded.regenerateDeviceIdOnAnonymize).to(beFalse())
+                    expect(decoded).to(equal(config))
+                }
+
+                it("should preserve true through encode and decode") {
+                    let config = try! Configuration(
+                        projectToken: "project-token",
+                        authorization: Authorization.none,
+                        baseUrl: "baseUrl",
+                        appGroup: appGroup,
+                        regenerateDeviceIdOnAnonymize: true
+                    )
+                    expect(config.regenerateDeviceIdOnAnonymize).to(beTrue())
+
+                    let encoded = try! PropertyListEncoder().encode(config)
+                    let decoded = try! PropertyListDecoder().decode(Configuration.self, from: encoded)
+                    expect(decoded.regenerateDeviceIdOnAnonymize).to(beTrue())
+                    expect(decoded).to(equal(config))
+                }
+
+                it("should preserve true through save and load from UserDefaults") {
+                    let config = try! Configuration(
+                        integrationConfig: Exponea.ProjectSettings(
+                            projectToken: "project-token",
+                            authorization: .token("test"),
+                            baseUrl: "https://some.base.url",
+                            projectMapping: nil
+                        ),
+                        appGroup: appGroup,
+                        regenerateDeviceIdOnAnonymize: true
+                    )
+                    config.saveToUserDefaults()
+                    let loaded = Configuration.loadFromUserDefaults(appGroup: appGroup)
+                    expect(loaded).notTo(beNil())
+                    expect(loaded?.regenerateDeviceIdOnAnonymize).to(beTrue())
+                    expect(loaded).to(equal(config))
+                }
+
+                it("should preserve true through encode and decode for Stream config") {
+                    let config = try! Configuration(
+                        integrationConfig: Exponea.StreamSettings(
+                            streamId: "stream-token",
+                            baseUrl: "https://some.base.url"
+                        ),
+                        appGroup: appGroup,
+                        regenerateDeviceIdOnAnonymize: true
+                    )
+                    expect(config.regenerateDeviceIdOnAnonymize).to(beTrue())
+
+                    let encoded = try! PropertyListEncoder().encode(config)
+                    let decoded = try! PropertyListDecoder().decode(Configuration.self, from: encoded)
+                    expect(decoded.regenerateDeviceIdOnAnonymize).to(beTrue())
+                    expect(decoded).to(equal(config))
+                }
+            }
         }
     }
 }

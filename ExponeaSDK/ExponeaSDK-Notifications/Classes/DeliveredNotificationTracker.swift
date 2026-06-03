@@ -16,7 +16,11 @@ final class DeliveredNotificationTracker {
     let events: [EventTrackingObject]
     private let repository: ServerRepository
 
-    init(appGroup: String, notificationData: NotificationData) throws {
+    init(
+        appGroup: String,
+        notificationData: NotificationData,
+        state: String = DeliveredNotificationStateResolver.shownValue
+    ) throws {
         guard let configuration = Configuration.loadFromUserDefaults(appGroup: appGroup) else {
             throw DeliveredNotificationTrackerError.configurationNotFound
         }
@@ -27,7 +31,8 @@ final class DeliveredNotificationTracker {
         events = DeliveredNotificationTracker.generateTrackingObjects(
             configuration: configuration,
             customerIds: customerIds,
-            notification: notificationData
+            notification: notificationData,
+            state: state
         )
     }
 
@@ -59,7 +64,8 @@ final class DeliveredNotificationTracker {
     static func generateTrackingObjects(
         configuration: Configuration,
         customerIds: [String: String],
-        notification: NotificationData
+        notification: NotificationData,
+        state: String = DeliveredNotificationStateResolver.shownValue
     ) -> [EventTrackingObject] {
         if notification.considerConsent && !notification.hasTrackingConsent {
             Exponea.logger.log(.verbose, message: "Event for delivered notification is not tracked because consent is not given")
@@ -68,7 +74,12 @@ final class DeliveredNotificationTracker {
         var properties = configuration.defaultProperties?.mapValues { $0.jsonValue } ?? [:]
         properties = properties.merging(notification.properties, uniquingKeysWith: { (_, new) in new })
         properties["status"] = .string("delivered")
-        properties["state"] = .string("shown")
+        // Previously hardcoded "shown"; now reflects actual notification-center
+        // authorization / alert-setting, resolved by the NSE caller via
+        // DeliveredNotificationStateResolver. Callers that do not yet resolve
+        // authorization fall back to "shown" through the default parameter to
+        // preserve legacy event shape.
+        properties["state"] = .string(state)
         properties["application_id"] = .string(configuration.applicationID)
         let userDefaults = TelemetryUtility.getUserDefaults(appGroup: configuration.appGroup)
         properties["device_id"] = .string(TelemetryUtility.getInstallId(userDefaults: userDefaults))

@@ -338,6 +338,9 @@ struct PushNotificationsTestData {
         eventType: .pushOpened,
         eventData: [.properties([
             "status": .string("delivered"),
+            // Silent pushes are never surfaced to the user, so the parser
+            // unconditionally tags them `state = "not_shown"`.
+            "state": .string("not_shown"),
             "platform": .string("ios"),
             "cta": .string("notification"),
             "url": .string("app"),

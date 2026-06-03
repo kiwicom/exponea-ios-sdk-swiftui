@@ -102,6 +102,9 @@ public final class TelemetryUtility {
             "manualSessionAutoClose":
                 "\(config.manualSessionAutoClose)"
             + "\(config.manualSessionAutoClose == defaultConfig.manualSessionAutoClose ? " [default]" : "")",
+            "regenerateDeviceIdOnAnonymize":
+                "\(config.regenerateDeviceIdOnAnonymize)"
+            + "\(config.regenerateDeviceIdOnAnonymize == defaultConfig.regenerateDeviceIdOnAnonymize ? " [default]" : "")",
             "application_id": Constants.General.applicationID
         ]
     }
