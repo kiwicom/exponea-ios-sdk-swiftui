@@ -14,6 +14,24 @@ content:
 > Refer to the [SDK version update guide for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-version-update) for details on updating to the next major version.
 
 ## Release Notes
+## Release Notes for 4.2.0
+#### June 04, 2026
+* Added:
+  * Tracks `notification_state` based on notification permission status. The `valid` flag and `description` now reflect the OS-reported authorization status directly, independent of `requirePushAuthorization`.
+  * Detects push notification permission state changes (granted ↔ revoked) and emits a fresh `notification_state` event regardless of the configured `tokenTrackFrequency`.
+  * Adds `application_id` to the push notification self-check request, enabling correct routing in multi-mobile-app projects.
+  * Automatically re-tracks `notification_state` after 30 days to keep customer profiles within the backend validity window.
+  * Adds the `regenerateDeviceIdOnAnonymize` configuration flag (opt-in, default `false`). When enabled, `anonymize()` regenerates the local `device_id` so the new customer profile can't be linked to the previous one through the device identifier. The default behavior preserves `device_id` across `anonymize()`, unchanged from 4.1.0.
+  * Adds calendar-day semantics for the `.daily` token tracking frequency, so the daily refresh runs once per local calendar day instead of once per rolling 24 hours.
+  * Persists the APNs push token across SDK initialization and process crashes through a crash-survivable buffer.
+  * Adds a device snapshot (SDK version, OS version, app version, and device model) to `notification_state` events.
+  * Adds an `anonymize(exponeaIntegrationType:exponeaProjectMapping:completion:)` overload with a main-thread
+  completion callback invoked once the pre-anonymize flush and teardown finish.
+* Fixed:
+  * Fixes the `notification_state` event not being tracked when push notification permission is re-granted after being revoked within the same SDK lifetime (for example, the user opens Settings, revokes permission, re-grants it, and returns to the app).
+  * Fixes a contradictory `notification_state` payload (`valid=true` paired with `Permission denied`) emitted by `anonymize()` and `stopIntegration()` when `requirePushAuthorization` was disabled but the OS denied delivery.
+
+
 ## Release Notes for 4.1.0
 #### May 06, 2026
 * Added:
