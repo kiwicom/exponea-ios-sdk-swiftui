@@ -105,7 +105,10 @@ Exponea.shared.anonymize(
 )
 ```
 
-A new `anonymize(completion:)` overload is also available for cases where you need a callback after flush and teardown completion.
+Two new completion-bearing overloads are also available for cases where you need a callback after flush and teardown completion:
+
+- `anonymize(completion:)` — anonymize with the current integration settings.
+- `anonymize(exponeaIntegrationType:exponeaProjectMapping:completion:)` — anonymize and switch to a different integration (Project **or** Stream), and receive a callback once the switch is done. The callback adds the most value in Stream mode (where the pre-anonymize flush is asynchronous when a JWT or error handler is set) and for wrapper SDKs that need to resolve their async bridge contract; Project-mode callers can use it too, but the callback will fire almost immediately.
 
 ### Deprecated Configuration properties
 

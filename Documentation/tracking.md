@@ -238,6 +238,7 @@ You can also use the `anonymize` method to switch to a different integration. Th
 | `anonymize()` | Anonymize with current integration settings. |
 | `anonymize(completion:)` | Same as above, but calls `completion` on the main thread after flush + teardown are complete. Recommended for Stream mode so the host app knows when it is safe to proceed. |
 | `anonymize(exponeaIntegrationType:exponeaProjectMapping:)` | Anonymize and switch to a different integration (accepts both `ExponeaProject` and `ExponeaIntegration`). |
+| `anonymize(exponeaIntegrationType:exponeaProjectMapping:completion:)` | Anonymize and switch to a different integration (Project **or** Stream), then call `completion` on the main thread once flush + teardown are complete. The completion is particularly valuable in Stream mode (where the pre-anonymize flush is asynchronous when a JWT or error handler is set) and for wrapper SDKs that need to resolve their async bridge contract. Project-mode callers can use it too; the callback will simply fire almost immediately. |
 
 > ⚠️
 >
@@ -279,6 +280,21 @@ Exponea.shared.anonymize(
         streamId: "YOUR_STREAM_ID"
     ),
     exponeaProjectMapping: nil
+)
+```
+
+Switch integration with completion (works for both Project and Stream mode; most useful in Stream mode and for wrapper SDKs that need to resolve a `Promise`/`Future` once the switch is done):
+
+```swift
+Exponea.shared.anonymize(
+    exponeaIntegrationType: ExponeaIntegration(
+        baseUrl: "https://api.exponea.com",
+        streamId: "YOUR_STREAM_ID"
+    ),
+    exponeaProjectMapping: nil,
+    completion: {
+        // Pre-anonymize flush and teardown are complete, safe to re-configure or navigate
+    }
 )
 ```
 

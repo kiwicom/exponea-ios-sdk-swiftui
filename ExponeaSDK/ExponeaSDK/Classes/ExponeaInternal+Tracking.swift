@@ -466,13 +466,27 @@ extension ExponeaInternal {
         exponeaIntegrationType: any ExponeaIntegrationType,
         exponeaProjectMapping: [EventType: [ExponeaProject]]? = nil
     ) {
+        anonymize(
+            exponeaIntegrationType: exponeaIntegrationType,
+            exponeaProjectMapping: exponeaProjectMapping,
+            completion: nil
+        )
+    }
+    
+    /// Use exponeaProjectMapping when integrating with project token, not stream ID
+    /// The completion is called on the main thread once the anonymize (and optional flush) finishes.
+    public func anonymize(
+        exponeaIntegrationType: any ExponeaIntegrationType,
+        exponeaProjectMapping: [EventType: [ExponeaProject]]? = nil,
+        completion: (() -> Void)?
+    ) {
         Exponea.logger.log(.verbose, message: "Anonymisation requested with \(exponeaIntegrationType) and \(String(describing: exponeaProjectMapping))")
         executeSafelyWithDependencies { dependencies in
             self.performAnonymize(
                 dependencies: dependencies,
                 exponeaIntegrationType: exponeaIntegrationType,
                 exponeaProjectMapping: exponeaProjectMapping,
-                completion: nil
+                completion: completion
             )
         }
     }
