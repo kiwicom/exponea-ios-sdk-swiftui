@@ -363,7 +363,9 @@
 		60486AF92F7E44CE0068F7D0 /* InstallIdResetSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */; };
 		60486AFB2F7E451C0068F7D0 /* TelemetryUtilitySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */; };
 		60486AFF2F7E8A2F0068F7D0 /* ServerRepositoryAuthWiringSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */; };
+		605899D52FD6CD8C00022F20 /* Data+ImageFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 605899D42FD6CD8B00022F20 /* Data+ImageFormat.swift */; };
 		605C41822F23C0B700946118 /* PushNotificationManagerStreamSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 605C41812F23C0B500946118 /* PushNotificationManagerStreamSpec.swift */; };
+		607D66AC2FD313420001B1CE /* GifImageDecodingSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607D66AB2FD313400001B1CE /* GifImageDecodingSpec.swift */; };
 		608B3A9E2F152D8300DF41B0 /* RecommendationsStreamRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 608B3A9D2F152D7100DF41B0 /* RecommendationsStreamRequest.swift */; };
 		608B3AA02F152DA400DF41B0 /* RecommendationsStreamResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 608B3A9F2F152D9B00DF41B0 /* RecommendationsStreamResponse.swift */; };
 		608B3AA62F162CCA00DF41B0 /* config_valid_stream.plist in Resources */ = {isa = PBXBuildFile; fileRef = 608B3AA32F162CCA00DF41B0 /* config_valid_stream.plist */; };
@@ -969,7 +971,9 @@
 		60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallIdResetSpec.swift; sourceTree = "<group>"; };
 		60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryUtilitySpec.swift; sourceTree = "<group>"; };
 		60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerRepositoryAuthWiringSpec.swift; sourceTree = "<group>"; };
+		605899D42FD6CD8B00022F20 /* Data+ImageFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Data+ImageFormat.swift"; sourceTree = "<group>"; };
 		605C41812F23C0B500946118 /* PushNotificationManagerStreamSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManagerStreamSpec.swift; sourceTree = "<group>"; };
+		607D66AB2FD313400001B1CE /* GifImageDecodingSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifImageDecodingSpec.swift; sourceTree = "<group>"; };
 		608B3A9D2F152D7100DF41B0 /* RecommendationsStreamRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationsStreamRequest.swift; sourceTree = "<group>"; };
 		608B3A9F2F152D9B00DF41B0 /* RecommendationsStreamResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationsStreamResponse.swift; sourceTree = "<group>"; };
 		608B3AA32F162CCA00DF41B0 /* config_valid_stream.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config_valid_stream.plist; sourceTree = "<group>"; };
@@ -1498,6 +1502,7 @@
 		058DD937241131F400E5BF91 /* Other */ = {
 			isa = PBXGroup;
 			children = (
+				605899D42FD6CD8B00022F20 /* Data+ImageFormat.swift */,
 				31EBB8652A6AC3330003AAA5 /* Extension+CleanURL.swift */,
 				5527979C28D98C15002B2B77 /* GdprTracking.swift */,
 				0551A0AB241A81FE009A5A5E /* JSON+SnakeCase.swift */,
@@ -2131,6 +2136,7 @@
 		C028C3A0211097D500B03ED4 /* Other */ = {
 			isa = PBXGroup;
 			children = (
+				607D66AB2FD313400001B1CE /* GifImageDecodingSpec.swift */,
 				C05BF44A2111B3DA000C4AE1 /* DatabaseManagerProcessingSpec.swift */,
 				55130C4E28E3C50D00B4FE77 /* GdprTrackingSpec.swift */,
 				7F417FBE26AB2DD5FE31707E /* HtmlNormalizerSpec.swift */,
@@ -3172,6 +3178,7 @@
 				053BC79F25ADDDCB007D70D4 /* TrackingRepository.swift in Sources */,
 				056182E825AD9E05001E30A3 /* Exponea.swift in Sources */,
 				0561833025ADB1BD001E30A3 /* DataType.swift in Sources */,
+				605899D52FD6CD8C00022F20 /* Data+ImageFormat.swift in Sources */,
 				55CD47582E292D9100E8BF3F /* TelemetryUpload.swift in Sources */,
 				55CD475D2E292DB200E8BF3F /* TelemetryEventType.swift in Sources */,
 				0561832325ADB1BC001E30A3 /* Result.swift in Sources */,
@@ -3554,6 +3561,7 @@
 				05895CCB247E4F7D0021B0B9 /* ExponeaAppDelegateSpec.swift in Sources */,
 				057F447D239904050070DF30 /* SampleInAppMessage.swift in Sources */,
 				31CFEF6F2A66940E005402E5 /* SequenceTest.swift in Sources */,
+				607D66AC2FD313420001B1CE /* GifImageDecodingSpec.swift in Sources */,
 				0591907323EC58550037BD88 /* NumberOperatorsSpec.swift in Sources */,
 				55391D4D295497A7001D95B8 /* AppInboxProviderSpec.swift in Sources */,
 				F04BEA9221119DD200591950 /* HTTPMethodSpec.swift in Sources */,

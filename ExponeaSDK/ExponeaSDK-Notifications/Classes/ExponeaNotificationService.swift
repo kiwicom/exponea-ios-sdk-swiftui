@@ -158,12 +158,21 @@ public class ExponeaNotificationService {
                 bestAttemptContent?.sound = UNNotificationSound.init(named: UNNotificationSoundName(rawValue: sound))
             }
 
-            // Download and add image
+            // Download and add image.
+            // Animated attachments (GIF and extended WebP) must be saved with
+            // the .gif extension so that UNNotificationAttachment derives the
+            // correct UTI and does not transcode the bytes (which would strip
+            // animation data). WebP cannot use .webp — UNNotificationAttachment
+            // rejects it with error 101 "Unrecognized attachment file type" —
+            // but .gif is accepted and preserves the raw bytes on disk. The
+            // content extension detects the actual format via magic bytes.
             if let imagePath = content.userInfo["image"] as? String,
                 let url = imagePath.cleanedURL(),
-                let data = try? Data(contentsOf: url, options: []),
-                let attachment = saveImage("image.png", data: data, options: nil) {
-                bestAttemptContent?.attachments = [attachment]
+                let data = try? Data(contentsOf: url, options: []) {
+                let filename = (data.isGif || data.isExtendedWebP) ? "image.gif" : "image.png"
+                if let attachment = saveImage(filename, data: data, options: nil) {
+                    bestAttemptContent?.attachments = [attachment]
+                }
             }
         }
         contentCreated = true
