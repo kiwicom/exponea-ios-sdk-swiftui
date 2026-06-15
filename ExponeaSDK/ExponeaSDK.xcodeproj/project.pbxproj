@@ -360,6 +360,7 @@
 		6030B3F92F51CE2F0092016B /* KeychainJwtTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD822F2BE72400073A3D /* KeychainJwtTokenStore.swift */; };
 		6030B3FA2F51CE2F0092016B /* JwtTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD812F2BE72400073A3D /* JwtTokenStore.swift */; };
 		603CC5802FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */; };
+		603CC5822FD0957F005A7A64 /* CompletionGuaranteesSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603CC5812FD0957E005A7A64 /* CompletionGuaranteesSpec.swift */; };
 		60486AF92F7E44CE0068F7D0 /* InstallIdResetSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */; };
 		60486AFB2F7E451C0068F7D0 /* TelemetryUtilitySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */; };
 		60486AFF2F7E8A2F0068F7D0 /* ServerRepositoryAuthWiringSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */; };
@@ -968,6 +969,7 @@
 		602F9B5F2FB5DB84007D5F5B /* SelfCheckApplicationIDWiringSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfCheckApplicationIDWiringSpec.swift; sourceTree = "<group>"; };
 		602F9B632FB5F137007D5F5B /* PushSelfCheckRequestSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushSelfCheckRequestSpec.swift; sourceTree = "<group>"; };
 		603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnonymizeWithIntegrationAndCompletionSpec.swift; sourceTree = "<group>"; };
+		603CC5812FD0957E005A7A64 /* CompletionGuaranteesSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionGuaranteesSpec.swift; sourceTree = "<group>"; };
 		60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallIdResetSpec.swift; sourceTree = "<group>"; };
 		60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryUtilitySpec.swift; sourceTree = "<group>"; };
 		60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerRepositoryAuthWiringSpec.swift; sourceTree = "<group>"; };
@@ -2554,6 +2556,7 @@
 		F0CA58F7207F783E00C89A7F /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				603CC5812FD0957E005A7A64 /* CompletionGuaranteesSpec.swift */,
 				558453A0297E8D26000707E4 /* AppInboxTrackingSpec.swift */,
 				603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */,
 				60D28F302F71901300F95CD0 /* StopIntegrationSpec.swift */,
@@ -3628,6 +3631,7 @@
 				057F4481239909DC0070DF30 /* MockRepository.swift in Sources */,
 				0567724123746B9B0082167C /* PushNotificationSwizzlerSpec.swift in Sources */,
 				057F447B2398FE930070DF30 /* InAppMessagesCacheSpec.swift in Sources */,
+				603CC5822FD0957F005A7A64 /* CompletionGuaranteesSpec.swift in Sources */,
 				05FEBDC223A7C940007C2372 /* MockInAppMessageTrackingDelegate.swift in Sources */,
 				F063BEAA207E36E600030811 /* MockDatabaseManager.swift in Sources */,
 				F04BEA9B2111AF7E00591950 /* RequestParametersTypeSpec.swift in Sources */,

@@ -11,13 +11,18 @@ import Foundation
 
 internal class MockFlushingManager: FlushingManagerType {
     var inAppRefreshCallback: ExponeaSDK.EmptyBlock?
-    
+
+    /// Optional caller-supplied `FlushResult` returned from `flushData(isFromIdentify:completion:)`
+    /// and `flushDataWith(delay:completion:)`. When `nil`, both methods preserve the historical
+    /// `.noInternetConnection` response so pre-existing callers are unaffected.
+    var stubbedResult: FlushResult?
+
     func flushDataWith(delay: Double, completion: ((FlushResult) -> Void)?) {
-        completion?(.noInternetConnection)
+        completion?(stubbedResult ?? .noInternetConnection)
     }
 
     func flushData(isFromIdentify: Bool, completion: ((FlushResult) -> Void)?) {
-        completion?(.noInternetConnection)
+        completion?(stubbedResult ?? .noInternetConnection)
     }
 
     var flushingMode: FlushingMode = .manual

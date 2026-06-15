@@ -244,6 +244,31 @@ You can also use the `anonymize` method to switch to a different integration. Th
 >
 > `anonymize(exponeaProject:projectMapping:)` is **deprecated**. Use `anonymize(exponeaIntegrationType:exponeaProjectMapping:)` instead, which accepts any `ExponeaIntegrationType` (both Project and Stream).
 
+> 📘 **Completion guarantee for `anonymize(completion:)` and `anonymize(...completion:)`**
+>
+> When the SDK is configured and no stop is in progress, the completion-bearing `anonymize` overloads invoke the callback on the main thread on the successful path. Public-API short-circuits that also invoke the callback are:
+>
+> - SDK stopped via `stopIntegration`
+> - Prior internal exception
+>
+> In those short-circuit cases, the SDK performs no anonymization — the callback signals only that the call resolved.
+>
+> The SDK queues calls placed before `configure(...)` finishes. If the deferred call succeeds, the SDK invokes the callback once configuration completes. `Exponea.logger` logs deferred failures — prior internal exception or `NSException` during deferred execution — which may not surface in the callback.
+>
+> A similar guarantee applies to [`flushData(completion:)`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-data-flushing#completion-guarantee). Public-API short-circuits that deliver a `FlushResult.error(_:)` carrying the underlying `ExponeaError` are:
+>
+> - SDK stopped
+> - Prior internal exception
+> - Insufficient authorization
+>
+> Pipeline short-circuits that deliver their typed `FlushResult` case are:
+>
+> - No internet connection
+> - Flush already in progress
+> - Empty queue (returns `.success(0)`)
+>
+> Flutter, React Native, and similar wrapper SDKs that resolve a `Promise` or `Future` inside the iOS callback can rely on this contract for post-configure paths.
+
 #### Examples
 
 ```swift
