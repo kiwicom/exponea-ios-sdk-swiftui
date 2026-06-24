@@ -12,13 +12,14 @@ protocol InAppMessagePresenterType {
     var presenting: Bool { get set }
     func presentInAppMessage(
         messageType: InAppMessageType,
-        payload: InAppMessagePayload?,
+        payload: RichInAppMessagePayload?,
+        oldPayload: InAppMessagePayload?,
         payloadHtml: String?,
         delay: TimeInterval,
         timeout: TimeInterval?,
         imageData: Data?,
         actionCallback: @escaping (InAppMessagePayloadButton) -> Void,
-        dismissCallback: @escaping TypeBlock<Bool>,
+        dismissCallback: @escaping (Bool, InAppMessagePayloadButton?) -> Void,
         presentedCallback: ((InAppMessageView?, String?) -> Void)?
     )
 }

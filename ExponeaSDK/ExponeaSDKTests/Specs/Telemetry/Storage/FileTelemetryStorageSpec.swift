@@ -9,6 +9,7 @@ import Quick
 import Nimble
 
 @testable import ExponeaSDK
+@testable import ExponeaSDKShared
 
 final class FileTelemetryStorageSpec: QuickSpec {
     let mockException = NSException()
@@ -19,12 +20,14 @@ final class FileTelemetryStorageSpec: QuickSpec {
             fatal: true,
             date: Date(),
             launchDate: Date(),
-            runId: "mock_run_id"
+            runId: "mock_run_id",
+            thread: TelemetryUtility.getCurrentThreadInfo()
         )
     }
 
     override func spec() {
         beforeEach {
+            IntegrationManager.shared.isStopped = false
             let cacheURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
             let directoryContents = try? FileManager.default.contentsOfDirectory(
                 at: cacheURL,

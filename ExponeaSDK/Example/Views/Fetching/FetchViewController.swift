@@ -12,10 +12,14 @@ import ExponeaSDK
 class FetchViewController: UIViewController {
 
     @IBOutlet var buttonsStack: UIStackView!
+    let button = Exponea.shared.getAppInboxButton()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        let button = Exponea.shared.getAppInboxButton()
+        IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+            self?.button.removeFromSuperview()
+            self?.view.layoutIfNeeded()
+        }
         self.buttonsStack.addArrangedSubview(button)
         let widthConstraint = button.widthAnchor.constraint(equalToConstant: 48)
         let heightConstraint = button.heightAnchor.constraint(equalToConstant: 48)
@@ -34,6 +38,18 @@ class FetchViewController: UIViewController {
     }
 
     typealias MyRecommendationResponse = RecommendationResponse<MyRecommendation>
+
+    @IBAction func segment(_ sender: Any) {
+        Exponea.shared.getSegments(force: true, category: .content()) { data in
+            DispatchQueue.main.async {
+                let alertController = UIAlertController(title: "Segment", message: data.map { segment in
+                    "id: \(segment.id), segmentationId: \(segment.segmentationId)\n"
+                }.joined(), preferredStyle: .alert)
+                alertController.addAction(.init(title: "Ok", style: .default))
+                self.present(alertController, animated: true, completion: nil)
+            }
+        }
+    }
 
     @IBAction func fetchRecommendation(_ sender: Any) {
         let alertController = UIAlertController(title: "Input Recommendation ID", message: "", preferredStyle: .alert)

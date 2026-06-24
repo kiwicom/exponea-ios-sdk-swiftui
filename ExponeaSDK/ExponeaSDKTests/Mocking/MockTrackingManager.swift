@@ -10,7 +10,30 @@ import Foundation
 @testable import ExponeaSDK
 
 internal class MockTrackingManager: TrackingManagerType {
+    func trackNotificationState(pushToken: String?, isValid: Bool, description: String) throws {
+        if let pushToken {
+            let data: [String: JSONValue] = [
+                "platform": .string("ios"),
+                "device_id": .string("device-id"),
+                "description": .string(description)
+            ]
+            try track(
+                .notificationState,
+                with: [
+                    .properties(data),
+                    .pushNotificationToken(
+                        token: pushToken,
+                        authorized: isValid
+                    )
+                ]
+            )
+        }
+    }
+    
 
+    func clearSessionManager() {
+        
+    }
     public struct TrackedEvent: Equatable {
         let type: EventType
         let data: [DataType]?
@@ -103,7 +126,10 @@ internal class MockTrackingManager: TrackingManagerType {
     }
 
     func track(_ type: EventType, with data: [DataType]?) throws {
-        var payload: [DataType] = data ?? []
+        var payload: [DataType] = data?.addProperties([
+            "application_id": "default-application",
+            "device_id": "device-id"
+        ]) ?? []
         if let stringEventType = getEventTypeString(type: type) {
             payload.append(.eventType(stringEventType))
         }
@@ -142,7 +168,10 @@ internal class MockTrackingManager: TrackingManagerType {
         trackingAllowed: Bool,
         for customerId: String?
     ) throws {
-        var payload: [DataType] = data ?? []
+        var payload: [DataType] = data?.addProperties([
+            "application_id": "default-application",
+            "device_id": "device-id"
+        ]) ?? []
         if let stringEventType = getEventTypeString(type: type) {
             payload.append(.eventType(stringEventType))
         }
@@ -168,7 +197,10 @@ internal class MockTrackingManager: TrackingManagerType {
         fatalError("Not implemented")
     }
 
-    func anonymize(exponeaProject: ExponeaProject, projectMapping: [EventType: [ExponeaProject]]?) throws {
+    func anonymize(
+        exponeaIntegrationType exponeaProject: any ExponeaIntegrationType,
+        exponeaProjectMapping projectMapping: [EventType: [ExponeaProject]]?
+    ) throws {
         fatalError("Not implemented")
     }
 
@@ -226,8 +258,8 @@ internal class MockTrackingManager: TrackingManagerType {
     func trackInAppContentBlocksClose(message: InAppContentBlockResponse, trackingAllowed: Bool) {}
     func trackInAppContentBlocksShow(message: InAppContentBlockResponse, trackingAllowed: Bool) {}
 
-    func trackInAppMessageClose(message: ExponeaSDK.InAppMessage, trackingAllowed: Bool, isUserInteraction: Bool) {
-        self.track(.close, for: message, trackingAllowed: trackingAllowed, isUserInteraction: isUserInteraction)
+    func trackInAppMessageClose(message: ExponeaSDK.InAppMessage, closeButtonText: String?, trackingAllowed: Bool, isUserInteraction: Bool) {
+        self.track(.close(buttonLabel: closeButtonText), for: message, trackingAllowed: trackingAllowed, isUserInteraction: isUserInteraction)
     }
 
     func trackInAppMessageShown(message: ExponeaSDK.InAppMessage, trackingAllowed: Bool) {
@@ -294,6 +326,7 @@ internal class MockTrackingManager: TrackingManagerType {
         case .campaignClick: return Constants.EventTypes.campaignClick
         case .banner: return Constants.EventTypes.banner
         case .appInbox: return Constants.EventTypes.appInbox
+        case .notificationState: return Constants.EventTypes.notificationState
         }
     }
 

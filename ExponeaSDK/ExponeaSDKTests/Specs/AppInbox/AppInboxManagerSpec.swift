@@ -14,11 +14,19 @@ import Nimble
 
 class AppInboxManagerSpec: QuickSpec {
 
-    let configuration = try! Configuration(
-        projectToken: "token",
-        authorization: Authorization.none,
-        baseUrl: "baseUrl"
-    )
+    private let configurations: [Configuration] = [
+        try! Configuration(
+            projectToken: "token",
+            authorization: Authorization.none,
+            baseUrl: "baseUrl"
+        ),
+        try! Configuration(
+            integrationConfig: Exponea.StreamSettings(
+                streamId: "token",
+                baseUrl: "baseUrl"
+            )
+        )
+    ]
 
     public static let htmlAppInboxMessageContent: String = """
     <style>
@@ -187,13 +195,22 @@ class AppInboxManagerSpec: QuickSpec {
     """
 
     override func spec() {
+        for configuration in configurations {
+            context(configuration.integrationConfig.type.rawValue) {
+                runAllAppInboxManagerTests(for: configuration)
+            }
+        }
+    }
+    
+    private func runAllAppInboxManagerTests(for configuration: Configuration) {
         var appInboxManager: AppInboxManager!
         var repository: MockRepository!
         var trackingManager: MockTrackingManager!
         var database: MockDatabaseManager!
 
         beforeEach {
-            repository = MockRepository(configuration: self.configuration)
+            IntegrationManager.shared.isStopped = false
+            repository = MockRepository(configuration: configuration)
             trackingManager = MockTrackingManager(onEventCallback: { _, _ in
                 // nothing yet
             })
@@ -203,7 +220,7 @@ class AppInboxManagerSpec: QuickSpec {
                 trackingManager: trackingManager,
                 database: database
             )
-            AppInboxCache().clear()
+            AppInboxCache.shared.clear()
         }
 
         it("should load only supported messages") {
@@ -535,6 +552,100 @@ class AppInboxManagerSpec: QuickSpec {
                     done()
                 }
             }
+        }
+
+        it("should keep messages when application ID stays the same") {
+            var message = AppInboxCacheSpec.getSampleMessage(id: "first-mock-id")
+            message.customerIds = ["some": "some"]
+            message.syncToken = "some"
+            let cache = AppInboxCache()
+            cache.setMessages(messages: [message])
+            appInboxManager = AppInboxManager(
+                repository: repository,
+                trackingManager: trackingManager,
+                database: database
+            )
+            expect(cache.getMessages()).to(equal([message]))
+            expect(AppInboxCache().getMessages()).to(equal([message]))
+        }
+
+        it("should delete messages when application ID changes") {
+            var message = AppInboxCacheSpec.getSampleMessage(id: "first-mock-id")
+            message.customerIds = ["some": "some"]
+            message.syncToken = "some"
+            let cache = AppInboxCache()
+            cache.setMessages(messages: [message])
+            appInboxManager = AppInboxManager(
+                repository: repository,
+                trackingManager: trackingManager,
+                database: database,
+                cachedAppId: "new-app-id"
+            )
+            expect(AppInboxCache().getMessages()).to(beEmpty())
+        }
+
+        it("should retry with cleared sync token on resourceGone (HTTP 410)") {
+            let staleToken = "stale-sync-token"
+            let freshToken = "fresh-sync-token"
+            let now = Date().timeIntervalSince1970.doubleValue
+            AppInboxCache.shared.setSyncToken(token: staleToken)
+            let successResponse = AppInboxResponse(
+                success: true,
+                messages: [
+                    AppInboxCacheSpec.getSampleMessage(id: "id1", received: now - 20, type: "push")
+                ],
+                syncToken: freshToken
+            )
+            var callCount = 0
+            repository.fetchAppInboxAction = { syncToken, completion in
+                callCount += 1
+                if callCount == 1 {
+                    expect(syncToken).to(equal(staleToken))
+                    completion(.failure(RepositoryError.resourceGone("{\"success\":false,\"error\":\"invalid sync token\"}")))
+                } else {
+                    expect(syncToken).to(beNil())
+                    completion(.success(successResponse))
+                }
+            }
+            waitUntil(timeout: .seconds(30)) { done in
+                appInboxManager.fetchAppInbox { result in
+                    expect(result.value?.count).to(equal(1))
+                    expect(AppInboxCache.shared.getSyncToken()).to(equal(freshToken))
+                    expect(callCount).to(equal(2))
+                    done()
+                }
+            }
+        }
+
+        it("should not retry infinitely on persistent resourceGone when token is nil") {
+            AppInboxCache.shared.setSyncToken(token: nil)
+            repository.fetchAppInboxResult = .failure(
+                RepositoryError.resourceGone("{\"success\":false,\"error\":\"invalid sync token\"}")
+            )
+            waitUntil(timeout: .seconds(10)) { done in
+                appInboxManager.fetchAppInbox { result in
+                    expect(result.error).toNot(beNil())
+                    expect(AppInboxCache.shared.getSyncToken()).to(beNil())
+                    done()
+                }
+            }
+        }
+
+        it("should reset isFetching on failure") {
+            repository.fetchAppInboxResult = .failure(RepositoryError.connectionError)
+            waitUntil(timeout: .seconds(10)) { done in
+                appInboxManager.fetchAppInbox { _ in
+                    done()
+                }
+            }
+            var message = AppInboxCacheSpec.getSampleMessage(id: "msg1")
+            message.customerIds = ["some": "id"]
+            message.syncToken = "token"
+            AppInboxCache.shared.setMessages(messages: [message])
+            AppInboxCache.shared.setSyncToken(token: "token")
+            appInboxManager.onEventOccurred(of: .identifyCustomer, for: [])
+            expect(AppInboxCache.shared.getMessages()).to(beEmpty())
+            expect(AppInboxCache.shared.getSyncToken()).to(beNil())
         }
     }
 }

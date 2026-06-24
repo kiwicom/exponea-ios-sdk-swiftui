@@ -9,13 +9,40 @@
 import WebKit
 import UIKit
 import Combine
+#if canImport(ExponeaSDKShared)
+import ExponeaSDKShared
+#endif
 
 open class CarouselInAppContentBlockView: UIView {
 
     var isFirstCellLoaded = false
     private var height: NSLayoutConstraint?
 
-    private lazy var collectionView: UICollectionView = {
+    func createCompositionalLayout() -> UICollectionViewLayout {
+        UICollectionViewCompositionalLayout { [weak self] _, _ in
+            self?.createHorizontalScrollLayoutSection() ?? Self.fallbackEmptyLayoutSection()
+        }
+    }
+
+    /// Returned only when `self` has already been released and the layout system asks for
+    /// a section provider one final time. The collection view will be torn down momentarily;
+    /// returning a degenerate empty section is safer than force-unwrapping.
+    private static func fallbackEmptyLayoutSection() -> NSCollectionLayoutSection {
+        let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .fractionalHeight(1.0)
+        ))
+        let group = NSCollectionLayoutGroup.horizontal(
+            layoutSize: NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .fractionalHeight(1.0)
+            ),
+            subitems: [item]
+        )
+        return NSCollectionLayoutSection(group: group)
+    }
+
+    func createHorizontalScrollLayoutSection() -> NSCollectionLayoutSection {
         let itemSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0),
             heightDimension: .fractionalHeight(1.0))
@@ -26,9 +53,11 @@ open class CarouselInAppContentBlockView: UIView {
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
         let section = NSCollectionLayoutSection(group: group)
         section.orthogonalScrollingBehavior = .groupPagingCentered
-        let config = UICollectionViewCompositionalLayoutConfiguration()
-        let layout = UICollectionViewCompositionalLayout(section: section, configuration: config)
-        let collectionView = UICollectionView(frame: .init(x: 0, y: 0, width: UIScreen.main.bounds.size.width, height: 0), collectionViewLayout: layout)
+        return section
+    }
+
+    private lazy var collectionView: UICollectionView = {
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: createCompositionalLayout())
         collectionView.delegate = self
         collectionView.backgroundColor = .clear
         collectionView.dataSource = self
@@ -46,14 +75,19 @@ open class CarouselInAppContentBlockView: UIView {
     private var timer: AnyCancellable?
     private lazy var inAppContentBlocksManager = InAppContentBlocksManager.manager
     private let maxMessagesCount: Int
-    public var onMessageShown: TypeBlock<CarouselOnShowMessageData>?
-    public var onMessageChanged: TypeBlock<CarouselOnChangeData>?
     private var customHeight: CGFloat?
     private var currentMessage: StaticReturnData?
     private var alreadyShowedMessages: [String] = []
     private let defaultBehaviourCallback: DefaultContentBlockCarouselCallback!
+    private var behaviourCallback: InAppContentBlockCallbackType = DefaultInAppContentBlockCallback()
+    private var pendingScrollMessageId: String?
+    private var didNotifyNoMessage = false
+    private var hasStartedCarousel = false
+    private var reloadToken = UUID()
+    private let carouselStartDelay: TimeInterval = 0.5
 
-    private var data: [StaticReturnData] = []
+    @Atomic private var messages: [StaticReturnData] = []
+    @Atomic private var data: [StaticReturnData] = []
     private var savedTimer: TimeInterval?
     private let placeholder: String
 
@@ -74,24 +108,32 @@ open class CarouselInAppContentBlockView: UIView {
         listenToState()
 
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
-            .sink { _ in
-                self.startTimer()
+            .sink { [weak self] _ in
+                self?.startTimer()
             }
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
-            .sink { _ in
-                self.saveCurrentTimer()
+            .sink { [weak self] _ in
+                self?.saveCurrentTimer()
             }
             .store(in: &cancellables)
-
-        redrawWithNewHeight(inputView: self, loadedInAppContentBlocksView: collectionView, height: 1)
 
         calculator.heightUpdate = { [weak self] height in
             guard let self else { return }
             let height = self.customHeight ?? height.height
             self.redrawWithNewHeight(inputView: self, loadedInAppContentBlocksView: collectionView, height: height)
+            defaultBehaviourCallback.onHeightUpdate(placeholderId: placeholder, height: height)
         }
+
+        IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+            guard let self else { return }
+            self.height?.constant = 0
+            self.stopTimer()
+            self.layoutIfNeeded()
+        }
+
+        redrawWithNewHeight(inputView: self, loadedInAppContentBlocksView: collectionView, height: 1)
     }
 
     open func filterContentBlocks(placeholder: String, continueCallback: TypeBlock<[InAppContentBlockResponse]>?, expiredCompletion: EmptyBlock?) {
@@ -118,42 +160,179 @@ open class CarouselInAppContentBlockView: UIView {
     }
 
     open func reload(isTriggered: Bool = false) {
+        // Public surface (`open` on a `public` class): host apps and subclasses may call
+        // `reload` from any thread. The main-queue hop below is mandatory — `performReload`
+        // mutates view state that must be touched only on main.
+        onMain { [weak self] in
+            guard let self else { return }
+            self.performReload(isTriggered: isTriggered)
+        }
+    }
+
+    /// Main-queue-only body of `reload`. Kept non-overridable so subclasses can still override
+    /// the public `reload(isTriggered:)` entry point, but the thread-sensitive state transitions
+    /// here are guaranteed to run on main.
+    private func performReload(isTriggered: Bool) {
         alreadyShowedMessages.removeAll()
         savedTimer = nil
         state = .stopTimer
-        inAppContentBlocksManager.loadMessagesForCarousel(placeholder: placeholder) { [weak self] in
-            guard let self else { return }
-            self.inAppContentBlocksManager
-                .inAppContentBlockMessages
-                .filter { $0.placeholders.contains(self.placeholder) }
-                .filter { $0.isCorruptedImage }
-                .forEach { message in
-                    self.defaultBehaviourCallback.onError(
-                        placeholderId: message.id,
-                        contentBlock: message,
-                        errorMessage: "Corrupted image for \(message.id)"
-                    )
+        didNotifyNoMessage = false
+        hasStartedCarousel = false
+        pendingScrollMessageId = nil
+        reloadToken = UUID()
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "In-app reload failed: SDK is stopping")
+            return
+        }
+        let token = reloadToken
+        inAppContentBlocksManager.loadMessagesForCarousel(
+            placeholder: placeholder,
+            initialCompletion: { [weak self] in
+                onMain {
+                    guard let self, self.reloadToken == token else { return }
+                    self.applyCarouselData(isTriggered: isTriggered, phase: .initial)
                 }
-            self.filterContentBlocks(placeholder: self.placeholder) { data in
-                if data.isEmpty {
-                    self.defaultBehaviourCallback.onNoMessageFound(placeholderId: self.placeholder)
-                }
-                let toReturn = data
-                    .compactMap { response in
-                        self.inAppContentBlocksManager.prepareCarouselStaticData(messages: response)
-                    }
-                let sortedMessages = self.sortContentBlocks(data: toReturn)
-                self.data = self.maxMessagesCount > 0 ? Array(sortedMessages.prefix(self.maxMessagesCount)) : sortedMessages
-                self.state = .refresh
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self.startCarouseling()
-                }
-            } expiredCompletion: { [weak self] in
-                if !isTriggered {
-                    self?.reload(isTriggered: true)
+            },
+            completion: { [weak self] in
+                onMain {
+                    guard let self, self.reloadToken == token else { return }
+                    self.applyCarouselData(isTriggered: true, phase: .full)
                 }
             }
+        )
+    }
+
+    internal func makeDuplicate(input: [StaticReturnData]) -> [StaticReturnData] {
+        let multiplier: Int
+        switch true {
+        case input.count == 1:
+            multiplier = 1
+        case input.count <= 2:
+            multiplier = 100
+        case input.count <= 5:
+            multiplier = 50
+        case input.count <= 10:
+            multiplier = 25
+        default:
+            multiplier = 10
         }
+        var copy: [StaticReturnData] = []
+        for _ in 0..<multiplier {
+            let updatedInput = input.map { data in
+                var beforeUpdate = data
+                beforeUpdate.id = UUID()
+                return beforeUpdate
+            }
+            copy.append(contentsOf: updatedInput)
+        }
+        return copy
+    }
+
+    private enum CarouselLoadPhase {
+        case initial
+        case full
+    }
+
+    private func applyCarouselData(isTriggered: Bool, phase: CarouselLoadPhase) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        if phase == .full {
+            reportCorruptedImages()
+        }
+        filterContentBlocks(placeholder: placeholder) { [weak self] data in
+            guard let self else { return }
+            guard !data.isEmpty else {
+                if phase == .full {
+                    self.notifyNoMessageFound()
+                }
+                return
+            }
+            let toReturn = data.compactMap { response in
+                self.inAppContentBlocksManager.prepareCarouselStaticData(messages: response)
+            }
+            let sortedMessages = self.sortContentBlocks(data: toReturn)
+            let input = self.maxMessagesCount > 0 ? Array(sortedMessages.prefix(self.maxMessagesCount)) : sortedMessages
+            guard !input.isEmpty else {
+                if phase == .full {
+                    self.notifyNoMessageFound()
+                }
+                return
+            }
+            let currentMessageId = self.currentMessage?.message?.id
+            let newFiltered = input.filter { $0.message != nil }
+            if phase == .full {
+                // Eligible set unchanged from the initial phase — skip the rebuild,
+                // the second WKWebView load, and the collection-view refresh to avoid
+                // the visible flicker / scroll-jump on the cold-render path.
+                let previousIds = self.messages.compactMap { $0.message?.id }
+                let nextIds = newFiltered.compactMap { $0.message?.id }
+                if previousIds == nextIds, !previousIds.isEmpty {
+                    return
+                }
+            }
+            self.messages = newFiltered
+            self.pendingScrollMessageId = currentMessageId
+            self._data.changeValue(with: { $0 = self.makeDuplicate(input: input) })
+            if let first = self.data.first?.html {
+                self.calculator.loadHtml(placedholderId: self.placeholder, html: first)
+            }
+            self.state = .refresh
+            if !self.hasStartedCarousel {
+                self.hasStartedCarousel = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + carouselStartDelay) { [weak self] in
+                    self?.startCarouseling()
+                }
+            }
+        } expiredCompletion: { [weak self] in
+            guard let self else { return }
+            if !isTriggered {
+                self.reload(isTriggered: true)
+            }
+        }
+    }
+
+    private func notifyNoMessageFound() {
+        guard !didNotifyNoMessage else { return }
+        didNotifyNoMessage = true
+        defaultBehaviourCallback.onNoMessageFound(placeholderId: placeholder)
+    }
+
+    private func reportCorruptedImages() {
+        inAppContentBlocksManager
+            .inAppContentBlockMessages
+            .filter { $0.placeholders.contains(placeholder) }
+            .filter { $0.personalizedMessage?.isCorruptedImage == true }
+            .forEach { message in
+                defaultBehaviourCallback.onError(
+                    placeholderId: message.id,
+                    contentBlock: message,
+                    errorMessage: "Corrupted image for \(message.id)"
+                )
+            }
+    }
+
+    private func indexForMessageId(_ messageId: String) -> Int? {
+        guard !data.isEmpty else { return nil }
+        let middleIndex = data.count / 2
+        if let index = data[middleIndex...].firstIndex(where: { $0.message?.id == messageId }) {
+            return index
+        }
+        if let index = data[..<middleIndex].firstIndex(where: { $0.message?.id == messageId }) {
+            return index
+        }
+        return nil
+    }
+
+    private func scrollToPendingMessageOrCenter() {
+        guard !data.isEmpty else { return }
+        let targetIndex: Int = {
+            if let messageId = pendingScrollMessageId,
+               let index = indexForMessageId(messageId) {
+                return index
+            }
+            return data.count / 2
+        }()
+        pendingScrollMessageId = nil
+        collectionView.scrollToItem(at: IndexPath(item: targetIndex, section: 0), at: .centeredHorizontally, animated: false)
     }
 
     public func checkMessage(message: StaticReturnData, shouldBeReloaded: Bool = false) {
@@ -161,7 +340,7 @@ open class CarouselInAppContentBlockView: UIView {
         inAppContentBlocksManager.isMessageValid(message: messageResponse) { [weak self] isValid in
             guard let self else { return }
             if !isValid {
-                self.data.removeAll(where: { $0.message?.id == message.message?.id })
+                self._data.changeValue(with: { $0.removeAll(where: { $0.message?.id == message.message?.id }) })
                 self.state = .refresh
             }
             if shouldBeReloaded {
@@ -170,10 +349,17 @@ open class CarouselInAppContentBlockView: UIView {
         } refreshCallback: { [weak self] in
             guard let self else { return }
             self.inAppContentBlocksManager.refreshMessage(message: messageResponse) { message in
-                if let index = self.data.firstIndex(where: { $0.message?.id == message.id }),
-                   let newData = self.inAppContentBlocksManager.prepareCarouselStaticData(messages: message) {
-                    if self.data[safeIndex: index] != nil {
-                        self.data[index] = newData
+                if let newData = self.inAppContentBlocksManager.prepareCarouselStaticData(messages: message) {
+                    var indexes: [Int] = []
+                    for message in self.data.filter({ $0.message?.id == message.id }) {
+                        if let index = self.data.firstIndex(where: { $0.id == message.id }) {
+                            indexes.append(index)
+                        }
+                    }
+                    indexes.forEach { index in
+                        if self.data[safeIndex: index] != nil {
+                            self._data.changeValue(with: { $0[index] = newData })
+                        }
                     }
                 }
             }
@@ -218,8 +404,12 @@ open class CarouselInAppContentBlockView: UIView {
     public func release() {
         removeFromSuperview()
         stopTimer()
-        NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
+        // The foreground/background observers are Combine `publisher(for:).sink`
+        // subscriptions stored in `cancellables`, not selector-based observers.
+        // Dropping the cancellables is what actually unsubscribes them. This also
+        // tears down the `$state` listener (`listenToState()`), which is the
+        // intended behavior on release — the view is no longer in the hierarchy.
+        cancellables.removeAll()
     }
 
     deinit {
@@ -239,13 +429,20 @@ open class CarouselInAppContentBlockView: UIView {
     }
 
     public func getShownCount() -> Int {
-        data.filter { $0.message?.status?.displayed != nil }.count
+        let data = data.filter { $0.message?.status?.displayed != nil }
+        var messages: Set<StaticReturnData> = .init()
+        data.forEach { item in
+            messages.insert(item)
+        }
+        return messages.count
     }
 
     private func refreshContent() {
         if let visibleCell = collectionView.visibleCells.first, let indexPath = collectionView.indexPath(for: visibleCell) {
             if indexPath.row < data.count - 1 {
-                let nextIndexPath: IndexPath = .init(row: indexPath.row + 1, section: indexPath.section)
+                let newIndexPath = indexPath.row + 1
+                guard newIndexPath < data.count else { return }
+                let nextIndexPath: IndexPath = .init(row: newIndexPath, section: indexPath.section)
                 collectionView.scrollToItem(at: nextIndexPath, at: .right, animated: true)
             } else {
                 collectionView.scrollToItem(at: .init(row: 0, section: 0), at: .left, animated: false)
@@ -262,6 +459,11 @@ open class CarouselInAppContentBlockView: UIView {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 guard let self else { return }
+                guard !IntegrationManager.shared.isStopped else {
+                    Exponea.logger.log(.error, message: "In-app content blocks fetch failed: SDK is stopping")
+                    stopTimer()
+                    return
+                }
                 switch state {
                 case .restart:
                     self.savedTimer = nil
@@ -273,8 +475,9 @@ open class CarouselInAppContentBlockView: UIView {
                     self.stopTimer()
                 case .idle: break
                 case .refresh:
-                    self.onMessageChanged?(.init(count: self.data.count, messages: self.data))
+                    defaultBehaviourCallback.onMessagesChanged(count: self.messages.count, messages: self.messages.map { $0.message! })
                     self.collectionView.reloadData()
+                    self.scrollToPendingMessageOrCenter()
                 case .startTimer:
                     self.startTimer()
                 }
@@ -315,21 +518,28 @@ open class CarouselInAppContentBlockView: UIView {
 
 extension CarouselInAppContentBlockView: UICollectionViewDelegateFlowLayout {
     public func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        guard let message = data[safeIndex: indexPath.row], let id = message.message?.id else {
+        guard let message = data[safeIndex: indexPath.row], let messageResponse = message.message, let id = message.message?.id else {
             currentMessage = nil
             return
         }
         currentMessage = message
-        if !alreadyShowedMessages.contains(id), let messageResponse = message.message {
+        if !alreadyShowedMessages.contains(id) {
             alreadyShowedMessages.append(id)
-            defaultBehaviourCallback.onMessageShown(placeholderId: placeholder, contentBlock: messageResponse)
             Exponea.shared.telemetryManager?.report(
-                eventWithType: .showInAppMessage,
-                properties: ["messageType": InAppContentBlockType.carouselContentBlock.type]
+                eventWithType: .contentBlockShown,
+                properties: [
+                    "type": (messageResponse.content == nil ? "personal" : "static"),
+                    "messageId": id,
+                    "placeholders": TelemetryUtility.toJson(messageResponse.placeholders)
+                ]
             )
         }
         inAppContentBlocksManager.updateDisplayedState(for: id)
-        onMessageShown?(.init(placeholderId: placeholder, contentBlock: message, index: indexPath.row, count: data.count))
+        if let index = messages.firstIndex(where: { $0.message?.id == messageResponse.id }) {
+            defaultBehaviourCallback.onMessageShown(placeholderId: placeholder, contentBlock: messageResponse, index: index, count: messages.count)
+        } else {
+            Exponea.logger.log(.error, message: "Error while calling onMessageShown callback, index of message not found")
+        }
         let maxLimitSeconds: Double = defaultRefreshInterval
         let tolerant: Double = 0.3
         let currentTimeStampWithLimit = lastScrollTimestamp + (maxLimitSeconds - tolerant)
@@ -343,6 +553,7 @@ extension CarouselInAppContentBlockView: UICollectionViewDelegateFlowLayout {
     }
 
     public func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard data[safeIndex: indexPath.row] != nil else { return }
         ensureBackground { [weak self] in
             if let message = self?.data[safeIndex: indexPath.row] {
                 self?.checkMessage(message: message)
@@ -380,8 +591,8 @@ extension CarouselInAppContentBlockView: UICollectionViewDataSource {
                 self?.checkMessage(message: message, shouldBeReloaded: true)
             }
         }
-        cell.touchCallback = saveCurrentTimer
-        cell.releaseCallback = startTimer
+        cell.touchCallback = { [weak self] in self?.saveCurrentTimer() }
+        cell.releaseCallback = { [weak self] in self?.startTimer() }
         cell.loadHtml(
             html: message.html,
             assignedMessage: message.message,
@@ -390,3 +601,36 @@ extension CarouselInAppContentBlockView: UICollectionViewDataSource {
         return cell
     }
 }
+
+#if DEBUG
+// MARK: - Internal helpers for unit tests
+//
+// These exist solely so XCTest specs can exercise the
+// `UICollectionViewDataSource.collectionView(_:cellForItemAt:)` path without
+// going through the async `loadMessagesForCarousel` pipeline. They are NOT
+// part of the public SDK surface, are compiled out of Release builds, and
+// must not be called from host applications.
+extension CarouselInAppContentBlockView {
+    /// Test-only: synchronously seeds the carousel's internal data buffers so
+    /// the data source can vend cells. Does NOT trigger any layout, refresh,
+    /// or HTML loading — purely a state injection for unit tests.
+    internal func _testOnly_seedData(_ entries: [StaticReturnData]) {
+        self._data.changeValue { $0 = entries }
+        self.messages = entries
+    }
+
+    /// Test-only: drives `collectionView(_:cellForItemAt:)` on the view's own
+    /// (private, lazy) `collectionView` so the cell is retained by the same
+    /// stored property the production code path uses. This is what lets
+    /// retain-cycle regression tests actually pin the
+    /// `self -> collectionView -> cell -> closure -> self` cycle.
+    /// Returns the dequeued cell (caller may discard it).
+    @discardableResult
+    internal func _testOnly_vendCellAtFirstIndex() -> UICollectionViewCell {
+        return self.collectionView(
+            self.collectionView,
+            cellForItemAt: IndexPath(item: 0, section: 0)
+        )
+    }
+}
+#endif

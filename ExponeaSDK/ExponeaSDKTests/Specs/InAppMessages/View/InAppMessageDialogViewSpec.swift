@@ -13,22 +13,23 @@ import Quick
 
 final class InAppMessageDialogViewSpec: QuickSpec {
     override func spec() {
-        let payload = SampleInAppMessage.getSampleInAppMessage().payload
+        let payload = SampleInAppMessage.getSampleInAppMessage().oldPayload
         var image: UIImage!
 
         beforeEach {
+            IntegrationManager.shared.isStopped = false
             let bundle = Bundle(for: InAppMessageDialogViewSpec.self)
             image = UIImage(contentsOfFile: bundle.path(forResource: "lena", ofType: "jpeg")!)
         }
 
         let fullscreenSettings = [true, false]
-        fullscreenSettings.forEach { fullscreen in
+        for fullscreen in fullscreenSettings {
             it("should setup \(fullscreen ? "fullscreen" : "modal") dialog with payload") {
                 let dialog: InAppMessageDialogView = InAppMessageDialogView(
                     payload: payload!,
                     image: image,
                     actionCallback: { _ in },
-                    dismissCallback: { _ in },
+                    dismissCallback: { _, _ in },
                     fullscreen: fullscreen
                 )
                 dialog.beginAppearanceTransition(true, animated: false)

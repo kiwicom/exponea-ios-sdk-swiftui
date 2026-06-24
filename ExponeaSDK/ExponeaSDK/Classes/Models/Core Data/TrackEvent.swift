@@ -19,8 +19,10 @@ class TrackEvent: NSManagedObjectWithContext, DatabaseObject {
     }
 
     @NSManaged public var baseUrl: String?
-    @NSManaged public var projectToken: String?
+    @NSManaged public var integrationId: String?
     @NSManaged public var authorizationString: String?
+    @NSManaged public var integrationType: String?
+    @NSManaged public var projectToken: String?
 
     @NSManaged public var eventType: String?
     @NSManaged public var timestamp: Double
@@ -31,7 +33,7 @@ class TrackEvent: NSManagedObjectWithContext, DatabaseObject {
 extension TrackEvent {
 
     var dataTypes: [DataType] {
-        let data: [DataType]? = managedObjectContext?.performAndWait {
+        let data: [DataType]? = managedObjectContext?.performAndWaitSafely {
             var data: [DataType] = []
 
             // Convert all properties to key value items.
@@ -88,7 +90,8 @@ final class TrackEventProxy: FlushableObject {
     let databaseObjectProxy: DatabaseObjectProxy
 
     let baseUrl: String?
-    let projectToken: String?
+    let integrationId: String?
+    let integrationType: String?
     let authorization: Authorization
 
     let customerIds: [String: String]
@@ -100,7 +103,8 @@ final class TrackEventProxy: FlushableObject {
     init(_ event: TrackEvent) {
         self.databaseObjectProxy = DatabaseObjectProxy(event)
         self.baseUrl = event.baseUrl
-        self.projectToken = event.projectToken
+        self.integrationId = event.integrationId
+        self.integrationType = event.integrationType
         self.authorization = Authorization(from: event.authorizationString)
 
         self.customerIds = event.customer?.ids ?? [:]
@@ -112,19 +116,21 @@ final class TrackEventProxy: FlushableObject {
 
     func getTrackingObject(
         defaultBaseUrl: String,
-        defaultProjectToken: String,
+        defaultIntegrationId: String,
         defaultAuthorization: Authorization
     ) -> TrackingObject {
         var auth = authorization
-        if case .none = auth {
+        if case Authorization.none = auth {
             auth = defaultAuthorization
         }
+        let exponeaProject = getExponeaIntegrationType(
+            integrationType: integrationType,
+            baseUrl: baseUrl ?? defaultBaseUrl,
+            integrationId: integrationId ?? defaultIntegrationId,
+            auth: auth
+        )
         return EventTrackingObject(
-            exponeaProject: ExponeaProject(
-                baseUrl: baseUrl ?? defaultBaseUrl,
-                projectToken: projectToken ?? defaultProjectToken,
-                authorization: auth
-            ),
+            exponeaProject: exponeaProject,
             customerIds: customerIds,
             eventType: eventType,
             timestamp: timestamp,

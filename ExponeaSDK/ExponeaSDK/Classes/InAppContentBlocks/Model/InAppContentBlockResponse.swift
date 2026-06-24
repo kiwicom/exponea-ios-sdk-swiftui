@@ -53,9 +53,9 @@ public struct InAppContentBlockResponse: Codable {
 
     public struct DateFilter: Codable {
         public let enabled: Bool
-        public let fromDate: UInt?
-        public let toDate: UInt?
-        public init(enabled: Bool, fromDate: UInt?, toDate: UInt?) {
+        public let fromDate: Date?
+        public let toDate: Date?
+        public init(enabled: Bool, fromDate: Date?, toDate: Date?) {
             self.enabled = enabled
             self.fromDate = fromDate
             self.toDate = toDate
@@ -70,26 +70,19 @@ public struct InAppContentBlockResponse: Codable {
     public let id: String
     public let name: String
     public let dateFilter: DateFilter
-    @CodableIgnored
     public var frequency: InAppContentBlocksFrequency?
     public var loadPriority: Int? = 0
     public var contentType: InAppContentBlockContentType?
     public var content: Content?
-    @CodableIgnored
     public var normalizedResult: NormalizedResult?
     public var trackingConsentCategory: String?
     public let placeholders: [String]
-    @CodableIgnored
     public var personalizedMessage: PersonalizedInAppContentBlockResponse?
-    @CodableIgnored
     public var status: InAppContentBlocksDisplayStatus?
-    @CodableIgnored
     public var sessionStart: Date? = Date()
-    @CodableIgnored
     public var tags: Set<Int>? = []
-    @CodableIgnored
     public var indexPath: IndexPath?
-    public var isCorruptedImage = true
+    public var isCorruptedImage = false
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -143,7 +136,7 @@ public struct InAppContentBlockResponse: Codable {
     }
 }
 
-public enum InAppContentBlocksFrequency: String {
+public enum InAppContentBlocksFrequency: String, Codable {
     case always = "always"
     case onlyOnce = "only_once"
     case oncePerVisit = "once_per_visit"

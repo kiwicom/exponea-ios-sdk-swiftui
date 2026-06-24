@@ -1,16 +1,21 @@
 ---
-title: Fetch Data
-excerpt: Fetch data from Bloomreach Engagement using the iOS SDK
+title: Fetch data for iOS SDK
 slug: ios-sdk-fetch-data
-categorySlug: integrations
-parentDocSlug: ios-sdk
+category:
+  uri: /branches/2/categories/guides/Developers
+parent:
+  uri: ios-sdk
+content:
+  excerpt: Fetch data from Bloomreach Engagement using the iOS SDK
 ---
 
 The SDK provides methods to retrieve data from the Engagement platform. Responses are available in a completion handler closure.
 
-## Fetch Recommendations
+## Fetch recommendations
 
 Use the `fetchRecommendation` method to get personalized recommendations for the current customer from an Engagement [recommendation model](https://documentation.bloomreach.com/engagement/docs/recommendations).
+
+> `fetchRecommendation` works transparently in both Project/Engagement and Stream/Data Hub modes. In Stream mode, the SDK routes the request to the Data Hub optimization endpoint (`/optimization/streams/<streamId>/recommend/user`) using JWT authentication. No API changes are needed from the consumer side.
 
 The method returns a `RecommendationResponse` object containing the system data (the recommendation engine data and recommended item IDs) and, if applicable, the user-defined data. To specify user-defined properties, you can use the generic type parameter `T: RecommendationUserData`. It's a simple `struct` with coding keys representing your custom properties. If you only need the system properties, you can use `EmptyRecommendationData`.
 
@@ -61,7 +66,7 @@ Exponea.shared.fetchRecommendation(with: recommendationOptions) { (result: Resul
 }
 ```
 
-### Return Object
+### Return object
 
 #### RecommendationResponse
 
@@ -87,7 +92,7 @@ Exponea.shared.fetchRecommendation(with: recommendationOptions) { (result: Resul
 | recommendationId        | String | ID of the recommendation engine (model) used. |
 | recommendationVariantId | String | ID of the recommendation engine variant used. |
 
-## Fetch Consent Categories
+## Fetch consent categories
 
 Use the `fetchConsents` method to get a list of your consent categories and their definitions.
 
@@ -110,7 +115,7 @@ Exponea.shared.fetchConsents { (result) in
 }
 ```
 
-### Result Object
+### Result object
 
 #### ConsentsResponse
 

@@ -42,6 +42,13 @@ protocol TrackingManagerType: AnyObject {
         isUserInteraction: Bool
     )
     
+    /// This function is used to track the current push notification token
+    ///  - Parameters:
+    ///    - pushToken: current push notification token
+    ///    - isValid: boolean value that is responsible to remove or move push notification token from one customer to another
+    ///    - description: providing information about the state of device's push notification permission
+    func trackNotificationState(pushToken: String?, isValid: Bool, description: String) throws
+    
     // Function used to track inAppContentBlocks message banner click event
     func trackInAppContentBlockClick(
         placeholderId: String,
@@ -49,9 +56,9 @@ protocol TrackingManagerType: AnyObject {
         message: InAppContentBlockResponse,
         trackingAllowed: Bool
     )
-    
+    func clearSessionManager()
     // Function used to track in-app message banner close event
-    func trackInAppMessageClose(message: InAppMessage, trackingAllowed: Bool, isUserInteraction: Bool)
+    func trackInAppMessageClose(message: InAppMessage, closeButtonText: String?, trackingAllowed: Bool, isUserInteraction: Bool)
     // Function used to track inAppContentBlocks message banner close event
     func trackInAppContentBlockClose(
         placeholderId: String,
@@ -88,10 +95,10 @@ protocol TrackingManagerType: AnyObject {
     func manualSessionEnd()
 
     func setAutomaticSessionTracking(automaticSessionTracking: Exponea.AutomaticSessionTracking)
-
-    /// Anonymizes the user by deleting all identifiers (including cookie) and deletes all database data.
+    
+    // Anonymizes the user by deleting all identifiers (including cookie) and deletes all database data.
     /// You can switch project and new user will be tracked into it
-    func anonymize(exponeaProject: ExponeaProject, projectMapping: [EventType: [ExponeaProject]]?) throws
+    func anonymize(exponeaIntegrationType: any ExponeaIntegrationType, exponeaProjectMapping: [EventType: [ExponeaProject]]?) throws
     
     /// Tracks delivered push notification as EventTrackingObject
     func trackDeliveredPushEvent(_ eventObject: EventTrackingObject)

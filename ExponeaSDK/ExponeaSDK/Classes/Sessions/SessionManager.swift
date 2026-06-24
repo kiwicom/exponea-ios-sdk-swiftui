@@ -13,6 +13,7 @@ final class SessionManager: SessionManagerType {
     private let isAutomatic: Bool
     private let sessionTimeout: Double
     private weak var trackingDelegate: SessionTrackingDelegate?
+    private let manualSessionAutoClose: Bool
 
     var sessionStartTime: Double {
         get { return userDefaults.double(forKey: Constants.Keys.sessionStarted) }
@@ -31,15 +32,29 @@ final class SessionManager: SessionManagerType {
         userDefaults: UserDefaults,
         trackingDelegate: SessionTrackingDelegate
     ) {
+        self.manualSessionAutoClose = configuration.manualSessionAutoClose == true
         self.userDefaults = userDefaults
         self.trackingDelegate = trackingDelegate
         self.sessionTimeout = configuration.sessionTimeout
         self.isAutomatic = configuration.automaticSessionTracking
+
+        IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+            guard let self else { return }
+            self.clear()
+            self.trackingDelegate = nil
+        }
     }
 
     func manualSessionStart(at timestamp: TimeInterval) {
         guard !isAutomatic else { return }
         triggerSessionStart(at: timestamp)
+    }
+
+    func clearSessionManager() {
+        sessionStartTime = 0
+        sessionEndTime = 0
+        userDefaults.removeObject(forKey: Constants.Keys.sessionEnded)
+        userDefaults.removeObject(forKey: Constants.Keys.sessionStarted)
     }
 
     func manualSessionEnd(at timestamp: TimeInterval) {
@@ -90,11 +105,17 @@ final class SessionManager: SessionManagerType {
     }
 
     private func triggerSessionStart(at timestamp: TimeInterval) {
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "Session_start not tracked, SDK is stopping")
+            return
+        }
         // if previous session was not closed properly(background work was not run)
         if hasActiveSession {
             if !shouldResumeCurrentSession(at: timestamp) {
                 Exponea.logger.log(.verbose, message: "We're past session timeout, tracking previous session end.")
-                triggerSessionEnd(at: timestamp)
+                if isAutomatic || manualSessionAutoClose {
+                    triggerSessionEnd(at: timestamp)
+                }
             } else {
                 Exponea.logger.log(.verbose, message: "Continuing current session as we're within session timeout.")
                 return
@@ -106,6 +127,10 @@ final class SessionManager: SessionManagerType {
     }
 
     private func triggerSessionEnd(at timestamp: TimeInterval) {
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "Session_end not tracked, SDK is stopping")
+            return
+        }
         guard sessionStartTime != 0 else {
             Exponea.logger.log(.error, message: "Can't end session as no session was started.")
             return

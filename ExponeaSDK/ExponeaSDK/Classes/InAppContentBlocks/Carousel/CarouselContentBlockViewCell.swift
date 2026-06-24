@@ -11,7 +11,7 @@ import WebKit
 
 class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
     private lazy var inAppContentBlocksManager = InAppContentBlocksManager.manager
-    private let webview = WKWebView()
+    var webview = WKWebView()
     var assignedMessage: InAppContentBlockResponse?
     var placeholder: String = ""
     var actionClicked: EmptyBlock?
@@ -19,12 +19,18 @@ class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
     var touchCallback: EmptyBlock?
     var releaseCallback: EmptyBlock?
     var contentBlockCarouselCallback: DefaultContentBlockCarouselCallback?
+    // Cached so we can recover from `webViewWebContentProcessDidTerminate(_:)`
+    // when iOS jetsams the WebContent process while the app is backgrounded.
+    private var lastLoadedHtml: String?
 
     override func prepareForReuse() {
         super.prepareForReuse()
-        
+
+        webview.stopLoading()
+        webview.loadHTMLString("", baseURL: nil)
         contentBlockCarouselCallback = nil
         assignedMessage = nil
+        lastLoadedHtml = nil
     }
 
     override init(frame: CGRect) {
@@ -72,6 +78,7 @@ class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
         }
         self.assignedMessage = assignedMessage
         self.placeholder = placeholder
+        self.lastLoadedHtml = html
         webview.loadHTMLString(html, baseURL: nil)
     }
 
@@ -82,6 +89,15 @@ class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
     ) {
         let handled = handleUrlClick(navigationAction.request.url)
         decisionHandler(handled ? .cancel : .allow)
+    }
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        Exponea.logger.log(
+            .warning,
+            message: "Carousel cell WebContent process terminated; reissuing last load for placeholder \(placeholder)"
+        )
+        guard let html = lastLoadedHtml, !html.isEmpty else { return }
+        webView.loadHTMLString(html, baseURL: nil)
     }
 
     private func handleUrlClick(_ actionUrl: URL?) -> Bool {
@@ -97,7 +113,7 @@ class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
         guard let message = assignedMessage else {
             return true
         }
-        let webAction: WebActionManager = .init { [weak self] in
+        let webAction: WebActionManager = .init { [weak self] _ in
             guard let self else { return }
             InAppContentBlocksManager.manager.updateInteractedState(for: message.id)
             self.contentBlockCarouselCallback?.onCloseClicked(placeholderId: self.placeholder, contentBlock: message)
@@ -143,14 +159,8 @@ class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
             return .browser
         case .deeplink:
             return .deeplink
-        case .unknown:
-            if action.actionUrl == "https://exponea.com/close_action" {
-                return .close
-            }
-            if action.actionUrl.starts(with: "http://") || action.actionUrl.starts(with: "https://") {
-                return .browser
-            }
-            return .deeplink
+        case .close:
+            return .close
         }
     }
 }

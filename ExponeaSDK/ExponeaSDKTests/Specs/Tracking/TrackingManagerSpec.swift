@@ -24,6 +24,8 @@ class TrackingManagerSpec: QuickSpec {
             var configuration: ExponeaSDK.Configuration!
 
             beforeEach {
+                Exponea.shared = ExponeaInternal()
+                IntegrationManager.shared.isStopped = false
                 configuration = try! Configuration(
                     projectToken: UUID().uuidString,
                     authorization: .token("mock-token"),
@@ -49,6 +51,8 @@ class TrackingManagerSpec: QuickSpec {
                     inAppMessageManager: nil,
                     trackManagerInitializator: { _ in },
                     userDefaults: userDefaults,
+                    campaignRepository: CampaignRepository(userDefaults: userDefaults),
+                    requirePushAuthorization: repository.configuration.requirePushAuthorization,
                     onEventCallback: { type, event in
                         
                     }
@@ -63,6 +67,10 @@ class TrackingManagerSpec: QuickSpec {
                 let data: [DataType] = [.properties(MockData().properties)]
                 expect { try trackingManager.track(EventType.customEvent, with: data) }.notTo(raiseException())
                 expect { try database.fetchTrackEvent().count }.to(equal(1))
+                Exponea.shared.stopIntegration()
+                expect { try trackingManager.track(EventType.customEvent, with: data) }.notTo(raiseException())
+                expect { try database.fetchTrackEvent().count }.to(equal(0))
+                IntegrationManager.shared.isStopped = false
             }
 
             it("should add default properties to event with properties") {
@@ -72,7 +80,12 @@ class TrackingManagerSpec: QuickSpec {
                 ]
                 expect { try trackingManager.track(EventType.customEvent, with: data) }.notTo(raiseException())
                 expect { try database.fetchTrackEvent()[0].dataTypes }.to(equal([
-                    .properties(["prop": .string("value"), "default_prop": .string("default_value")]),
+                    .properties([
+                        "prop": .string("value"),
+                        "default_prop": .string("default_value"),
+                        "application_id": .string("default-application"),
+                        "device_id": .string(TelemetryUtility.getInstallId(userDefaults: userDefaults))
+                    ]),
                     .timestamp(123456)
                 ]))
             }
@@ -81,9 +94,40 @@ class TrackingManagerSpec: QuickSpec {
                 let data: [DataType] = [.timestamp(123456)]
                 expect { try trackingManager.track(EventType.customEvent, with: data) }.notTo(raiseException())
                 expect { try database.fetchTrackEvent()[0].dataTypes }.to(equal([
-                    .properties(["default_prop": .string("default_value")]),
+                    .properties([
+                        "default_prop": .string("default_value"),
+                        "application_id": .string("default-application"),
+                        "device_id": .string(TelemetryUtility.getInstallId(userDefaults: userDefaults))
+                    ]),
                     .timestamp(123456)
                 ]))
+            }
+
+            // Regression guard: device-property snapshot must be attached to notification_state
+            // events. The wire payload should carry sdk_version / os_version / app_version / etc.
+            // so backend & analytics can correlate token reachability issues with the originating
+            // device. The check uses key-by-key assertions (not full equality) so the test stays
+            // resilient to future SDK / OS version bumps.
+            it("should attach device properties to notification_state events") {
+                expect {
+                    try trackingManager.trackNotificationState(
+                        pushToken: "device-token",
+                        isValid: true,
+                        description: "Permission granted"
+                    )
+                }.notTo(raiseException())
+                let stored = try! database.fetchTrackEvent()
+                expect(stored).notTo(beEmpty())
+                let properties = stored[0].dataTypes.properties
+                expect(properties["sdk_version"] as? String).to(equal(Exponea.version))
+                expect(properties["os_name"] as? String).to(equal(Constants.DeviceInfo.osName))
+                expect((properties["os_version"] as? String) ?? "").notTo(beEmpty())
+                expect((properties["app_version"] as? String) ?? "").notTo(beEmpty())
+                expect((properties["device_model"] as? String) ?? "").notTo(beEmpty())
+                expect((properties["device_type"] as? String) ?? "").notTo(beEmpty())
+                expect(properties["platform"] as? String).to(equal("ios"))
+                expect(properties["description"] as? String).to(equal("Permission granted"))
+                expect(properties["application_id"] as? String).to(equal("default-application"))
             }
 
             context("updateLastEvent") {
@@ -138,6 +182,26 @@ class TrackingManagerSpec: QuickSpec {
                             }
                         }
                     }
+                    Exponea.shared.stopIntegration()
+                    expect {
+                        try trackingManager.track(EventType.sessionEnd,
+                                                  with: [DataType.properties(["order": .string("1")])])
+                    }.notTo(raiseException())
+                    expect {
+                        try trackingManager.track(EventType.sessionEnd,
+                                                  with: [DataType.properties(["order": .string("2")])])
+                    }.notTo(raiseException())
+                    expect {
+                        try trackingManager.track(EventType.sessionEnd,
+                                                  with: [DataType.properties(["order": .string("3")])])
+                    }.notTo(raiseException())
+                    expect {
+                        try trackingManager.updateLastPendingEvent(ofType: Constants.EventTypes.sessionEnd,
+                                                            with: updateData)
+                    }.notTo(raiseException())
+                    let trackEventsAfter = try! trackingManager.database.fetchTrackEvent()
+                    expect { trackEventsAfter.count }.to(equal(0))
+                    IntegrationManager.shared.isStopped = false
                 }
 
                 it("should update multiple events if there are multiple project tokens") {
@@ -172,6 +236,26 @@ class TrackingManagerSpec: QuickSpec {
                             }
                         }
                     }
+                    Exponea.shared.stopIntegration()
+                    expect {
+                        try trackingManager.track(EventType.sessionStart,
+                                                  with: [DataType.properties(["order": .string("1")])])
+                    }.notTo(raiseException())
+                    expect {
+                        try trackingManager.track(EventType.sessionStart,
+                                                  with: [DataType.properties(["order": .string("2")])])
+                    }.notTo(raiseException())
+                    expect {
+                        try trackingManager.track(EventType.sessionStart,
+                                                  with: [DataType.properties(["order": .string("3")])])
+                    }.notTo(raiseException())
+                    expect {
+                        try trackingManager.updateLastPendingEvent(ofType: Constants.EventTypes.sessionStart,
+                                                            with: updateData)
+                    }.notTo(raiseException())
+                    let trackEventsAfter = try! trackingManager.database.fetchTrackEvent()
+                    expect { trackEventsAfter.count }.to(equal(0))
+                    IntegrationManager.shared.isStopped = false
                 }
             }
             context("InAppMessageTrackingDelegate") {
@@ -195,6 +279,16 @@ class TrackingManagerSpec: QuickSpec {
                     expect(event.dataTypes.properties["interaction"] as? Bool).to(equal(true))
                     expect(event.dataTypes.properties["variant_id"] as? Int).to(equal(0))
                     expect(event.dataTypes.properties["variant_name"] as? String).to(equal("Variant A"))
+                    Exponea.shared.stopIntegration()
+                    trackingManager.track(
+                        .click(buttonLabel: "mock-text", url: "mock-url"),
+                        for: SampleInAppMessage.getSampleInAppMessage(),
+                        trackingAllowed: true,
+                        isUserInteraction: true
+                    )
+                    let trackEventsAfter = try! trackingManager.database.fetchTrackEvent()
+                    expect(trackEventsAfter.count).to(equal(0))
+                    IntegrationManager.shared.isStopped = false
                 }
                 
                 it("should track in-app message type as modal") {
@@ -209,6 +303,16 @@ class TrackingManagerSpec: QuickSpec {
                     let event = trackEvents[0]
                     expect(event.eventType).to(equal(Constants.EventTypes.banner))
                     expect(event.dataTypes.properties["banner_type"] as? String).to(equal("modal"))
+                    Exponea.shared.stopIntegration()
+                    trackingManager.track(
+                        .click(buttonLabel: "mock-text", url: "mock-url"),
+                        for: SampleInAppMessage.getSampleInAppMessage(messageType: "modal"),
+                        trackingAllowed: true,
+                        isUserInteraction: true
+                    )
+                    let trackEvents2 = try! trackingManager.database.fetchTrackEvent()
+                    expect(trackEvents2.count).to(equal(0))
+                    IntegrationManager.shared.isStopped = false
                 }
                 
                 it("should track in-app message type as alert") {
@@ -283,7 +387,7 @@ class TrackingManagerSpec: QuickSpec {
 
                 it("should track close in-app message event") {
                     trackingManager.track(
-                        .close,
+                        .close(buttonLabel: nil),
                         for: SampleInAppMessage.getSampleInAppMessage(),
                         trackingAllowed: true
                     )

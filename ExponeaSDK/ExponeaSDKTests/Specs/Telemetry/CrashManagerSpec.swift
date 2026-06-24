@@ -10,6 +10,7 @@ import Nimble
 import ExponeaSDKObjC
 
 @testable import ExponeaSDK
+@testable import ExponeaSDKShared
 
 final class CrashManagerSpec: QuickSpec {
     class MockExceptionHandler {
@@ -36,7 +37,8 @@ final class CrashManagerSpec: QuickSpec {
             fatal: true,
             date: date ?? Date(),
             launchDate: Date(),
-            runId: "mock_run_id"
+            runId: "mock_run_id",
+            thread: TelemetryUtility.getCurrentThreadInfo()
         )
     }
 
@@ -46,7 +48,11 @@ final class CrashManagerSpec: QuickSpec {
 
         beforeEach {
             storage = MockTelemetryStorage()
-            upload = MockTelemetryUpload()
+            let userDefaults = TelemetryUtility.getUserDefaults(appGroup: nil)
+            upload = MockTelemetryUpload(
+                installIdProvider: { TelemetryUtility.getInstallId(userDefaults: userDefaults) },
+                configGetter: { Exponea.shared.configuration }
+            )
             MockExceptionHandler.called = false
             NSSetUncaughtExceptionHandler(nil)
         }
@@ -77,7 +83,7 @@ final class CrashManagerSpec: QuickSpec {
         it("should upload caught exception") {
             let crashManager = CrashManager(storage: storage, upload: upload, launchDate: Date(), runId: "mock_run_id")
             upload.result = true
-            crashManager.caughtErrorHandler(ExponeaError.unknownError("error"), stackTrace: [])
+            crashManager.caughtErrorHandler(ExponeaError.unknownError("error"), stackTrace: [], thread: TelemetryUtility.getCurrentThreadInfo())
             expect(storage.getAllCrashLogs().count).to(equal(0))
             expect(upload.uploadedCrashLogs.count).to(equal(1))
         }
@@ -85,7 +91,7 @@ final class CrashManagerSpec: QuickSpec {
         it("should save caught exception if upload fails") {
             let crashManager = CrashManager(storage: storage, upload: upload, launchDate: Date(), runId: "mock_run_id")
             upload.result = false
-            crashManager.caughtErrorHandler(ExponeaError.unknownError("error"), stackTrace: [])
+            crashManager.caughtErrorHandler(ExponeaError.unknownError("error"), stackTrace: [], thread: TelemetryUtility.getCurrentThreadInfo())
             expect(storage.getAllCrashLogs().count).to(equal(1))
             expect(upload.uploadedCrashLogs.count).to(equal(1))
         }
@@ -141,12 +147,26 @@ final class CrashManagerSpec: QuickSpec {
             expect(crashManager.getLogs()).to(equal(["log1", "log2", "log3"]))
         }
 
+        it("should truncate logs exceeding maxLogMessages") {
+            let crashManager = CrashManager(
+                storage: storage, upload: upload,
+                launchDate: Date(), runId: "mock_run_id"
+            )
+            for i in 0..<(CrashManager.maxLogMessages + 20) {
+                crashManager.reportLog("log_\(i)")
+            }
+            let logs = crashManager.getLogs()
+            expect(logs.count).to(equal(CrashManager.maxLogMessages))
+            expect(logs.first).to(equal("log_20"))
+            expect(logs.last).to(equal("log_\(CrashManager.maxLogMessages + 19)"))
+        }
+
         it("should append logs to crashlogs") {
             let crashManager = CrashManager(storage: storage, upload: upload, launchDate: Date(), runId: "mock_run_id")
             crashManager.reportLog("log1")
             crashManager.reportLog("log2")
             crashManager.reportLog("log3")
-            crashManager.caughtErrorHandler(ExponeaError.notConfigured, stackTrace: ["stack trace element"])
+            crashManager.caughtErrorHandler(ExponeaError.notConfigured, stackTrace: ["stack trace element"], thread: TelemetryUtility.getCurrentThreadInfo())
             expect(upload.uploadedCrashLogs.count).to(equal(1))
             expect(upload.uploadedCrashLogs[0].logs).to(equal(["log1", "log2", "log3"]))
         }

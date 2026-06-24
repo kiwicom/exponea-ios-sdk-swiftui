@@ -23,40 +23,38 @@ final class UrlOpener: UrlOpenerType {
             Exponea.logger.log(.warning, message: "Provided url \"\(urlString)\" is invalid")
             return
         }
-        if !openUniversalLink(url, application: UIApplication.shared) {
-            openURLSchemeDeeplink(url, application: UIApplication.shared)
+        self.openUniversalLink(url, application: UIApplication.shared) { result in
+            if !result {
+                self.openURLSchemeDeeplink(url, application: UIApplication.shared)
+            }
         }
     }
 
-    private func openUniversalLink(_ url: URL, application: UIApplication) -> Bool {
+    private func openUniversalLink(_ url: URL, application: UIApplication, callBackHandler: @escaping (Bool) -> Void) {
         // Validate this is a valid URL, prevents NSUserActivity crash with invalid URL
         // only http/https is allowed
         // https://developer.apple.com/documentation/foundation/nsuseractivity/1418086-webpageurl
         // eg. MYDEEPLINK::HOME:SCREEN:1, exponea://deeplink
         guard url.absoluteString.isValidURL, url.scheme == "http" || url.scheme == "https" else {
-            return false
+            callBackHandler(false)
+            return
         }
         // Simulate universal link user activity
         let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
         userActivity.webpageURL = url
 
-        let openedByAppDelegate = application.delegate?.application?(
-            application,
-            continue: userActivity,
-            restorationHandler: { _ in }
-        ) ?? false
-
-        if openedByAppDelegate {
-            return true
-        }
-
-        if let windowScene = application.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
-           windowScene.delegate?.scene?(windowScene, continue: userActivity) != nil {
-            return true
-        }
-
         // Try and open the link as universal link
-        return false
+        if application.delegate?.application?(application, continue: userActivity, restorationHandler: { _ in }) ?? false {
+            callBackHandler(true)
+        } else {
+            // SwiftUI app root support - see https://github.com/exponea/exponea-ios-sdk/issues/78
+            if let windowScene = application.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+                windowScene.delegate?.scene?(windowScene, continue: userActivity) != nil {
+                callBackHandler(true)
+            } else {
+                callBackHandler(false)
+            }
+        }
     }
 
     private func openURLSchemeDeeplink(_ url: URL, application: UIApplication) {

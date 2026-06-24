@@ -129,6 +129,10 @@ class InAppContentBlocksViewController: UIViewController, UITableViewDelegate, U
 
         view.addSubview(placeholder)
 
+        placeholder.calculator.publicHeightUpdate = { calculator in
+            print("placeholder height \(calculator.height)")
+        }
+
         placeholder.contentReadyCompletion = { [weak self] contentLoaded in
             guard let self else {
                 Exponea.logger.log(.error, message: "In-app content block has been loaded but deattached from view controller")
@@ -172,10 +176,15 @@ class InAppContentBlocksViewController: UIViewController, UITableViewDelegate, U
 
         SegmentationManager.shared.addCallback(
             callbackData: .init(
-                category: .merchandise(),
-                isIncludeFirstLoad: false,
+                category: .merchandising(),
+                isIncludeFirstLoad: true,
                 onNewData: { segments in
+                    
         }))
+
+        Exponea.shared.getSegments(force: true, category: .discovery()) { data in
+            
+        }
     }
 
     @objc func refresh() {

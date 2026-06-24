@@ -14,15 +14,10 @@ import Nimble
 
 class AppInboxProviderSpec: QuickSpec {
 
-    let configuration = try! Configuration(
-        projectToken: "token",
-        authorization: Authorization.none,
-        baseUrl: "baseUrl"
-    )
-
     override func spec() {
         var appInboxProvider: AppInboxProvider!
         beforeEach {
+            IntegrationManager.shared.isStopped = false
             appInboxProvider = DefaultAppInboxProvider()
         }
         it("should show empty view for missing message") {

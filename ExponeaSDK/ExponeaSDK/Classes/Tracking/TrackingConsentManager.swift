@@ -7,6 +7,9 @@
 //
 
 import Foundation
+#if canImport(ExponeaSDKShared)
+import ExponeaSDKShared
+#endif
 
 class TrackingConsentManager: TrackingConsentManagerType {
     private let trackingManager: TrackingManagerType
@@ -26,6 +29,20 @@ class TrackingConsentManager: TrackingConsentManagerType {
         // Create payload
         var properties: [String: JSONValue] = data.properties
         properties["status"] = .string("delivered")
+        // `state` now reflects the user's current permission state at the time
+        // the main-app picks up the persisted delivery (typically NSE-fallback
+        // path in applicationDidBecomeActive). We read a cached authorization
+        // snapshot rather than blocking on `getNotificationSettings` here
+        // because the surrounding code path is synchronous and several
+        // production callers (and the legacy test suite) assume immediate
+        // tracking. When no snapshot has been refreshed yet the resolver
+        // returns `"shown"` to preserve the legacy event shape.
+        properties["state"] = .string(
+            DeliveredNotificationStateResolver.resolve(
+                authorization: DeliveryAuthorizationProvider.lastSnapshot,
+                silent: false
+            )
+        )
         if data.consentCategoryTracking != nil {
             properties["consent_category_tracking"] = .string(data.consentCategoryTracking!)
         }
@@ -108,13 +125,18 @@ class TrackingConsentManager: TrackingConsentManagerType {
         self.trackingManager.trackInAppMessageClick(message: message, buttonText: buttonText, buttonLink: buttonLink, trackingAllowed: trackingAllowed, isUserInteraction: isUserInteraction)
     }
 
-    func trackInAppMessageClose(message: InAppMessage, mode: MODE, isUserInteraction: Bool) {
+    func trackInAppMessageClose(message: InAppMessage, buttonText: String?, mode: MODE, isUserInteraction: Bool) {
         var trackingAllowed = true
         if mode == .CONSIDER_CONSENT && !message.hasTrackingConsent {
             Exponea.logger.log(.error, message: "Event for closed inAppMessage is not tracked because consent is not given")
             trackingAllowed = false
         }
-        self.trackingManager.trackInAppMessageClose(message: message, trackingAllowed: trackingAllowed, isUserInteraction: isUserInteraction)
+        self.trackingManager.trackInAppMessageClose(
+            message: message,
+            closeButtonText: buttonText,
+            trackingAllowed: trackingAllowed,
+            isUserInteraction: isUserInteraction
+        )
     }
 
     func trackInAppContentBlockClose(placeholderId: String, message: InAppContentBlockResponse, mode: MODE) {
@@ -217,6 +239,14 @@ class TrackingConsentManager: TrackingConsentManagerType {
         } catch {
             Exponea.logger.log(.error, message: "Error tracking AppInbox opened: \(error.localizedDescription)")
         }
+        Exponea.shared.telemetryManager?.report(
+            eventWithType: .appInboxMessageShown,
+            properties: [
+                "type": message.type,
+                "messageId": message.id,
+                "campaignId": TelemetryUtility.readAsString(message.content?.trackingData?["campaign_id"]?.rawValue)
+            ]
+        )
     }
 
     func trackInAppContentBlockClick(

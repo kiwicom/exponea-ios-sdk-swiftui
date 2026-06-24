@@ -1,9 +1,12 @@
 ---
-title: Tracking
-excerpt: Track customers and events using the iOS SDK
+title: Tracking for iOS SDK
 slug: ios-sdk-tracking
-categorySlug: integrations
-parentDocSlug: ios-sdk
+category:
+  uri: /branches/2/categories/guides/Developers
+parent:
+  uri: ios-sdk
+content:
+  excerpt: Track customers and events using the iOS SDK
 ---
 
 You can track events in Engagement to learn more about your app’s usage patterns and to segment your customers by their interactions.
@@ -13,18 +16,35 @@ By default, the SDK tracks certain events automatically, including:
 * Installation (after app installation and after invoking [anonymize](#anonymize))
 * User session start and end
 * Banner event for showing an in-app message or content block
+* `notification_state` event for push notification token tracking (SDK versions 3.8.0 and higher). [Learn more](https://documentation.bloomreach.com/engagement/docs/ios-sdk-push-notifications#token-tracking-via-notification_state-event).
 
 Additionally, you can track any custom event relevant to your business.
 
+> 📘
+>
+> Also see [Mobile SDK tracking FAQ](https://support.bloomreach.com/hc/en-us/articles/18153058904733-Mobile-SDK-tracking-FAQ) at Bloomreach Support Help Center.
+
+> ❗️ Protect the privacy of your customers
+
+ > Make sure you have obtained and stored tracking consent from your customer before initializing Exponea iOS SDK.
+ > 
+ > To ensure you're not tracking events without the customer's consent, you can use `Exponea.shared.clearLocalCustomerData(appGroup: String)` when a customer opts out from tracking (this applies to new users or returning customers who have previously opted out). This will bring the SDK to a state as if it was never initialized. This option also prevents reusing existing cookies for returning customers.
+ > 
+ > Refer to [Clear local customer data](#clear-local-customer-data) for details.
+ > 
+ > If customer denied tracking consent after Exponea iOS SDK is initialized, you can use `Exponea.shared.stopIntegration()` to stop SDK integration and remove all locally stored data.
+ >
+ > Refer to [Stop SDK integration](#stop-sdk-integration) for details.
+
 ## Events
 
-### Track Event
+### Track event
 
 Use the `trackEvent()` method to track any custom event type relevant to your business.
 
 You can use any name for a custom event type. We recommended using a descriptive and human-readable name.
 
-Refer to the [Custom Events](https://documentation.bloomreach.com/engagement/docs/custom-events) documentation for an overview of commonly used custom events.
+Refer to the [Custom events](https://documentation.bloomreach.com/engagement/docs/custom-events) documentation for an overview of commonly used custom events.
 
 #### Arguments
 
@@ -73,7 +93,7 @@ Exponea.shared.trackEvent(properties: properties,
 
 > 👍
 >
-> Optionally, you can provide a custom `timestamp` if the event happened at a different time. By default the current time will be used.
+> Optionally, you can provide a custom `timestamp` if the event happened at a different time. By default, the current time will be used.
 
 ## Customers
 
@@ -93,13 +113,24 @@ The default hard ID is `registered` and its value is typically the customer's em
 
 Optionally, you can track additional customer properties such as first and last names, age, etc.
 
+> ❗️
+>
+> Although it's possible to use `identifyCustomer` with a [soft ID](https://documentation.bloomreach.com/engagement/docs/customer-identification#section-soft-id), developers should use caution when doing this. In some cases (for example, after using `anonymize`), this can unintentionally associate the current user with an incorrect customer profile.
+
+> ❗️
+>
+> The SDK stores data, including customer hard ID, in a local cache on the device. Removing the hard ID from the local cache requires calling [anonymize](#anonymize) in the app.
+> If the customer profile is anonymized or deleted in the Bloomreach Engagement webapp, subsequent initialization of the SDK in the app can cause the customer profile to be reidentified or recreated from the locally cached data.
+
+> Always use a [hard ID](https://documentation.bloomreach.com/engagement/docs/customer-identification#hard-id) to identify a customer. Using a soft ID with `identifyCustomer` could unintentionally cause the customer to be associated with an incorrect profile.
+
 #### Arguments
 
 | Name                        | Type                      | Description |
 | --------------------------- | ------------------------- | ----------- |
 | customerIds **(required)**  | [String: String]          | Dictionary of customer unique identifiers. Only identifiers defined in the Engagement project are accepted. |
 | properties                  | [String: JSONConvertible] | Dictionary of customer properties. |
-| timestamp                   | Double                    | Unix timestamp specifying when the customer properties were updated. Specify `nil` value to use the current time. |
+| timestamp                   | Double                    | Unix timestamp specifying when the customer properties were updated. Specify the `nil` value to use the current time. |
 
 #### Examples
 
@@ -141,21 +172,77 @@ Exponea.identifyCustomer(customerIds: customerIds,
 >
 > Optionally, you can provide a custom `timestamp` if the identification happened at a different time. By default the current time will be used.
 
+### Identify with auth context (Stream/Data hub)
+
+When using Stream JWT integration, you can provide customer IDs and the JWT token together using `identifyCustomer(context:properties:timestamp:)`. This is the preferred method for Stream mode as it atomically associates the customer identity with the JWT.
+
+#### Arguments
+
+| Name | Type | Description |
+| --- | --- | --- |
+| context **(required)** | CustomerIdentity | Contains `customerIds` (dictionary of customer IDs) and optional `jwtToken` (Stream JWT). |
+| properties | [String: JSONConvertible] | Dictionary of customer properties. |
+| timestamp | Double | Unix timestamp specifying when the identification happened. Specify `nil` to use the current time. |
+
+#### Example
+
+```swift
+let context = CustomerIdentity(
+    customerIds: ["registered": "user@example.com"],
+    jwtToken: "YOUR_STREAM_JWT_TOKEN"
+)
+Exponea.shared.identifyCustomer(context: context, properties: [:], timestamp: nil)
+```
+
+The JWT is stored in the Keychain and used for subsequent Stream requests. You can omit `jwtToken` if the token was already set via `setSdkAuthToken`.
+
 ### Anonymize
 
 Use the `anonymize()` method to delete all information stored locally and reset the current SDK state. A typical use case for this is when the user signs out of the app.
 
 Invoking this method will cause the SDK to:
 
-* Remove the push notification token for the current customer from local device storage and the customer profile in Engagement.
-* Clear local repositories and caches, excluding tracked events.
-* Track a new session start if `automaticSessionTracking` is enabled.
-* Create a new customer record in Engagement (a new `cookie` soft ID is generated).
-* Assign the previous push notification token to the new customer record.
-* Preload in-app messages, in-app content blocks, and app inbox for the new customer.
-* Track a new `installation` event for the new customer.
+1. Track a `session_end` event if `automaticSessionTracking` is enabled.
+2. Invalidate the push notification token by tracking `notification_state` with `valid: false`.
+3. Flush all pending events to the server (in Stream mode, this uses the current JWT while it is still available).
+4. Remove the push notification token for the current customer from local device storage and the customer profile in Engagement.
+5. Clear local repositories and caches, excluding tracked events.
+6. Clear the JWT from the Keychain (Stream mode).
+7. If [`regenerateDeviceIdOnAnonymize`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) is set to `true`, regenerate the SDK's persisted telemetry `device_id` so subsequent events for the new customer carry a freshly-generated identifier (see the callout below for the full data flow). This step runs before the new customer record is created so the new `device_id` is in place for steps 8–12.
+8. Create a new customer record in Engagement (a new `cookie` soft ID is generated).
+9. Assign the previous push notification token to the new customer record.
+10. Preload in-app messages, in-app content blocks, and app inbox for the new customer.
+11. Track a new `installation` event for the new customer.
+12. Track a new session start if `automaticSessionTracking` is enabled.
 
-You can also use the `anonymize` method to switch to a different Engagement project. The SDK will then track events to a new customer record in the new project, similar to the first app session after installation on a new device.
+You can also use the `anonymize` method to switch to a different integration. The SDK will then track events to a new customer record, similar to the first app session after installation on a new device.
+
+> ⚠️ **Stream/JWT integrators**
+>
+> `anonymize()` creates a new anonymous customer profile. If your integration requires that every event is associated with an authenticated customer and valid JWT, use [`stopIntegration(completion:)`](#stop-sdk-integration) on logout instead. `stopIntegration` does not generate anonymous events.
+
+> 📘 **Telemetry `device_id` behavior on `anonymize()`**
+>
+> The SDK's locally-stored telemetry `device_id` is the same UUID that appears as the `device_id` property on tracked events (`notification_state`, `installation`, `session_*`, etc.) — it's the bridge between local SDK telemetry and backend analytics.
+>
+> By default, `anonymize()` preserves this `device_id` across the call, so platform diagnostics keyed on `device_id` (for example, crash-rate dashboards) remain continuous through a sign-out + sign-in flow. The new customer profile carries the same `device_id` as the previous one.
+>
+> If your privacy requirements mean that the new profile can't be linked back to the previous customer through the device identifier, set [`regenerateDeviceIdOnAnonymize`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) to `true` in your `Configuration`. The next event tracked after `anonymize()` carries a freshly-generated `device_id`. The pre-anonymize `notification_state(valid=false, description="Invalidated")` event (step 2 above) still carries the OLD `device_id` so the invalidation lands on the previous customer profile; all post-anonymize events carry the NEW `device_id`.
+>
+> The full-teardown alternative [`stopIntegration()`](#stop-sdk-integration) rotates the `device_id` unconditionally regardless of this flag.
+
+#### Overloads
+
+| Method | Description |
+| --- | --- |
+| `anonymize()` | Anonymize with current integration settings. |
+| `anonymize(completion:)` | Same as above, but calls `completion` on the main thread after flush + teardown are complete. Recommended for Stream mode so the host app knows when it is safe to proceed. |
+| `anonymize(exponeaIntegrationType:exponeaProjectMapping:)` | Anonymize and switch to a different integration (accepts both `ExponeaProject` and `ExponeaIntegration`). |
+| `anonymize(exponeaIntegrationType:exponeaProjectMapping:completion:)` | Anonymize and switch to a different integration (Project **or** Stream), then call `completion` on the main thread once flush + teardown are complete. The completion is particularly valuable in Stream mode (where the pre-anonymize flush is asynchronous when a JWT or error handler is set) and for wrapper SDKs that need to resolve their async bridge contract. Project-mode callers can use it too; the callback will simply fire almost immediately. |
+
+> ⚠️
+>
+> `anonymize(exponeaProject:projectMapping:)` is **deprecated**. Use `anonymize(exponeaIntegrationType:exponeaProjectMapping:)` instead, which accepts any `ExponeaIntegrationType` (both Project and Stream).
 
 #### Examples
 
@@ -163,16 +250,51 @@ You can also use the `anonymize` method to switch to a different Engagement proj
 Exponea.shared.anonymize()
 ```
 
-Switch to a different project:
+Anonymize with completion (recommended for Stream mode):
+
+```swift
+Exponea.shared.anonymize { 
+    // Flush and teardown are complete, safe to re-configure or navigate
+}
+```
+
+Switch to a different Project:
 
 ```swift
 Exponea.shared.anonymize(
-    exponeaProject: ExponeaProject(
+    exponeaIntegrationType: ExponeaProject(
         baseUrl: "https://api.exponea.com",
         projectToken: "YOUR PROJECT TOKEN",
-        authorization: .token("YOUR API KEY"),
+        authorization: .token("YOUR API KEY")
     ),
-    projectMapping: nil
+    exponeaProjectMapping: nil
+)
+```
+
+Switch to a Stream integration:
+
+```swift
+Exponea.shared.anonymize(
+    exponeaIntegrationType: ExponeaIntegration(
+        baseUrl: "https://api.exponea.com",
+        streamId: "YOUR_STREAM_ID"
+    ),
+    exponeaProjectMapping: nil
+)
+```
+
+Switch integration with completion (works for both Project and Stream mode; most useful in Stream mode and for wrapper SDKs that need to resolve a `Promise`/`Future` once the switch is done):
+
+```swift
+Exponea.shared.anonymize(
+    exponeaIntegrationType: ExponeaIntegration(
+        baseUrl: "https://api.exponea.com",
+        streamId: "YOUR_STREAM_ID"
+    ),
+    exponeaProjectMapping: nil,
+    completion: {
+        // Pre-anonymize flush and teardown are complete, safe to re-configure or navigate
+    }
 )
 ```
 
@@ -182,11 +304,11 @@ The SDK tracks sessions automatically by default, producing two events: `session
 
 The session represents the actual time spent in the app. It starts when the application is launched and ends when it goes into the background. If the user returns to the app before the session times out, the application will continue the current session.
 
-The default session timeout is 6.0 seconds. Set `sessionTimeout` in the [SDK configuration](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) to specify a different timeout.
+The default session timeout is 60 seconds. Set `sessionTimeout` in the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) to specify a different timeout.
 
-### Track Session Manually
+### Track session manually
 
-To disable automatic session tracking, set `automaticSessionTracking` to `false` in the [SDK configuration](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration).
+To disable automatic session tracking, set `automaticSessionTracking` to `false` in the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration).
 
 Use the `trackSessionStart()` and `trackSessionEnd()` methods to track sessions manually.
 
@@ -196,21 +318,32 @@ Use the `trackSessionStart()` and `trackSessionEnd()` methods to track sessions 
 Exponea.shared.trackSessionStart()
 ```
 
+> 👍
+>
+> The default behavior for manually calling `Exponea.shared.trackSessionStart()` multiple times can be controlled by the `manualSessionAutoClose` flag in the `Configuration`, which is set to `true` by default. If a previous session is still open (i.e., it hasn’t been manually closed with `Exponea.shared.trackSessionEnd()`) before `Exponea.shared.trackSessionStart()` is called again, the SDK will automatically track a `sessionEnd` for the previous session and then trigger a new `sessionStart` event. To prevent this behavior, set the `manualSessionAutoClose` flag in the `Configuration` to `false`.   
+
+
 ``` swift
 Exponea.shared.trackSessionEnd()
-```
+``` 
 
-## Push Notifications
+## Push notifications
 
 If developers [integrate push notification functionality](https://documentation.bloomreach.com/engagement/docs/ios-sdk-push-notifications#integration) in their app, the SDK automatically tracks the push notification token by default.
 
-### Track Token Manually
+In the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration), you can disable automatic push notification tracking by setting the Boolean value of the `pushNotificationTracking` property to `false`. It is then up to the developer to manually track push notifications.
+
+> ❗️
+>
+> The behavior of push notification tracking may be affected by the tracking consent feature, which in enabled mode requires explicit consent for tracking. Refer to the [Tracking consent for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-tracking-consent) documentation for details.
+
+### Track token manually
 
 Use the `trackPushToken()` method to manually track the token for receiving push notifications. The token is assigned to the currently logged-in customer (with the `identifyCustomer` method).
 
-Invoking this method will track a push token immediately regardless of the value of 'tokenTrackFrequency' (refer to the [Configuration](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) documentation for details).
+Invoking this method will track a push token immediately regardless of the value of `tokenTrackFrequency` (refer to the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) documentation for details).
 
-Each time the app becomes active, the SDK calls `verifyPushStatusAndTrackPushToken` and tracks the token.
+Each time the app becomes active, the SDK invokes `verifyPushStatusAndTrackPushToken`, which re-evaluates the configured [`tokenTrackFrequency`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) and tracks the token again only when the condition is met (or when an OS push authorization flip is detected, which always forces a fresh `notification_state` regardless of frequency).
 
 #### Arguments
 
@@ -228,11 +361,342 @@ Exponea.shared.trackPushToken("value-of-push-token")
 >
 > Remember to invoke [anonymize](#anonymize) whenever the user signs out to ensure the push notification token is removed from the user's customer profile. Failing to do this may cause multiple customer profiles share the same token, resulting in duplicate push notifications.
 
+### Track push notification delivery manually
+
+Use the `trackPushReceived()` method to manually track push notification delivery.
+
+You can pass either the notification data or the user info as argument.
+
+#### Arguments
+
+| Name                   | Type                                   | Description |
+| -----------------------| -------------------------------------- | ----------- |
+| content **(required)** | [UNNotificationContent](https://developer.apple.com/documentation/usernotifications/unnotificationcontent) | Notification data. |
+
+or:
+
+| Name                    | Type                 | Description |
+| ------------------------| ---------------------| ----------- |
+| userInfo **(required)** | \[AnyHashable: Any\] | User info object from the notification data. |
+
+
+#### Example
+
+Passing notification data as argument:
+
+```swift
+func trackPushNotifReceived() {
+    let notifContent = UNMutableNotificationContent()
+    notifContent.title = "Example title"
+    // ... and anything you need, but only `userInfo` is required for tracking
+    notifContent.userInfo = [
+        "url": "https://example.com/ios",
+        "title": "iOS Title",
+        "action": "app",
+        "message": "iOS Message",
+        "image": "https://example.com/image.jpg",
+        "actions": [
+            ["title": "Action 1", "action": "app", "url": "https://example.com/action1/ios"],
+            ["title": "Action 2", "action": "browser", "url": "https://example.com/action2/ios"]
+        ],
+        "sound": "default",
+        "aps": [
+            "alert": ["title": "iOS Alert Title", "body": "iOS Alert Body"],
+            "mutable-content": 1
+        ],
+        "attributes": [
+            "event_type": "campaign",
+            "campaign_id": "123456",
+            "campaign_name": "iOS Campaign",
+            "action_id": 1,
+            "action_type": "mobile notification",
+            "action_name": "iOS Action",
+            "campaign_policy": "policy",
+            "consent_category": "General consent",
+            "subject": "iOS Subject",
+            "language": "en",
+            "platform": "ios",
+            "sent_timestamp": 1631234567.89,
+            "recipient": "ios@example.com"
+        ],
+        "url_params": ["param1": "value1", "param2": "value2"],
+        "source": "xnpe_platform",
+        "silent": false,
+        "has_tracking_consent": true,
+        "consent_category_tracking": "iOS Consent"
+    ]
+    Exponea.shared.trackPushReceived(content: notifContent)
+}
+```
+
+Passing user info as argument:
+
+```swift
+func trackPushNotifReceived() {
+    let userInfo: [AnyHashable: Any] = [
+        "url": "https://example.com/ios",
+        "title": "iOS Title",
+        "action": "app",
+        "message": "iOS Message",
+        "image": "https://example.com/image.jpg",
+        "actions": [
+            ["title": "Action 1", "action": "app", "url": "https://example.com/action1/ios"],
+            ["title": "Action 2", "action": "browser", "url": "https://example.com/action2/ios"]
+        ],
+        "sound": "default",
+        "aps": [
+            "alert": ["title": "iOS Alert Title", "body": "iOS Alert Body"],
+            "mutable-content": 1
+        ],
+        "attributes": [
+            "event_type": "campaign",
+            "campaign_id": "123456",
+            "campaign_name": "iOS Campaign",
+            "action_id": 1,
+            "action_type": "mobile notification",
+            "action_name": "iOS Action",
+            "campaign_policy": "policy",
+            "consent_category": "General consent",
+            "subject": "iOS Subject",
+            "language": "en",
+            "platform": "ios",
+            "sent_timestamp": 1631234567.89,
+            "recipient": "ios@example.com"
+        ],
+        "url_params": ["param1": "value1", "param2": "value2"],
+        "source": "xnpe_platform",
+        "silent": false,
+        "has_tracking_consent": true,
+        "consent_category_tracking": "iOS Consent"
+    ]
+    Exponea.shared.trackPushReceived(userInfo: userInfo)
+}
+```
+
+### Track push notification click manually
+
+Use the `trackPushOpened()` method to manually track push notification clicks.
+
+#### Arguments
+
+| Name                     | Type                 | Description |
+| -------------------------| ---------------------| ----------- |
+| userInfo **(required)**  | \[AnyHashable: Any\] | User info object from the notification data. |
+
+#### Example
+
+```swift
+func trackPushNotifClick() {
+    let userInfo: [AnyHashable: Any] = [
+        "url": "https://example.com/ios",
+        "title": "iOS Title",
+        "action": "app",
+        "message": "iOS Message",
+        "image": "https://example.com/image.jpg",
+        "actions": [
+            ["title": "Action 1", "action": "app", "url": "https://example.com/action1/ios"],
+            ["title": "Action 2", "action": "browser", "url": "https://example.com/action2/ios"]
+        ],
+        "sound": "default",
+        "aps": [
+            "alert": ["title": "iOS Alert Title", "body": "iOS Alert Body"],
+            "mutable-content": 1
+        ],
+        "attributes": [
+            "event_type": "campaign",
+            "campaign_id": "123456",
+            "campaign_name": "iOS Campaign",
+            "action_id": 1,
+            "action_type": "mobile notification",
+            "action_name": "iOS Action",
+            "campaign_policy": "policy",
+            "consent_category": "General consent",
+            "subject": "iOS Subject",
+            "language": "en",
+            "platform": "ios",
+            "sent_timestamp": 1631234567.89,
+            "recipient": "ios@example.com"
+        ],
+        "url_params": ["param1": "value1", "param2": "value2"],
+        "source": "xnpe_platform",
+        "silent": false,
+        "has_tracking_consent": true,
+        "consent_category_tracking": "iOS Consent"
+    ]
+    Exponea.shared.trackPushOpened(with: userInfo)
+}
+```
+
+## Clear local customer data
+
+Your application should always ask customers for consent to track their app usage. If the customer consents to tracking events at the application level but not at the personal data level, using the `anonymize()` method is usually sufficient.
+
+If the customer doesn't consent to any tracking, it's recommended not to initialize the SDK at all.
+
+If the customer asks to delete personalized data, use the `clearLocalCustomerData(appGroup: String)` method to delete all information stored locally before SDK is initialized.
+
+The customer may also revoke all tracking consent after the SDK is fully initialized and tracking is enabled. In this case, you can stop SDK integration and remove all locally stored data using the [stopIntegration](#stop-sdk-integration) method.
+
+Invoking this method will cause the SDK to:
+
+* Remove the push notification token for the current customer from local device storage.
+* Clear local repositories and caches, including all previously tracked events that haven't been flushed yet.
+* Clear all session start and end information.
+* Remove the customer record stored locally.
+* Clear any previously loaded in-app messages, in-app content blocks, and app inbox messages.
+* Clear the SDK configuration from the last invoked initialization.
+* Clear the Stream JWT from the Keychain (if Stream integration was used).
+* Stop handling of received push notifications.
+* Stop tracking of deep links and universal links (your app's handling of them isn't affected).
+
+## Stop SDK integration
+
+❗️ App group must be same for configuration and NotificationServices ❗️
+ - otherwise received push could be tracked
+
+Your application should always ask the customer for consent to track their app usage. If the customer consents to tracking of events at the application level but not at the personal data level, using the `anonymize()` method is normally sufficient.
+
+If the customer doesn't consent to any tracking before the SDK is initialized, it's recommended that the SDK isn't initialized at all. For the case of deleting personalized data before SDK initialization, see more info in the usage of the [clearLocalCustomerData](#clear-local-customer-data) method.
+
+The customer may also revoke all tracking consent later, after the SDK is fully initialized and tracking is enabled. In this case, you can stop SDK integration and remove all locally stored data by using the `Exponea.shared.stopIntegration()` method.
+
+Use the `stopIntegration()` method to stop the SDK, flush any pending data, and delete all information stored locally.
+
+> 👍 **Preferred for Stream/JWT mode**
+>
+> Use `stopIntegration` instead of `anonymize()` when non-anonymous traffic is required (e.g. Stream JWT mode). Unlike `anonymize`, `stopIntegration` does not create a new anonymous customer profile.
+
+When the SDK is running, invoking this method will cause the SDK to:
+
+1. Track a `session_end` event if automatic session tracking is enabled. (If you use manual session tracking, call `trackSessionEnd()` before `stopIntegration`.)
+2. Invalidate the push notification token by tracking `notification_state` with `valid: false`.
+3. Flush all pending events to the server (using the current JWT in Stream mode).
+4. Clear the Stream JWT from the Keychain (Stream mode).
+5. Remove the push notification token for the current customer from local device storage.
+6. Clear local repositories and caches.
+7. Clear all session start and end information.
+8. Remove the customer record stored locally.
+9. Clear any in-app messages, in-app content blocks, and App Inbox messages previously loaded.
+10. Clear the SDK configuration from the last invoked initialization.
+11. Stop handling of received push notifications.
+12. Stop tracking of deep links and universal links (your app's handling of them is not affected).
+13. Stop and disable session tracking, event tracking, and flushing.
+14. Stop displaying in-app messages, in-app content blocks, and App Inbox messages. Already displayed messages are dismissed.
+
+After invoking `stopIntegration()`, the SDK will drop any API method invocation until you [initialize the SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize_the_sdk) again.
+
+#### `stopIntegration(completion:)`
+
+Use the completion variant to be notified when flush and teardown are complete. The completion block is called on the main thread. You may safely call `Exponea.shared.configure(...)` again inside the completion handler (e.g. for re-login flows).
+
+```swift
+Exponea.shared.stopIntegration {
+    // All data flushed, JWT cleared, SDK fully torn down.
+    // Safe to re-configure for a different user:
+    Exponea.shared.configure(
+        Exponea.StreamSettings(streamId: "NEW_STREAM_ID"),
+        pushNotificationTracking: .enabled(appGroup: "YOUR_APP_GROUP")
+    )
+    Exponea.shared.setSdkAuthToken("NEW_USER_JWT")
+}
+```
+
+Please validate dismiss behaviour if you [customized](https://documentation.bloomreach.com/engagement/docs/ios-sdk-app-inbox#customize-app-inbox) the App Inbox UI layout.
+
+
+### Use cases
+
+Correct usage of the `stopIntegration()` method depends on the use case, so consider all scenarios.
+
+#### Stop the SDK but upload tracked data
+
+`stopIntegration()` now automatically flushes all pending events before clearing local data. You no longer need to call `flushData()` manually before stopping the SDK.
+
+If you need to know when the flush completes, use the completion variant:
+
+```swift
+Exponea.shared.stopIntegration {
+    // All pending data has been flushed and the SDK is fully stopped.
+}
+```
+
+#### Stop the SDK and wipe all tracked data
+
+The SDK caches data (such as sessions, events, and customer properties) in an internal local database and periodically sends them to the Bloomreach Engagement app. If the device has no network or if you configured the SDK to upload them less frequently, these data are kept locally.
+
+You may face the use case where the customer gets removed from the Bloomreach Engagement platform, and subsequently, you want to remove them from local storage too.
+
+Please do not initialize the SDK in this case. Depending on your configuration, the SDK may upload the stored tracked events. This may lead to the customer's profile being recreated in Bloomreach Engagement. Stored events may have been tracked for this customer, and uploading them will result in the recreation of the customer profile based on the assigned customer IDs.
+
+To prevent this from happening, invoke `stopIntegration()` immediately without initializing the SDK:
+
+```swift
+Exponea.shared.stopIntegration()
+```
+
+This results in all previously stored data being removed from the device. The next SDK initialization will be considered a fresh new start.
+
+#### Stop the already running SDK
+
+The method `stopIntegration()` can be invoked anytime on a configured and running SDK.
+
+This can be used in case the customer previously consented to tracking but revoked their consent later. You may freely invoke `stopIntegration()` with immediate effect.
+
+```swift
+// User gave you permission to track
+Exponea.shared.configure(...)
+
+// Later, user decides to stop tracking
+Exponea.shared.stopIntegration()
+```
+
+This results in the SDK flushing all pending events, then stopping all internal processes (such as session tracking and push notifications handling) and removing all locally stored data.
+
+#### Customer denies tracking consent
+
+It is recommended to ask the customer for tracking consent as soon as possible in your application. If the customer denies consent, please do not initialize the SDK at all.
+
+❗️ AppInbox remove after `stopIntegration()` 
+Add a callback to your viewController with AppInboxButton
+
+```swift
+IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+    self?.appInboxButton.removeFromSuperview()
+    self?.view.layoutIfNeeded()
+}
+```
+
+❗️ Stop receiving push after `stopIntegration()` 
+You have to override the method in ExponeaAppDelegate
+```swift
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        super.userNotificationCenter(.....)
+        
+        // your code if needed
+    }
+}
+```
+
+If you can't override this method and call super, make sure you add `if` to your method
+
+```swift
+if IntegrationManager.shared.isStopped && Exponea.isExponeaNotification(userInfo: notification.request.content.userInfo) {
+    Exponea.logger.log(.error, message: "Will present wont finish, SDK is stopping")
+    UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [notification.request.identifier])
+    completionHandler([])
+}
+```
+
+
 ## Payments
 
 The SDK tracks in-app purchases automatically.
 
-### Track Payment
+### Track payment
 
 Use the `trackPayment()` method to track payments manually.
 
@@ -241,7 +705,7 @@ Use the `trackPayment()` method to track payments manually.
 | Name                      | Type                      | Description |
 | ------------------------- | ------------------------- | ----------- |
 | properties                | [String: JSONConvertible] | Dictionary of payment properties. |
-| timestamp                 | Double                    | Unix timestamp specifying when the event was tracked. Specify `nil` value to use the current time. |
+| timestamp                 | Double                    | Unix timestamp specifying when the event was tracked. Specify the `nil` value to use the current time. |
 
 #### Example
 
@@ -257,10 +721,10 @@ Exponea.shared.trackPayment(
 )
 ```
 
-## Default Properties
+## Default properties
 
 You can configure default properties to be tracked with every event. Note that the value of a default property will be overwritten if the tracking event has a property with the same key.
 
-Refer to `defaultProperties` in the [Configuration](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) documentation for details.
+Refer to `defaultProperties` in the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) documentation for details.
 
 After initializing the SDK, you can change the default properties using the `Exponea.shared.defaultProperties()` method.

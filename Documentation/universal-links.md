@@ -1,18 +1,21 @@
 ---
-title: Universal Links
-excerpt: Enable and track universal links in your app using the iOS SDK
+title: Universal links for iOS SDK
 slug: ios-sdk-universal-links
-categorySlug: integrations
-parentDocSlug: ios-sdk
+category:
+  uri: /branches/2/categories/guides/Developers
+parent:
+  uri: ios-sdk
+content:
+  excerpt: Enable and track universal links in your app using the iOS SDK
 ---
 
 Universal links allow the links you send through Engagement to open directly in your native mobile application without any redirects that would hinder your users' experience.
 
-For details on how universal links work and how they can improve your users' experience, refer to the [Universal Links](https://documentation.bloomreach.com/engagement/docs/universal-link) section in the Campaigns documentation.
+For details on how universal links work and how they can improve your users' experience, refer to the [Universal links](https://documentation.bloomreach.com/engagement/docs/universal-link) section in the Campaigns documentation.
 
 This page describes the steps required to support and track incoming universal links in your app using the iOS SDK.
 
-## Enable Universal Links
+## Enable universal links
 
 To support universal links in your app, you must create a two-way association between your app and your website and specify the URLs that your app handles.
 
@@ -51,7 +54,7 @@ Once the above items are in place, opening universal links should open your app.
 >
 > The easiest way to test the integration is to send yourself an email containing a universal link and open it in your email client in a web browser. Universal links work correctly when a user taps or clicks a link to a different domain. Copy-pasting the URL into Safari doesn't work, neither does following a link to the current domain, or opening the URL with Javascript.
 
-## Track Universal Links
+## Track universal links
 
 When the system opens your app after a user taps or clicks on a universal link, your app receives an `NSUserActivity` object with an `activityType` value of `NSUserActivityTypeBrowsingWeb`. You must update your app delegate to respond and track the link to the Engagement platform when it receives the `NSUserActivity` object.
 
@@ -77,8 +80,8 @@ Universal Link parameters are automatically tracked in `session_start` events wh
 
 > ❗️
 >
-> If an existing session is resumed by opening a universal link, the resumed session is **NOT** attributed to the universal link click, and the universal link click parameters are not tracked in the `session_start` event. Session behavior is determined by the `automaticSessionTracking` and `sessionTimeout` parameters described in [SDK Configuration](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration). Please consider this in case of manual session handling or while testing universal link tracking during the development.
+> If an existing session is resumed by opening a universal link, the resumed session is **NOT** attributed to the universal link click, and the universal link click parameters are not tracked in the `session_start` event. Session behavior is determined by the `automaticSessionTracking` and `sessionTimeout` parameters described in [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration). Please consider this in case of manual session handling or while testing universal link tracking during the development.
 
 > ❗️
 >
-> The SDK might not be initialized when `.trackCampaingClick()` is called. In this case, the event will be sent to the Engagement backend **after** the SDK is [initialized](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize-the-sdk) with `Exponea.shared.configure()`. 
+> The SDK might not be initialized when `.trackCampaignClick()` is called. In this case, the event will be sent to the Engagement backend **after** the SDK is [initialized](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize-the-sdk) with `Exponea.shared.configure()`. 

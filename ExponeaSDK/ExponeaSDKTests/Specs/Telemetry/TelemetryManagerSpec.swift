@@ -10,6 +10,7 @@ import Quick
 import Nimble
 
 @testable import ExponeaSDK
+@testable import ExponeaSDKShared
 
 final class TelemetryManagerSpec: QuickSpec {
     var storage: MockTelemetryStorage!
@@ -17,10 +18,16 @@ final class TelemetryManagerSpec: QuickSpec {
     var manager: TelemetryManager!
     override func spec() {
         beforeEach {
+            Exponea.shared = ExponeaInternal()
+            IntegrationManager.shared.isStopped = false
+            let userDefaults = TelemetryUtility.getUserDefaults(appGroup: nil)
             self.storage = MockTelemetryStorage()
-            self.upload = MockTelemetryUpload()
+            self.upload = MockTelemetryUpload(
+                installIdProvider: { TelemetryUtility.getInstallId(userDefaults: userDefaults) },
+                configGetter: { Exponea.shared.configuration }
+            )
             self.manager = TelemetryManager(
-                userDefaults: MockUserDefaults(),
+                appGroup: nil,
                 userId: nil,
                 storage: self.storage,
                 upload: self.upload
@@ -33,7 +40,8 @@ final class TelemetryManagerSpec: QuickSpec {
                     name: NSExceptionName(rawValue: "name of test exception"),
                     reason: "reason for test exception",
                     userInfo: nil
-                )
+                ),
+                thread: TelemetryUtility.getCurrentThreadInfo()
             )
             expect(self.upload.uploadedCrashLogs.count).to(equal(1))
             expect(self.upload.uploadedCrashLogs[0].isFatal).to(equal(false))
@@ -44,14 +52,18 @@ final class TelemetryManagerSpec: QuickSpec {
         it("should report sdk/swift error") {
             self.manager.report(
                 error: DatabaseManagerError.objectDoesNotExist,
-                stackTrace: ["something", "something else"]
+                stackTrace: [
+                    "0   MyAppName                     0x0000000100b3d184 MyClass.myMethod() + 44",
+                    "5   libdispatch.dylib             0x00000001b69af7f4 _dispatch_call_block_and_release + 24"
+                ],
+                thread: TelemetryUtility.getCurrentThreadInfo()
             )
             expect(self.upload.uploadedCrashLogs.count).to(equal(1))
             expect(self.upload.uploadedCrashLogs[0].isFatal).to(equal(false))
             expect(self.upload.uploadedCrashLogs[0].errorData.type).to(equal("DatabaseManagerError"))
             expect(self.upload.uploadedCrashLogs[0].errorData.message)
                 .to(equal("ExponeaSDK.DatabaseManagerError:5 Object does not exist."))
-            expect(self.upload.uploadedCrashLogs[0].errorData.stackTrace).to(equal(["something", "something else"]))
+            expect(self.upload.uploadedCrashLogs[0].errorData.stackTrace.count).to(equal(2))
         }
 
         it("should report NSError") {
@@ -61,46 +73,47 @@ final class TelemetryManagerSpec: QuickSpec {
                     code: 123,
                     userInfo: [NSLocalizedDescriptionKey: "localized error"]
                 ),
-                stackTrace: ["something", "something else"]
+                stackTrace: [
+                    "0   MyAppName                     0x0000000100b3d184 MyClass.myMethod() + 44",
+                    "5   libdispatch.dylib             0x00000001b69af7f4 _dispatch_call_block_and_release + 24"
+                ],
+                thread: TelemetryUtility.getCurrentThreadInfo()
             )
             expect(self.upload.uploadedCrashLogs.count).to(equal(1))
             expect(self.upload.uploadedCrashLogs[0].isFatal).to(equal(false))
             expect(self.upload.uploadedCrashLogs[0].errorData.type).to(equal("NSError"))
             expect(self.upload.uploadedCrashLogs[0].errorData.message)
                 .to(equal("custom domain:123 localized error"))
-            expect(self.upload.uploadedCrashLogs[0].errorData.stackTrace).to(equal(["something", "something else"]))
+            expect(self.upload.uploadedCrashLogs[0].errorData.stackTrace.count).to(equal(2))
         }
 
-        it("should report event") {
+        it("should complete event report without sending to Sentry") {
             self.manager.report(
-                eventWithType: .fetchRecommendation,
+                eventWithType: .recommendationsFetched,
                 properties: ["property": "value", "other_property": "other_value"]
             )
-            expect(self.upload.uploadedEvents.count).to(equal(1))
-            expect(self.upload.uploadedEvents[0].name).to(equal("fetchRecommendation"))
-            let appVersion = self.upload.uploadedEvents[0].properties["appVersion"] ?? ""
-            expect(appVersion).notTo(beNil())
-            expect(self.upload.uploadedEvents[0].properties["appName"]).to(equal("com.apple.dt.xctest.tool"))
-            expect(self.upload.uploadedEvents[0].properties["sdkVersion"]).to(equal(Exponea.version))
-            expect(self.upload.uploadedEvents[0].properties["appNameVersionSdkVersion"])
-                .to(equal("com.apple.dt.xctest.tool - \(appVersion) - SDK \(Exponea.version)"))
-            expect(self.upload.uploadedEvents[0].properties["appNameVersion"])
-                .to(equal("com.apple.dt.xctest.tool - \(appVersion)"))
-            expect(self.upload.uploadedEvents[0].properties["property"]).to(equal("value"))
-            expect(self.upload.uploadedEvents[0].properties["other_property"]).to(equal("other_value"))
-            expect(self.upload.uploadedEvents[0].properties.count).to(equal(7))
+            expect(self.upload.uploadedEnvelopes).to(beEmpty())
+        }
+        
+        it("should complete event report for stopped SDK without sending to Sentry") {
+            Exponea.shared.stopIntegration()
+            self.manager.report(
+                eventWithType: .recommendationsFetched,
+                properties: ["property": "value", "other_property": "other_value"]
+            )
+            expect(self.upload.uploadedEnvelopes).to(beEmpty())
+            IntegrationManager.shared.isStopped = false
         }
 
-        it("should report init event") {
+        it("should complete init event report without sending to Sentry") {
             self.manager.report(
                 initEventWithConfiguration: try! Configuration(
                     projectToken: "token",
-                    authorization: .none,
+                    authorization: Authorization.none,
                     baseUrl: Constants.Repository.baseUrl
                 )
             )
-            expect(self.upload.uploadedEvents.count).to(equal(1))
-            expect(self.upload.uploadedEvents[0].name).to(equal("init"))
+            expect(self.upload.uploadedEnvelopes).to(beEmpty())
         }
     }
 }

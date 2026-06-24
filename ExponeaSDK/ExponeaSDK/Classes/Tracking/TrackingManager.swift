@@ -17,7 +17,7 @@ import ExponeaSDKShared
 class TrackingManager {
     let database: DatabaseManagerType
     let repository: RepositoryType
-    let device: DeviceProperties
+    var device: DeviceProperties
     let onEventCallback: (EventType, [DataType]) -> Void
 
     /// The identifiers of the the current customer.
@@ -36,6 +36,8 @@ class TrackingManager {
 
     private var inAppMessageManager: InAppMessagesManagerType?
     private var flushingManager: FlushingManagerType
+    private var campaignRepository: CampaignRepositoryType
+    var requirePushAuthorization: Bool
 
     // Manager for  session tracking
     private lazy var sessionManager: SessionManagerType = SessionManager(
@@ -76,16 +78,20 @@ class TrackingManager {
          inAppMessageManager: InAppMessagesManagerType?,
          trackManagerInitializator: (TrackingManager) -> (Void),
          userDefaults: UserDefaults,
+         campaignRepository: CampaignRepositoryType,
+         requirePushAuthorization: Bool,
          onEventCallback: @escaping (EventType, [DataType]) -> Void
     ) throws {
         self.repository = repository
         self.database = database
         self.device = device
         self.userDefaults = userDefaults
+        self.campaignRepository = campaignRepository
 
         self.flushingManager = flushingManager
         self.inAppMessageManager = inAppMessageManager
         self.onEventCallback = onEventCallback
+        self.requirePushAuthorization = requirePushAuthorization
 
         // Always track when we become active, enter background or terminate (used for both sessions and data flushing)
         NotificationCenter.default.addObserver(self,
@@ -100,6 +106,15 @@ class TrackingManager {
 
         trackManagerInitializator(self)
         initialSetup()
+
+        IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+            guard let self else { return }
+            self.flushingManager.flushingMode = .periodic(0)
+            self.database.removeAllEvents()
+            NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
+            self.device.properties.removeAll()
+        }
     }
 
     deinit {
@@ -120,6 +135,10 @@ class TrackingManager {
     /// Installation event is fired only once for the whole lifetime of the app on one
     /// device when the app is launched for the first time.
     internal func trackInstallEvent() {
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "Install event not tracked, SDK is stopping.")
+            return
+        }
         /// Checking if the APP was launched before.
         /// If the key value is false, means that the event was not fired before.
         let key = Constants.Keys.installTracked + database.currentCustomer.uuid.uuidString
@@ -163,7 +182,7 @@ extension TrackingManager: TrackingManagerType {
         var projectTokens: Set<String> = []
         while !events.isEmpty {
             let event = events.removeLast()
-            if let projectToken = event.projectToken, !projectTokens.contains(projectToken) {
+            if let projectToken = event.integrationId, !projectTokens.contains(projectToken) {
                 projectTokens.insert(projectToken)
                 try database.updateEvent(withId: event.databaseObjectProxy.objectID, withData: data)
             }
@@ -177,12 +196,44 @@ extension TrackingManager: TrackingManagerType {
     public func track(_ type: EventType, with data: [DataType]?) throws {
         try trackInternal(type, with: data, trackingAllowed: true)
     }
+    
+    public func trackNotificationState(pushToken: String?, isValid: Bool, description: String) throws {
+        if let pushToken {
+            let data: [String: JSONValue] = [
+                "platform": .string("ios"),
+                "description": .string(description)
+            ]
+            // Carry the SDK-collected device snapshot (sdk_version, os_version, app_version,
+            // device_model, …) on notification_state events so backend & analytics can
+            // correlate token reachability issues with the originating device. Default
+            // properties remain gated by `canUseDefaultProperties`; only the SDK-owned
+            // device snapshot is attached here.
+            try trackInternal(
+                .notificationState,
+                with: [
+                    .properties(device.properties),
+                    .properties(data),
+                    .pushNotificationToken(
+                        token: pushToken,
+                        authorized: isValid
+                    )
+                ],
+                trackingAllowed: true
+            )
+        } else {
+            Exponea.logger.log(.error, message: "The trackNotificationState failed, pushToken is nil")
+        }
+    }
 
     private func trackInternal(
         _ type: EventType,
         with data: [DataType]?,
         trackingAllowed: Bool
     ) throws {
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "track internal failed, Exponea is stopped")
+            return
+        }
         /// Get token mapping or fail if no token provided.
         let projects = repository.configuration.projects(for: type)
         if projects.isEmpty {
@@ -193,19 +244,23 @@ extension TrackingManager: TrackingManagerType {
         } else {
             Exponea.logger.log(.verbose, message: "Processing event of type: \(type) with params \(data ?? []) with tracking \(trackingAllowed)")
         }
+        let newData = (data ?? []).addProperties([
+            "application_id": repository.configuration.applicationID,
+            "device_id": TelemetryUtility.getInstallId(userDefaults: userDefaults)
+        ])
         /// For each project token we have, track the data.
-        let payload = populateTrackEventPayload(of: type, from: data)
+        let payload = populateTrackEventPayload(of: type, from: newData)
         for project in projects {
             if type == .identifyCustomer {
                 inAppMessageManager?.pendingShowRequests.removeAll()
-                switch Exponea.shared.flushingMode {
+                switch flushingManager.flushingMode {
                 case .immediate:
-                    Exponea.shared.flushingManager?.inAppRefreshCallback = {
-                        Exponea.shared.flushingManager?.inAppRefreshCallback = nil
-                        try? self.storeTrackEvent(of: type, with: payload, trackingAllowed, within: project)
+                    try? self.storeTrackEvent(of: type, with: payload, trackingAllowed, within: project)
+                    flushingManager.inAppRefreshCallback = {
+                        self.flushingManager.inAppRefreshCallback = nil
                         self.onEventCallback(type, payload)
                     }
-                    Exponea.shared.flushingManager?.flushData()
+                    flushingManager.flushData(isFromIdentify: true)
                 default:
                     try storeTrackEvent(of: type, with: payload, trackingAllowed, within: project)
                     onEventCallback(type, payload)
@@ -246,11 +301,11 @@ extension TrackingManager: TrackingManagerType {
         of type: EventType,
         with payload: [DataType],
         _ trackingAllowed: Bool,
-        within project: ExponeaProject
+        within project: any ExponeaIntegrationType
     ) throws {
         switch type {
         case .identifyCustomer,
-             .registerPushToken:
+             .registerPushToken: // We have manual flush - this is just to support older versions
             if let appGroup = repository.configuration.appGroup {
                 database.currentCustomer.saveIdsToUserDefaults(appGroup: appGroup)
             }
@@ -268,6 +323,9 @@ extension TrackingManager: TrackingManagerType {
             if trackingAllowed {
                 try database.trackEvent(with: payload, into: project)
             }
+        case .notificationState:
+            try database.identifyCustomer(with: payload, into: project)
+            try database.trackEvent(with: payload, into: project)
         }
     }
 
@@ -275,6 +333,8 @@ extension TrackingManager: TrackingManagerType {
         switch eventType {
         case EventType.identifyCustomer, EventType.registerPushToken:
             return repository.configuration.allowDefaultCustomerProperties
+        case .notificationState:
+            return false
         default:
             return true
         }
@@ -335,8 +395,8 @@ extension TrackingManager: TrackingManagerType {
         track(.show, for: message, within: placeholderId, trackingAllowed: trackingAllowed)
     }
 
-    public func trackInAppMessageClose(message: InAppMessage, trackingAllowed: Bool, isUserInteraction: Bool) {
-        self.track(.close, for: message, trackingAllowed: trackingAllowed, isUserInteraction: isUserInteraction)
+    public func trackInAppMessageClose(message: InAppMessage, closeButtonText: String?, trackingAllowed: Bool, isUserInteraction: Bool) {
+        self.track(.close(buttonLabel: closeButtonText), for: message, trackingAllowed: trackingAllowed, isUserInteraction: isUserInteraction)
     }
 
     public func trackInAppMessageError(message: InAppMessage, error: String, trackingAllowed: Bool) {
@@ -348,6 +408,7 @@ extension TrackingManager: TrackingManagerType {
         case .identifyCustomer: return nil
         case .registerPushToken: return nil
         case .customEvent: return nil
+        case .notificationState: return Constants.EventTypes.notificationState
         case .install: return Constants.EventTypes.installation
         case .sessionStart: return Constants.EventTypes.sessionStart
         case .sessionEnd: return Constants.EventTypes.sessionEnd
@@ -370,6 +431,10 @@ extension TrackingManager: TrackingManagerType {
 
     func manualSessionEnd() {
         sessionManager.manualSessionEnd()
+    }
+
+    func clearSessionManager() {
+        sessionManager.clearSessionManager()
     }
 
     func setAutomaticSessionTracking(automaticSessionTracking: Exponea.AutomaticSessionTracking) {
@@ -412,14 +477,18 @@ extension TrackingManager: TrackingManagerType {
 extension TrackingManager: SessionTrackingDelegate {
     func trackSessionStart(at timestamp: TimeInterval) {
         do {
+            var sessionEventData: [DataType] = [
+                .eventType(EventType.sessionStart.rawValue),
+                .customerIds(customerIds),
+                .properties(device.properties),
+                .timestamp(timestamp)
+            ]
+            if let campaignData = campaignRepository.popValid() {
+                sessionEventData.append(.properties(campaignData.trackingData))
+            }
             try track(
                 .sessionStart,
-                with: [
-                    .eventType(EventType.sessionStart.rawValue),
-                    .customerIds(customerIds),
-                    .properties(device.properties),
-                    .timestamp(timestamp)
-                ]
+                with: sessionEventData
             )
         } catch {
             Exponea.logger.log(.error, message: "Session start tracking error: \(error.localizedDescription)")
@@ -544,16 +613,21 @@ extension TrackingManager: InAppMessageTrackingDelegate {
         if case .click(let text, let url) = event {
             eventData["text"] = .string(text)
             eventData["link"] = .string(url)
-            if (GdprTracking.isTrackForced(url)) {
+            if GdprTracking.isTrackForced(url) {
                 eventData["tracking_forced"] = .bool(true)
+            }
+        }
+        if case .close(let text) = event {
+            if let text {
+                eventData["text"] = .string(text)
             }
         }
         if case .error(let errorMessage) = event {
             eventData["error"] = .string(errorMessage)
         }
-        if (message.consentCategoryTracking != nil) {
+        if message.consentCategoryTracking != nil {
             eventData["consent_category_tracking"] = .string(message.consentCategoryTracking!)
-        }        
+        }
         do {
             try processTrack(
                 .banner,
@@ -627,20 +701,32 @@ extension TrackingManager: InAppContentBlocksTrackingDelegate {
 // MARK: - Anonymize -
 
 extension TrackingManager {
-    public func anonymize(exponeaProject: ExponeaProject, projectMapping: [EventType: [ExponeaProject]]?) throws {
+    func anonymize(
+        exponeaIntegrationType: any ExponeaIntegrationType,
+        exponeaProjectMapping: [EventType: [ExponeaProject]]?
+    ) throws {
         let pushToken = customerPushToken
-        try track(EventType.registerPushToken, with: [.pushNotificationToken(token: nil, authorized: false)])
         sessionManager.clear()
 
-        repository.configuration.switchProjects(mainProject: exponeaProject, projectMapping: projectMapping)
+        repository.configuration.switchProjects(
+            exponeaIntegrationType: exponeaIntegrationType,
+            exponeaIntegrationMapping: exponeaProjectMapping
+        )
         repository.configuration.saveToUserDefaults()
 
         database.makeNewCustomer()
         UNAuthorizationStatusProvider.current.isAuthorized { authorized in
-            Exponea.shared.executeSafely {
-                try self.track(
-                    EventType.registerPushToken,
-                    with: [.pushNotificationToken(token: pushToken, authorized: authorized)]
+            Exponea.shared.executeSafely { [weak self] in
+                guard let self else { return }
+                // The anonymize re-registration track must reflect the actual
+                // authorization status, matching the normal tracking flow in
+                // PushNotificationManager.trackCurrentPushToken. The previous expression
+                // `!requirePushAuthorization || authorized` reported `valid=true` when
+                // requirePushAuthorization=false regardless of the real permission state.
+                try self.trackNotificationState(
+                    pushToken: pushToken,
+                    isValid: authorized,
+                    description: authorized ? "Permission granted" : "Permission denied"
                 )
             }
         }

@@ -9,6 +9,8 @@
 import Foundation
 
 final class FileCache: FileCacheType {
+    
+    static let shared = FileCache()
 
     static let inAppMessagesFolder = "exponeasdk_files_cache"
 
@@ -29,18 +31,8 @@ final class FileCache: FileCacheType {
         return dir
     }
 
-    private func getFileName(fileUrl: String) -> String {
-        guard let data = fileUrl.data(using: .utf8) else {
-            return fileUrl
-        }
-        return data
-            .base64EncodedString()
-            .replacingOccurrences(of: "=", with: "")
-            .replacingOccurrences(of: "/", with: "")
-    }
-
     func deleteFiles(except: [String]) {
-        let exceptFileNames = except.map { getFileName(fileUrl: $0) }
+        let exceptFileNames = except.map { FileUtils.getFileName(fileUrl: $0) }
         guard let directory = getCacheDirectoryURL() else {
             return
         }
@@ -62,7 +54,7 @@ final class FileCache: FileCacheType {
             Exponea.logger.log(.warning, message: "Unable to get file cache directory")
             return false
         }
-        let fileUrl = directory.appendingPathComponent(getFileName(fileUrl: fileUrl))
+        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: fileUrl))
         let exists = fileManager.fileExists(atPath: fileUrl.path)
         if !exists {
             Exponea.logger.log(.verbose, message: "File \(fileUrl) not found in cache.")
@@ -74,7 +66,7 @@ final class FileCache: FileCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return
         }
-        let filePath = directory.appendingPathComponent(getFileName(fileUrl: fileUrl))
+        let filePath = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: fileUrl))
         try? data.write(to: filePath, options: .atomic)
     }
 
@@ -82,11 +74,25 @@ final class FileCache: FileCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return nil
         }
-        let filePath = directory.appendingPathComponent(getFileName(fileUrl: fileUrl))
+        let filePath = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: fileUrl))
         return try? Data(contentsOf: filePath)
     }
 
     func clear() {
         deleteFiles(except: [])
+    }
+
+    func getOrDownloadFile(at fileUrl: String) -> Data? {
+        if fileUrl.isEmpty {
+            return nil
+        }
+        var fileData = getFileData(at: fileUrl)
+        if fileData == nil {
+            fileData = FileUtils.tryDownloadFile(fileUrl)
+            if let fileData = fileData {
+                saveFileData(at: fileUrl, data: fileData)
+            }
+        }
+        return fileData
     }
 }

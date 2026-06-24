@@ -7,6 +7,9 @@
 //
 
 import Foundation
+#if canImport(ExponeaSDKShared)
+import ExponeaSDKShared
+#endif
 
 final class CrashManager {
     // we need to give NSSetUncaughtExceptionHandler a closure that doesn't trap context
@@ -24,6 +27,7 @@ final class CrashManager {
     static let maxLogMessages = 100
     private var logMessages: [String] = []
     private var logHookId: String?
+    private var isStarted = false
 
     var oldHandler: NSUncaughtExceptionHandler?
 
@@ -32,6 +36,15 @@ final class CrashManager {
         self.upload = upload
         self.launchDate = launchDate
         self.runId = runId
+
+        IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+            self?.logsQueue.sync {
+                self?.logMessages.removeAll()
+            }
+            self?.storage.getAllCrashLogs().forEach({ log in
+                self?.storage.deleteCrashLog(log)
+            })
+        }
     }
 
     deinit {
@@ -41,14 +54,18 @@ final class CrashManager {
     }
 
     func start() {
+        guard !isStarted else { return }
+        isStarted = true
         logHookId = Exponea.logger.addLogHook(self.reportLog(_:))
         uploadCrashLogs()
         oldHandler = NSGetUncaughtExceptionHandler()
         CrashManager.current = self
-        NSSetUncaughtExceptionHandler({ CrashManager.current?.uncaughtExceptionHandler($0) })
+        NSSetUncaughtExceptionHandler({
+            CrashManager.current?.uncaughtExceptionHandler($0, thread: TelemetryUtility.getCurrentThreadInfo())
+        })
     }
 
-    func uncaughtExceptionHandler(_ exception: NSException) {
+    func uncaughtExceptionHandler(_ exception: NSException, thread: ThreadInfo) {
         self.oldHandler?(exception)
         Exponea.logger.log(.error, message: "Handling uncaught exception")
         if TelemetryUtility.isSDKRelated(stackTrace: exception.callStackSymbols) {
@@ -59,13 +76,14 @@ final class CrashManager {
                     date: Date(),
                     launchDate: launchDate,
                     runId: runId,
-                    logs: getLogs()
+                    logs: getLogs(),
+                    thread: thread
                 )
             )
         }
     }
 
-    func caughtExceptionHandler(_ exception: NSException) {
+    func caughtExceptionHandler(_ exception: NSException, thread: ThreadInfo) {
         uploadCaughtCrashLog(
             CrashLog(
                 exception: exception,
@@ -73,12 +91,13 @@ final class CrashManager {
                 date: Date(),
                 launchDate: launchDate,
                 runId: runId,
-                logs: getLogs()
+                logs: getLogs(),
+                thread: thread
             )
         )
     }
 
-    func caughtErrorHandler(_ error: Error, stackTrace: [String]) {
+    func caughtErrorHandler(_ error: Error, stackTrace: [String], thread: ThreadInfo) {
         uploadCaughtCrashLog(
             CrashLog(
                 error: error,
@@ -87,12 +106,17 @@ final class CrashManager {
                 date: Date(),
                 launchDate: launchDate,
                 runId: runId,
-                logs: getLogs()
+                logs: getLogs(),
+                thread: thread
             )
         )
     }
 
     func uploadCaughtCrashLog(_ crashLog: CrashLog) {
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "uploadCaughtCrashLog skipped, SDK is stopped")
+            return
+        }
         upload.upload(crashLog: crashLog) { result in
             if !result {
                 Exponea.logger.log(.error, message: "Uploading crash log failed")
@@ -111,12 +135,16 @@ final class CrashManager {
     }
 
     func getLogs() -> [String] {
-        return logsQueue.sync {
-            self.logMessages
+        return logsQueue.sync { [weak self] in
+            self?.logMessages ?? []
         }
     }
 
     func uploadCrashLogs() {
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.error, message: "uploadCrashLogs skipped, SDK is stopped")
+            return
+        }
         storage.getAllCrashLogs().forEach { crashLog in
             if crashLog.timestamp > Date().timeIntervalSince1970 - CrashManager.logRetention {
                 upload.upload(crashLog: crashLog) { result in

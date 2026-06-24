@@ -53,6 +53,7 @@ public enum Constants {
         public static let campaignClick = "campaign_click"
         public static let banner = "banner"
         public static let appInbox = "campaign"
+        public static let notificationState = "notification_state"
     }
 
     /// Error messages
@@ -72,7 +73,7 @@ public enum Constants {
 
     /// Default session values represented in seconds
     public enum Session {
-        public static let defaultTimeout = 6.0
+        public static let defaultTimeout = 60.0
         public static let maxRetries = 5
         public static let sessionUpdateThreshold = 3.0
     }
@@ -80,6 +81,24 @@ public enum Constants {
     public enum Tracking {
         // To be able to amend session tracking with campaign data, we have to delay immediate event flushing a bit
         public static let immediateFlushDelay = 3.0
+    }
+
+    /// Notification-state related constants
+    public enum Notifications {
+        /// Staleness window for `notification_state`. The Bloomreach Engagement backend currently
+        /// retains a contactable push token for ~90 days after the last `notification_state`
+        /// heartbeat; SDK clients that keep the same APNs token but never re-track will silently
+        /// fall out of the validity window. We force-track from `.onTokenChange` and `.daily`
+        /// once the local `lastTokenTrackDate` is older than this many days, leaving a comfortable
+        /// margin to the 90-day cutoff so reachability is preserved across normal flush failures
+        /// and clock skew.
+        ///
+        /// The 30-day value leaves a comfortable margin before the 90-day cutoff so both
+        /// `.onTokenChange` and `.daily` modes benefit from the same staleness safety net.
+        /// iOS applies the check in `.daily` as well as a defence-in-depth guard against any
+        /// future weakening of the daily gate (which fires far earlier than the staleness
+        /// window today, making the extra check a no-op in practice).
+        public static let maxNotificationStateStalenessDays = 30
     }
 
     /// General constants
@@ -94,5 +113,25 @@ public enum Constants {
         public static let inAppContentBlockDisplayStatusUserDefaultsKey = "EXPONEA_IN_APP_CONTENT_BLOCK_DISPLAY_STATUS"
         public static let lastKnownConfiguration = "EXPONEA_LAST_KNOWN_CONFIGURATION"
         public static let lastKnownCustomerIds = "EXPONEA_LAST_KNOWN_CUSTOMER_IDS"
+        public static let applicationID = "default-application"
+        public static let telemetryEvents = "EXPONEA_TELEMETRY_EVENTS"
+        public static let telemetryInstallId = "EXPONEA_TELEMETRY_INSTALL_ID"
+        public static let notificationStateTracked = "EXPONEA_NOTIFICATION_STATE_TRACKED"
+        public static let notificationStateAppVersion = "EXPONEA_NOTIFICATION_STATE_APP_VERSION"
+        public static let notificationStateApplicationID = "EXPONEA_NOTIFICATION_STATE_APPLICATION_ID"
+
+        // Persisted pre-init APNs token for crash-recovery.
+        // Stored as JSON { "token": String, "receivedAt": TimeInterval }
+        // in the SDK suite (Constants.General.userDefaultsSuite). The host
+        // app-group cannot be used because it is not known until
+        // `Exponea.configure()` completes.
+        public static let preInitPushTokenBufferKey = "EXPONEA_PRE_INIT_PUSH_TOKEN_BUFFER"
+
+        /// Tri-state cache of the OS push-authorization flag that accompanied the most
+        /// recent successful `notification_state` track. Read as `Bool?` via
+        /// `object(forKey:)` so a missing key (never tracked) is distinguishable from a
+        /// persisted `false` — `bool(forKey:)` collapses both into `false` and would
+        /// silently miss the very first permission flip the SDK is supposed to catch.
+        public static let notificationStateLastPermissionFlag = "EXPONEA_NOTIFICATION_STATE_LAST_PERMISSION_FLAG"
     }
 }

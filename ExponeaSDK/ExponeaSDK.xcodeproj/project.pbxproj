@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 48;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -29,7 +29,6 @@
 		0529797A241925DB00A90526 /* MockUNAuthorizationStatusProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05297979241925DB00A90526 /* MockUNAuthorizationStatusProviding.swift */; };
 		052F685D2327D3DF002DDCD4 /* DatabaseManagerErrorSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052F685C2327D3DF002DDCD4 /* DatabaseManagerErrorSpec.swift */; };
 		052F685F2327D404002DDCD4 /* ExponeaErrorSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052F685E2327D404002DDCD4 /* ExponeaErrorSpec.swift */; };
-		05324BF023D19F8C00AE91D9 /* VSAppCenterTelemetryUploadSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05324BEF23D19F8C00AE91D9 /* VSAppCenterTelemetryUploadSpec.swift */; };
 		053BC75E25ADD16B007D70D4 /* Configuration+UserDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05835C9124124830002F4571 /* Configuration+UserDefaults.swift */; };
 		053BC75F25ADD16B007D70D4 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E757EF207D027300FE8C21 /* Configuration.swift */; };
 		053BC76025ADD16B007D70D4 /* Configuration+Validation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05EB8B6B2344F4D700AAC98B /* Configuration+Validation.swift */; };
@@ -48,15 +47,10 @@
 		053EC59923AA32A7004D1C8B /* InAppMessageDisplayStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053EC59823AA32A7004D1C8B /* InAppMessageDisplayStatus.swift */; };
 		053EC59B23AA3309004D1C8B /* InAppMessageDisplayStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053EC59A23AA3309004D1C8B /* InAppMessageDisplayStateStore.swift */; };
 		053EC59F23AA61DC004D1C8B /* InAppMessageDisplayStatusStoreSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053EC59E23AA61DC004D1C8B /* InAppMessageDisplayStatusStoreSpec.swift */; };
-		05457FAE241BCFF30067226F /* TelemetryEventType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05457FAD241BCFF30067226F /* TelemetryEventType.swift */; };
 		054B7E5123F2D71A00026543 /* InAppMessageActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054B7E5023F2D71A00026543 /* InAppMessageActionButton.swift */; };
 		05583E9B23603BA900F7084E /* PushNotificationParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05583E9A23603BA900F7084E /* PushNotificationParser.swift */; };
 		05583E9E23608AE400F7084E /* PushNotificationParserSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05583E9D23608AE400F7084E /* PushNotificationParserSpec.swift */; };
-		055EAD242417CE3100E2F364 /* mock_notification_request.h in Headers */ = {isa = PBXBuildFile; fileRef = 05B97D302417CD4A00FE9309 /* mock_notification_request.h */; };
 		055EAD252417CE7900E2F364 /* ExponeaSDKTests.h in Headers */ = {isa = PBXBuildFile; fileRef = 05A931F22375AB1F00D45200 /* ExponeaSDKTests.h */; };
-		055EAD262417CE9D00E2F364 /* mock_notification_response.h in Headers */ = {isa = PBXBuildFile; fileRef = 05A931ED2375A4EE00D45200 /* mock_notification_response.h */; };
-		055EAD272417CF3C00E2F364 /* mock_notification_response.m in Sources */ = {isa = PBXBuildFile; fileRef = 05A931EE2375A50100D45200 /* mock_notification_response.m */; };
-		055EAD282417CF4700E2F364 /* mock_notification_request.m in Sources */ = {isa = PBXBuildFile; fileRef = 05B97D252417B55400FE9309 /* mock_notification_request.m */; };
 		0561829B25AD959C001E30A3 /* ExponeaSDKShared.h in Headers */ = {isa = PBXBuildFile; fileRef = 0561829925AD959C001E30A3 /* ExponeaSDKShared.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		056182AD25AD97E4001E30A3 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E757DF207CF99E00FE8C21 /* Constants.swift */; };
 		056182E725AD9E05001E30A3 /* ExponeaError.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D9B07C20A3B24A0066FB1E /* ExponeaError.swift */; };
@@ -161,7 +155,7 @@
 		05BA580625064E4600E10994 /* PushOpenedDataSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BA580525064E4600E10994 /* PushOpenedDataSpec.swift */; };
 		05BB22B2236B1E0C0098C406 /* ExponeaNotificationServiceSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BB22B1236B1E0C0098C406 /* ExponeaNotificationServiceSpec.swift */; };
 		05BB22B3236B1F740098C406 /* ExponeaSDKNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0ED33B421A6FB0F003649C3 /* ExponeaSDKNotifications.framework */; };
-		05BB22B5236B2F780098C406 /* PushNotificationManagerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BB22B4236B2F780098C406 /* PushNotificationManagerSpec.swift */; };
+		05BB22B5236B2F780098C406 /* PushNotificationManagerProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BB22B4236B2F780098C406 /* PushNotificationManagerProjectSpec.swift */; };
 		05BB22B7236B300F0098C406 /* MockTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BB22B6236B300F0098C406 /* MockTrackingManager.swift */; };
 		05BF1C7623A10F1800FDC101 /* RecommendationRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BF1C7523A10F1800FDC101 /* RecommendationRequest.swift */; };
 		05BF1C7A23A1139B00FDC101 /* RecommendationResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BF1C7923A1139B00FDC101 /* RecommendationResponse.swift */; };
@@ -184,29 +178,31 @@
 		05E81632247555DD00AA28E3 /* ExponeaAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E81631247555DD00AA28E3 /* ExponeaAppDelegate.swift */; };
 		05F33B1B25C16DEF00CFD60A /* ExponeaSDKShared.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0561829725AD959C001E30A3 /* ExponeaSDKShared.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		05F33B1C25C16DEF00CFD60A /* ExponeaSDKObjC.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0563750C25AF030A00AB68DA /* ExponeaSDKObjC.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		05F3EFCD237E9260006E83F4 /* TelemetryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFCC237E9260006E83F4 /* TelemetryManager.swift */; };
 		05F3EFCF237E926B006E83F4 /* CrashManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFCE237E926B006E83F4 /* CrashManager.swift */; };
 		05F3EFD3237E9291006E83F4 /* TelemetryStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFD2237E9291006E83F4 /* TelemetryStorage.swift */; };
-		05F3EFD5237E92A4006E83F4 /* TelemetryUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFD4237E92A4006E83F4 /* TelemetryUpload.swift */; };
-		05F3EFD8237E938D006E83F4 /* CrashLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFD7237E938D006E83F4 /* CrashLog.swift */; };
-		05F3EFDA237E9415006E83F4 /* ErrorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFD9237E9415006E83F4 /* ErrorData.swift */; };
 		05F3EFDC237E96FA006E83F4 /* FileTelemetryStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFDB237E96FA006E83F4 /* FileTelemetryStorage.swift */; };
 		05F3EFE0237E99FE006E83F4 /* FileTelemetryStorageSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFDF237E99FE006E83F4 /* FileTelemetryStorageSpec.swift */; };
 		05F3EFE22382A814006E83F4 /* CrashManagerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFE12382A814006E83F4 /* CrashManagerSpec.swift */; };
-		05F3EFE42382BAB6006E83F4 /* TelemetryUtility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFE32382BAB6006E83F4 /* TelemetryUtility.swift */; };
-		05F3EFE62382BB88006E83F4 /* VSAppCenterTelemetryUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFE52382BB88006E83F4 /* VSAppCenterTelemetryUpload.swift */; };
 		05F3EFEA2382BC4C006E83F4 /* MockTelemetryStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFE92382BC4C006E83F4 /* MockTelemetryStorage.swift */; };
 		05F3EFED2382BD08006E83F4 /* MockTelemetryUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFEC2382BD08006E83F4 /* MockTelemetryUpload.swift */; };
-		05F3EFEF2382C192006E83F4 /* TelemetryUtilitySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFEE2382C192006E83F4 /* TelemetryUtilitySpec.swift */; };
-		05F3EFF12382C757006E83F4 /* VSAppCenterAPIModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFF02382C757006E83F4 /* VSAppCenterAPIModel.swift */; };
 		05FB1BB7236AE9220089C529 /* NotificationDataSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FB1BB6236AE9220089C529 /* NotificationDataSpec.swift */; };
 		05FBB15D244709C500BDF234 /* DatabaseManager+Clear.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FBB15C244709C500BDF234 /* DatabaseManager+Clear.swift */; };
 		05FD178F2403C4CC003A799B /* BuildConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FD178E2403C4CC003A799B /* BuildConfiguration.swift */; };
 		05FEBDC023A7BA2A007C2372 /* InAppMessageTrackingDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FEBDBF23A7BA2A007C2372 /* InAppMessageTrackingDelegate.swift */; };
 		05FEBDC223A7C940007C2372 /* MockInAppMessageTrackingDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FEBDC123A7C940007C2372 /* MockInAppMessageTrackingDelegate.swift */; };
 		23E725E4214AA7A900B552B8 /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23E725E3214AA7A900B552B8 /* Reachability.swift */; };
+		311268DB2CD10E9C00C38394 /* InAppButtonContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311268DA2CD10E9C00C38394 /* InAppButtonContainer.swift */; };
+		311268DD2CD1135900C38394 /* InAppButtonConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311268DC2CD1135900C38394 /* InAppButtonConfig.swift */; };
+		311557BF2CE9DEBD0027B481 /* InAppLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311557BD2CE9DEBD0027B481 /* InAppLabel.swift */; };
+		311557C22CE9DF070027B481 /* InAppImageComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311557C12CE9DF070027B481 /* InAppImageComponent.swift */; };
+		311557C42CEB3EE30027B481 /* InAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311557C32CEB3EE30027B481 /* InAppView.swift */; };
+		313444972CDA65B500931147 /* InAppCloseButtonComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313444962CDA65B500931147 /* InAppCloseButtonComponent.swift */; };
+		313C07042CD4EB8F0020DE64 /* InAppButtonContainerSwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313C07032CD4EB8F0020DE64 /* InAppButtonContainerSwiftUI.swift */; };
+		313C07062CD4EBC10020DE64 /* InAppButtonSwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313C07052CD4EBC10020DE64 /* InAppButtonSwiftUI.swift */; };
+		313C07082CD4EBDD0020DE64 /* InAppButtonContainerSwiftUIViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313C07072CD4EBDD0020DE64 /* InAppButtonContainerSwiftUIViewModel.swift */; };
 		313E30682C22B21200375D4B /* InAppContentBlockCarouselViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313E30672C22B21200375D4B /* InAppContentBlockCarouselViewController.swift */; };
 		314CF9272BD8F2820000EFD9 /* SegmentationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 314CF9262BD8F2820000EFD9 /* SegmentationSpec.swift */; };
+		31513E292CA97F4700A975F8 /* ManualSegmentationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31513E282CA97F4700A975F8 /* ManualSegmentationManager.swift */; };
 		315598082C09CAE500FBED42 /* CarouselInAppContentBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 315598072C09CAE500FBED42 /* CarouselInAppContentBlockView.swift */; };
 		315DCDFF2B6A67E9004BD7A7 /* beefree-actiontype.png in Resources */ = {isa = PBXBuildFile; fileRef = 315DCDFE2B6A67E9004BD7A7 /* beefree-actiontype.png */; };
 		317536862BD27D910062A5E5 /* SegmentDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 317536852BD27D910062A5E5 /* SegmentDTO.swift */; };
@@ -216,16 +212,36 @@
 		3189E2DF2C4B965100C4CD68 /* ContentBlockCarouselCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189E2DE2C4B965100C4CD68 /* ContentBlockCarouselCallback.swift */; };
 		3189E2E12C4EBEC300C4CD68 /* CarouselContentBlockViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189E2E02C4EBEC300C4CD68 /* CarouselContentBlockViewCell.swift */; };
 		3189E2E32C4EBEFE00C4CD68 /* InAppCarouselStateType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189E2E22C4EBEFE00C4CD68 /* InAppCarouselStateType.swift */; };
-		3189E2E52C4EBF1000C4CD68 /* CarouselOnShowMessageData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189E2E42C4EBF1000C4CD68 /* CarouselOnShowMessageData.swift */; };
-		3189E2E72C4EBF2300C4CD68 /* CarouselOnChangeData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189E2E62C4EBF2300C4CD68 /* CarouselOnChangeData.swift */; };
 		318B552A2A80E52B00934902 /* DeeplinkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318B55292A80E52B00934902 /* DeeplinkManager.swift */; };
+		318EFF442D898984004C5E1F /* InAppImageComponentConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF432D898984004C5E1F /* InAppImageComponentConfig.swift */; };
+		318EFF462D8989EA004C5E1F /* SlideInAppImageComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF452D8989EA004C5E1F /* SlideInAppImageComponent.swift */; };
+		318EFF482D898A1E004C5E1F /* InAppLabelConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF472D898A1E004C5E1F /* InAppLabelConfig.swift */; };
+		318EFF4A2D898A5A004C5E1F /* Sttring+calculatePaddings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF492D898A5A004C5E1F /* Sttring+calculatePaddings.swift */; };
+		318EFF4C2D898A74004C5E1F /* ButtonTextWithAttributedString.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF4B2D898A74004C5E1F /* ButtonTextWithAttributedString.swift */; };
+		318EFF4E2D898A97004C5E1F /* UIFont+styles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF4D2D898A97004C5E1F /* UIFont+styles.swift */; };
+		318EFF502D898AA7004C5E1F /* TextWithAttributedString.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF4F2D898AA7004C5E1F /* TextWithAttributedString.swift */; };
+		318EFF522D898B30004C5E1F /* InAppButtonLayoutType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF512D898B30004C5E1F /* InAppButtonLayoutType.swift */; };
+		318EFF542D898B3C004C5E1F /* InAppButtonAlignmentType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF532D898B3C004C5E1F /* InAppButtonAlignmentType.swift */; };
+		318EFF562D898B46004C5E1F /* InAppButtonMarginType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF552D898B46004C5E1F /* InAppButtonMarginType.swift */; };
+		318EFF582D898B53004C5E1F /* InAppButtonEdge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF572D898B53004C5E1F /* InAppButtonEdge.swift */; };
+		318EFF5A2D898B5F004C5E1F /* InAppButtonFontData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF592D898B5F004C5E1F /* InAppButtonFontData.swift */; };
+		318EFF5C2D898B9E004C5E1F /* InAppCloseButtonConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF5B2D898B9E004C5E1F /* InAppCloseButtonConfig.swift */; };
+		318EFF5E2D898BB2004C5E1F /* InAppModalTypeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF5D2D898BB2004C5E1F /* InAppModalTypeConfig.swift */; };
+		318EFF602D898BC0004C5E1F /* MessagePosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF5F2D898BC0004C5E1F /* MessagePosition.swift */; };
+		318EFF622D898BE4004C5E1F /* InAppLayoutConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF612D898BE4004C5E1F /* InAppLayoutConfig.swift */; };
+		318EFF642D898BF1004C5E1F /* InAppViewConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318EFF632D898BF1004C5E1F /* InAppViewConfig.swift */; };
 		319FEBF42BD6DA4300E0EB11 /* SegmentationStoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 319FEBF32BD6DA4300E0EB11 /* SegmentationStoring.swift */; };
+		31A1D21B2C6F8A6300606633 /* GiftHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31A1D21A2C6F8A6300606633 /* GiftHelper.swift */; };
+		31A277DD2C74E08E00354CD2 /* GIFTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31A277DC2C74E08E00354CD2 /* GIFTest.swift */; };
+		31B689542CEF4DE500C45E44 /* InAppDialogContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B689532CEF4DE500C45E44 /* InAppDialogContainerView.swift */; };
+		31B689562CEF537E00C45E44 /* ExponeaAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B689552CEF537E00C45E44 /* ExponeaAsyncImage.swift */; };
 		31C7B4242A822848001BA5E2 /* Coordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C7B4232A822848001BA5E2 /* Coordinator.swift */; };
 		31C7B4262A822FE7001BA5E2 /* ExponeaTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C7B4252A822FE7001BA5E2 /* ExponeaTabBarController.swift */; };
 		31CC0B742BD2519000608057 /* SegmentationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CC0B732BD2519000608057 /* SegmentationManager.swift */; };
 		31CC0B772BD251E200608057 /* SegmentationDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CC0B762BD251E200608057 /* SegmentationDataProvider.swift */; };
 		31CC0B792BD255D300608057 /* SegmentationRequests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CC0B782BD255D300608057 /* SegmentationRequests.swift */; };
 		31CC0B7B2BD2562000608057 /* LinkIdsRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CC0B7A2BD2562000608057 /* LinkIdsRequest.swift */; };
+		31CD7B862D81C5E4006DE6E5 /* IntegrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CD7B852D81C5E4006DE6E5 /* IntegrationManager.swift */; };
 		31CFEF6D2A66933A005402E5 /* Sequence+RemoveNil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CFEF6B2A6692B2005402E5 /* Sequence+RemoveNil.swift */; };
 		31CFEF6F2A66940E005402E5 /* SequenceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CFEF6E2A66940E005402E5 /* SequenceTest.swift */; };
 		31E9CBA22AE9494B00A333C8 /* URL+Init.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31E9CBA12AE9494B00A333C8 /* URL+Init.swift */; };
@@ -249,11 +265,8 @@
 		31EBB8682A6AC3470003AAA5 /* SampleInappContentBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31EBB8672A6AC3470003AAA5 /* SampleInappContentBlocks.swift */; };
 		31EBB86B2A6AC3500003AAA5 /* InAppContentBlocksManagerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31EBB86A2A6AC3500003AAA5 /* InAppContentBlocksManagerSpec.swift */; };
 		31EBB86D2A6AC3570003AAA5 /* TrackManager+IdentifyCustomerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31EBB86C2A6AC3570003AAA5 /* TrackManager+IdentifyCustomerSpec.swift */; };
-		31EC20A02C528A0900CE7BE9 /* CustomCarouselCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31EC209F2C528A0900CE7BE9 /* CustomCarouselCallback.swift */; };
 		3377ABFC29897F4C00E530FB /* ExpoInitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3377ABFB29897F4C00E530FB /* ExpoInitManager.swift */; };
 		3384EFC629965EEB009A5981 /* Execute+AfterInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3384EFC529965EEB009A5981 /* Execute+AfterInit.swift */; };
-		3388E6D129E8475B00F28C46 /* SwiftSoup.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B72A7E229C068BC00E1A1F9 /* SwiftSoup.xcframework */; };
-		3388E6D229E8475C00F28C46 /* SwiftSoup.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6B72A7E229C068BC00E1A1F9 /* SwiftSoup.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		33FC6CC229A90ED5001F113F /* OnMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33FC6CC129A90ED5001F113F /* OnMain.swift */; };
 		33FC6CC429A910BA001F113F /* SafeIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33FC6CC329A910BA001F113F /* SafeIndex.swift */; };
 		33FC6CC629A9123E001F113F /* Autolayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33FC6CC529A9123E001F113F /* Autolayout.swift */; };
@@ -262,11 +275,13 @@
 		33FC6CCC29A9195B001F113F /* Typealiases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33FC6CCB29A9195B001F113F /* Typealiases.swift */; };
 		4C169E3122B6524C00C425DA /* TrackUniversalLinkSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C169E3022B6524C00C425DA /* TrackUniversalLinkSpec.swift */; };
 		4C3F5F2D22DF98C00069E71D /* MockExponea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C3F5F2C22DF98C00069E71D /* MockExponea.swift */; };
+		551301372D072338005C71C8 /* CampaignRepositoryType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551301362D072338005C71C8 /* CampaignRepositoryType.swift */; };
+		551301392D07288D005C71C8 /* CampaignRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551301382D07288D005C71C8 /* CampaignRepository.swift */; };
+		5513013B2D088AC1005C71C8 /* CampaignRepositorySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5513013A2D088AC1005C71C8 /* CampaignRepositorySpec.swift */; };
 		55130C4928DDC81600B4FE77 /* TrackingConsentManagerType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55130C4828DDC81600B4FE77 /* TrackingConsentManagerType.swift */; };
 		55130C4B28DDCA6800B4FE77 /* TrackingConsentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55130C4A28DDCA6800B4FE77 /* TrackingConsentManager.swift */; };
 		55130C4F28E3C50D00B4FE77 /* GdprTrackingSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55130C4E28E3C50D00B4FE77 /* GdprTrackingSpec.swift */; };
 		55130C5128E425D600B4FE77 /* TrackConsentManagerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55130C5028E425D600B4FE77 /* TrackConsentManagerSpec.swift */; };
-		551F651A2BAAD0FC0072B980 /* SwiftSoup.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B72A7E229C068BC00E1A1F9 /* SwiftSoup.xcframework */; };
 		5524BD662B2B5DBE005CF699 /* ExponeaType.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0EB5D9E20BB530000F1031F /* ExponeaType.swift */; };
 		552772C928ED86E0000ACFD5 /* ExponeaInternal+AppInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552772C628ED86E0000ACFD5 /* ExponeaInternal+AppInbox.swift */; };
 		552772CB28EDAF3A000ACFD5 /* AppInboxListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552772CA28EDAF3A000ACFD5 /* AppInboxListViewController.swift */; };
@@ -298,16 +313,30 @@
 		558453A1297E8D26000707E4 /* AppInboxTrackingSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 558453A0297E8D26000707E4 /* AppInboxTrackingSpec.swift */; };
 		558DFADB2B2B350F00177800 /* ExtensionUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55D0543D2B29BE2200BC773A /* ExtensionUtils.swift */; };
 		558DFADD2B2B442400177800 /* ExampleInAppContentBlockCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 558DFADC2B2B442400177800 /* ExampleInAppContentBlockCallback.swift */; };
+		55977A172E8688950087F301 /* UIAnimatedImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55977A162E8688790087F301 /* UIAnimatedImageView.swift */; };
 		559D97082962FCF0006D4499 /* ImageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 559D97072962FCF0006D4499 /* ImageUtils.swift */; };
 		559E7609296E0E5C00F27BC9 /* MessageItemSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 559E7608296E0E5C00F27BC9 /* MessageItemSpec.swift */; };
 		55A468D0296F154C00E62438 /* WebActionsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A468CF296F154C00E62438 /* WebActionsManager.swift */; };
 		55B6E6CA2C359FE70052FC2B /* AnonymizeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55B6E6C92C359FE70052FC2B /* AnonymizeViewController.swift */; };
 		55BB0E1A28F4126100D6243A /* MessageItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BB0E1928F4126100D6243A /* MessageItem.swift */; };
 		55BB0E1E28F44EDA00D6243A /* AppInboxDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BB0E1D28F44EDA00D6243A /* AppInboxDetailViewController.swift */; };
-		55C08DCD2A4ED5EE000BA66A /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		55C08DCF2A5689F4000BA66A /* FileCacheType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C08DCE2A5689F4000BA66A /* FileCacheType.swift */; };
 		55C08DD12A568A55000BA66A /* FileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C08DD02A568A55000BA66A /* FileCache.swift */; };
 		55C08DD32A568C74000BA66A /* FileUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C08DD22A568C74000BA66A /* FileUtils.swift */; };
+		55CD47542E2013F700E8BF3F /* SentryTelemetryUploadSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55CD47532E2013F700E8BF3F /* SentryTelemetryUploadSpec.swift */; };
+		55CD47572E29236600E8BF3F /* TelemetryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFCC237E9260006E83F4 /* TelemetryManager.swift */; };
+		55CD47582E292D9100E8BF3F /* TelemetryUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFD4237E92A4006E83F4 /* TelemetryUpload.swift */; };
+		55CD47592E292D9600E8BF3F /* SentryTelemetryUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5529AE972E13BC44007FB0C8 /* SentryTelemetryUpload.swift */; };
+		55CD475A2E292D9D00E8BF3F /* TelemetryUtility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFE32382BAB6006E83F4 /* TelemetryUtility.swift */; };
+		55CD475B2E292DA900E8BF3F /* CrashLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFD7237E938D006E83F4 /* CrashLog.swift */; };
+		55CD475C2E292DAE00E8BF3F /* ErrorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F3EFD9237E9415006E83F4 /* ErrorData.swift */; };
+		55CD475D2E292DB200E8BF3F /* TelemetryEventType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05457FAD241BCFF30067226F /* TelemetryEventType.swift */; };
+		55CD475E2E292DB600E8BF3F /* ExponeaSentryEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C7817A2E0EA75700B1DEF3 /* ExponeaSentryEnvelope.swift */; };
+		55CD475F2E292DBA00E8BF3F /* ThreadInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C269B32E0FECB5004CB427 /* ThreadInfo.swift */; };
+		55CD47602E292DBE00E8BF3F /* ErrorStackTraceElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C269B52E0FED20004CB427 /* ErrorStackTraceElement.swift */; };
+		55CD47612E292DC200E8BF3F /* EventLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5529AE952E13BBD6007FB0C8 /* EventLog.swift */; };
+		55CD47632E29310300E8BF3F /* BuildConfigurationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55CD47622E29310300E8BF3F /* BuildConfigurationShared.swift */; };
+		55CD476B2E3905C500E8BF3F /* Sequence+RemoveInfinity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55CD476A2E3905C500E8BF3F /* Sequence+RemoveInfinity.swift */; };
 		55D0543A2B230C9600BC773A /* InAppContentBlockCallbackType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55D054392B230C9600BC773A /* InAppContentBlockCallbackType.swift */; };
 		55D0543C2B2351A000BC773A /* InAppContentBlockAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55D0543B2B2351A000BC773A /* InAppContentBlockAction.swift */; };
 		55DA6EBA290ABD4800B5B285 /* AppInboxManagerType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55DA6EB9290ABD4800B5B285 /* AppInboxManagerType.swift */; };
@@ -323,12 +352,53 @@
 		55F5F23D2C3E89070094B558 /* ArrayComparisonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55F5F23C2C3E89070094B558 /* ArrayComparisonTests.swift */; };
 		55F6A41829891F130029D628 /* ExampleAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55F6A41729891F130029D628 /* ExampleAuthProvider.swift */; };
 		55F6A41A29891F710029D628 /* CustomerTokenStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55F6A41929891F710029D628 /* CustomerTokenStorage.swift */; };
+		55F6A41D29891F730029D62B /* MockJwtService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55F6A41C29891F730029D62B /* MockJwtService.swift */; };
+		576C22ACED554D0D7372B5E1 /* Pods_ExponeaSDKTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 719B0B82B310EE3E7FEC5428 /* Pods_ExponeaSDKTests.framework */; };
+		602F9B602FB5DB87007D5F5B /* SelfCheckApplicationIDWiringSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602F9B5F2FB5DB84007D5F5B /* SelfCheckApplicationIDWiringSpec.swift */; };
+		602F9B642FB5F138007D5F5B /* PushSelfCheckRequestSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602F9B632FB5F137007D5F5B /* PushSelfCheckRequestSpec.swift */; };
+		6030B3F82F51CE2F0092016B /* JwtAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD7F2F2BE72400073A3D /* JwtAuthManager.swift */; };
+		6030B3F92F51CE2F0092016B /* KeychainJwtTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD822F2BE72400073A3D /* KeychainJwtTokenStore.swift */; };
+		6030B3FA2F51CE2F0092016B /* JwtTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD812F2BE72400073A3D /* JwtTokenStore.swift */; };
+		603CC5802FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */; };
+		60486AF92F7E44CE0068F7D0 /* InstallIdResetSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */; };
+		60486AFB2F7E451C0068F7D0 /* TelemetryUtilitySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */; };
+		60486AFF2F7E8A2F0068F7D0 /* ServerRepositoryAuthWiringSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */; };
+		605C41822F23C0B700946118 /* PushNotificationManagerStreamSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 605C41812F23C0B500946118 /* PushNotificationManagerStreamSpec.swift */; };
+		608B3A9E2F152D8300DF41B0 /* RecommendationsStreamRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 608B3A9D2F152D7100DF41B0 /* RecommendationsStreamRequest.swift */; };
+		608B3AA02F152DA400DF41B0 /* RecommendationsStreamResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 608B3A9F2F152D9B00DF41B0 /* RecommendationsStreamResponse.swift */; };
+		608B3AA62F162CCA00DF41B0 /* config_valid_stream.plist in Resources */ = {isa = PBXBuildFile; fileRef = 608B3AA32F162CCA00DF41B0 /* config_valid_stream.plist */; };
+		608B3AAA2F1649DC00DF41B0 /* config_valid2_stream.plist in Resources */ = {isa = PBXBuildFile; fileRef = 608B3AA92F1649DC00DF41B0 /* config_valid2_stream.plist */; };
+		608B3AAC2F16890300DF41B0 /* ExponeaConfigStream.plist in Resources */ = {isa = PBXBuildFile; fileRef = 608B3AAB2F16890300DF41B0 /* ExponeaConfigStream.plist */; };
+		608CB4E32F27BAF200F8FF46 /* SegmentationStreamSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 608CB4E22F27BAEC00F8FF46 /* SegmentationStreamSpec.swift */; };
+		60AB12072F30000100000007 /* MockJwtTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12012F30000100000001 /* MockJwtTokenStore.swift */; };
+		60AB12082F30000100000008 /* JwtAuthManagerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12022F30000100000002 /* JwtAuthManagerSpec.swift */; };
+		60AB12092F30000100000009 /* CustomerIdentitySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12032F30000100000003 /* CustomerIdentitySpec.swift */; };
+		60AB120A2F3000010000000A /* JwtErrorContextSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12042F30000100000004 /* JwtErrorContextSpec.swift */; };
+		60AB120B2F3000010000000B /* ConfigurationStreamIntegrationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12052F30000100000005 /* ConfigurationStreamIntegrationSpec.swift */; };
+		60AB120C2F3000010000000C /* JwtIntegrationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12062F30000100000006 /* JwtIntegrationSpec.swift */; };
+		60D28F312F71901300F95CD0 /* StopIntegrationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D28F302F71901300F95CD0 /* StopIntegrationSpec.swift */; };
+		60D5E6B32FBB17BF00C2CB5D /* DeliveredNotificationStateResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D5E6B22FBB17BE00C2CB5D /* DeliveredNotificationStateResolver.swift */; };
+		60D5E6B52FBB182F00C2CB5D /* DeliveredNotificationStateResolverSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D5E6B42FBB182E00C2CB5D /* DeliveredNotificationStateResolverSpec.swift */; };
+		6B4040A1000000000000A101 /* AnonymizeNotificationStateValidSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B4040A1000000000000A102 /* AnonymizeNotificationStateValidSpec.swift */; };
 		6BA73FED29B6377E009F92DF /* AtomicValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BA73FEC29B6377E009F92DF /* AtomicValue.swift */; };
 		6BA73FF029B63A14009F92DF /* AtomicValueSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BA73FEF29B63A14009F92DF /* AtomicValueSpec.swift */; };
-		792F2F886D9F14542DF0E97D /* Pods_ExponeaSDKTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A64D92FEFD20D8844C3C3BF9 /* Pods_ExponeaSDKTests.framework */; };
 		7F41714B094CAC0DA9B38776 /* HtmlNormalizerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F417FBE26AB2DD5FE31707E /* HtmlNormalizerSpec.swift */; };
 		7F417221332DEC81DB050230 /* HtmlNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F417E0EA9B478FEF72999D9 /* HtmlNormalizer.swift */; };
 		7F41777390316561CE4482DB /* InAppMessageWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F417D6738618D5F30397815 /* InAppMessageWebView.swift */; };
+		A30AC9DD2F07DEF200E51E34 /* ExponeaSettings+Integration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30AC9DC2F07DEEA00E51E34 /* ExponeaSettings+Integration.swift */; };
+		A30AC9E02F111EBB00E51E34 /* ExponeaIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30AC9DF2F111EBB00E51E34 /* ExponeaIntegration.swift */; };
+		A30AC9E22F111EDA00E51E34 /* ExponeaIntegrationType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30AC9E12F111EDA00E51E34 /* ExponeaIntegrationType.swift */; };
+		A30AC9E42F111EFB00E51E34 /* IntegrationSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30AC9E32F111EF300E51E34 /* IntegrationSourceType.swift */; };
+		A33A77012E02E5C900EA9145 /* Pods_ExponeaSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1834092C0840A684D9848A58 /* Pods_ExponeaSDK.framework */; };
+		A33A77022E02E5C900EA9145 /* Pods_ExponeaSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1834092C0840A684D9848A58 /* Pods_ExponeaSDK.framework */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A349F1B42FBCF5C900BD0C19 /* PreInitTokenBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A349F1B32FBCF5C900BD0C19 /* PreInitTokenBuffer.swift */; };
+		A349F1B62FBCF5E700BD0C19 /* PreInitTokenBufferSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A349F1B52FBCF5E700BD0C19 /* PreInitTokenBufferSpec.swift */; };
+		A370CD862F2BE72400073A3D /* JwtStreamAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD802F2BE72400073A3D /* JwtStreamAuthProvider.swift */; };
+		A370CD882F2BE79800073A3D /* ExponeaInternal+Jwt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD872F2BE79800073A3D /* ExponeaInternal+Jwt.swift */; };
+		A370CD8A2F2BE7CE00073A3D /* Configuration+StreamIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD892F2BE7CE00073A3D /* Configuration+StreamIntegration.swift */; };
+		A370CD8D2F2BE7DA00073A3D /* CustomerIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD8C2F2BE7DA00073A3D /* CustomerIdentity.swift */; };
+		A370CD8E2F2BE7DA00073A3D /* JwtErrorContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A370CD8B2F2BE7DA00073A3D /* JwtErrorContext.swift */; };
+		AC8C40ED947A60A1F0B36644 /* Pods_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BDEE2C0B168D360B2154ACA5 /* Pods_Example.framework */; };
 		B42DA68922B03F7700BBA225 /* Consent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42DA68822B03F7700BBA225 /* Consent.swift */; };
 		B42DA68C22B03FBF00BBA225 /* ConsentSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42DA68B22B03FBF00BBA225 /* ConsentSources.swift */; };
 		B42DA68E22B0556100BBA225 /* ConsentsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42DA68D22B0556100BBA225 /* ConsentsResponse.swift */; };
@@ -521,6 +591,17 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A33A77032E02E5C900EA9145 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A33A77022E02E5C900EA9145 /* Pods_ExponeaSDK.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C0843CF320B6E7CA00FAF0CB /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -529,7 +610,6 @@
 			files = (
 				05F33B1B25C16DEF00CFD60A /* ExponeaSDKShared.framework in Embed Frameworks */,
 				05F33B1C25C16DEF00CFD60A /* ExponeaSDKObjC.framework in Embed Frameworks */,
-				3388E6D229E8475C00F28C46 /* SwiftSoup.xcframework in Embed Frameworks */,
 				C0843CF220B6E7C900FAF0CB /* ExponeaSDK.framework in Embed Frameworks */,
 				C0ED33BC21A6FB10003649C3 /* ExponeaSDKNotifications.framework in Embed Frameworks */,
 			);
@@ -580,7 +660,6 @@
 		05297979241925DB00A90526 /* MockUNAuthorizationStatusProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockUNAuthorizationStatusProviding.swift; sourceTree = "<group>"; };
 		052F685C2327D3DF002DDCD4 /* DatabaseManagerErrorSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DatabaseManagerErrorSpec.swift; sourceTree = "<group>"; };
 		052F685E2327D404002DDCD4 /* ExponeaErrorSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExponeaErrorSpec.swift; sourceTree = "<group>"; };
-		05324BEF23D19F8C00AE91D9 /* VSAppCenterTelemetryUploadSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VSAppCenterTelemetryUploadSpec.swift; sourceTree = "<group>"; };
 		053BC76725ADD27F007D70D4 /* Configuration+Anonymize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Configuration+Anonymize.swift"; sourceTree = "<group>"; };
 		053CA1F9247D4944003B699C /* PushSelfCheckRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushSelfCheckRequest.swift; sourceTree = "<group>"; };
 		053CA1FD247D4A0F003B699C /* SelfCheckRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfCheckRepository.swift; sourceTree = "<group>"; };
@@ -668,8 +747,6 @@
 		059A7A6B2581128100A53BAF /* InputStream+readFully.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InputStream+readFully.swift"; sourceTree = "<group>"; };
 		05A6A3EA23954654008475E7 /* InAppMessageDialogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppMessageDialogView.swift; sourceTree = "<group>"; };
 		05A7BB4E243B0DBE00680B2E /* DatabaseModel v5.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "DatabaseModel v5.xcdatamodel"; sourceTree = "<group>"; };
-		05A931ED2375A4EE00D45200 /* mock_notification_response.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mock_notification_response.h; sourceTree = "<group>"; };
-		05A931EE2375A50100D45200 /* mock_notification_response.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = mock_notification_response.m; sourceTree = "<group>"; };
 		05A931F22375AB1F00D45200 /* ExponeaSDKTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExponeaSDKTests.h; sourceTree = "<group>"; };
 		05AA63BB2342362B00D78452 /* ServerRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerRepository.swift; sourceTree = "<group>"; };
 		05AA63BD2342413E00D78452 /* NetworkStubbing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkStubbing.swift; sourceTree = "<group>"; };
@@ -682,14 +759,12 @@
 		05B4D657238FF6DC00F5010F /* InAppMessageSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppMessageSpec.swift; sourceTree = "<group>"; };
 		05B78B1D2355CAFA0055077A /* NSManagedObjectWithContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NSManagedObjectWithContext.swift; sourceTree = "<group>"; };
 		05B97D202417B2C300FE9309 /* DeliveredNotificationTrackerSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeliveredNotificationTrackerSpec.swift; sourceTree = "<group>"; };
-		05B97D252417B55400FE9309 /* mock_notification_request.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = mock_notification_request.m; sourceTree = "<group>"; };
 		05B97D2C2417C95200FE9309 /* JSONConvertible.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JSONConvertible.swift; sourceTree = "<group>"; };
-		05B97D302417CD4A00FE9309 /* mock_notification_request.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mock_notification_request.h; sourceTree = "<group>"; };
 		05BA5803250649F000E10994 /* PushOpenedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushOpenedData.swift; sourceTree = "<group>"; };
 		05BA580525064E4600E10994 /* PushOpenedDataSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushOpenedDataSpec.swift; sourceTree = "<group>"; };
 		05BA58072506542400E10994 /* DataType+Codable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DataType+Codable.swift"; sourceTree = "<group>"; };
 		05BB22B1236B1E0C0098C406 /* ExponeaNotificationServiceSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaNotificationServiceSpec.swift; sourceTree = "<group>"; };
-		05BB22B4236B2F780098C406 /* PushNotificationManagerSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManagerSpec.swift; sourceTree = "<group>"; };
+		05BB22B4236B2F780098C406 /* PushNotificationManagerProjectSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManagerProjectSpec.swift; sourceTree = "<group>"; };
 		05BB22B6236B300F0098C406 /* MockTrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockTrackingManager.swift; sourceTree = "<group>"; };
 		05BF1C7523A10F1800FDC101 /* RecommendationRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationRequest.swift; sourceTree = "<group>"; };
 		05BF1C7923A1139B00FDC101 /* RecommendationResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationResponse.swift; sourceTree = "<group>"; };
@@ -721,19 +796,27 @@
 		05F3EFDF237E99FE006E83F4 /* FileTelemetryStorageSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTelemetryStorageSpec.swift; sourceTree = "<group>"; };
 		05F3EFE12382A814006E83F4 /* CrashManagerSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashManagerSpec.swift; sourceTree = "<group>"; };
 		05F3EFE32382BAB6006E83F4 /* TelemetryUtility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryUtility.swift; sourceTree = "<group>"; };
-		05F3EFE52382BB88006E83F4 /* VSAppCenterTelemetryUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VSAppCenterTelemetryUpload.swift; sourceTree = "<group>"; };
 		05F3EFE92382BC4C006E83F4 /* MockTelemetryStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockTelemetryStorage.swift; sourceTree = "<group>"; };
 		05F3EFEC2382BD08006E83F4 /* MockTelemetryUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockTelemetryUpload.swift; sourceTree = "<group>"; };
-		05F3EFEE2382C192006E83F4 /* TelemetryUtilitySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryUtilitySpec.swift; sourceTree = "<group>"; };
-		05F3EFF02382C757006E83F4 /* VSAppCenterAPIModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VSAppCenterAPIModel.swift; sourceTree = "<group>"; };
 		05FB1BB6236AE9220089C529 /* NotificationDataSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDataSpec.swift; sourceTree = "<group>"; };
 		05FBB15C244709C500BDF234 /* DatabaseManager+Clear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DatabaseManager+Clear.swift"; sourceTree = "<group>"; };
 		05FD178E2403C4CC003A799B /* BuildConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildConfiguration.swift; sourceTree = "<group>"; };
 		05FEBDBF23A7BA2A007C2372 /* InAppMessageTrackingDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppMessageTrackingDelegate.swift; sourceTree = "<group>"; };
 		05FEBDC123A7C940007C2372 /* MockInAppMessageTrackingDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockInAppMessageTrackingDelegate.swift; sourceTree = "<group>"; };
+		1834092C0840A684D9848A58 /* Pods_ExponeaSDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ExponeaSDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		23E725E3214AA7A900B552B8 /* Reachability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reachability.swift; sourceTree = "<group>"; };
+		311268DA2CD10E9C00C38394 /* InAppButtonContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonContainer.swift; sourceTree = "<group>"; };
+		311268DC2CD1135900C38394 /* InAppButtonConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonConfig.swift; sourceTree = "<group>"; };
+		311557BD2CE9DEBD0027B481 /* InAppLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppLabel.swift; sourceTree = "<group>"; };
+		311557C12CE9DF070027B481 /* InAppImageComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppImageComponent.swift; sourceTree = "<group>"; };
+		311557C32CEB3EE30027B481 /* InAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppView.swift; sourceTree = "<group>"; };
+		313444962CDA65B500931147 /* InAppCloseButtonComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppCloseButtonComponent.swift; sourceTree = "<group>"; };
+		313C07032CD4EB8F0020DE64 /* InAppButtonContainerSwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonContainerSwiftUI.swift; sourceTree = "<group>"; };
+		313C07052CD4EBC10020DE64 /* InAppButtonSwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonSwiftUI.swift; sourceTree = "<group>"; };
+		313C07072CD4EBDD0020DE64 /* InAppButtonContainerSwiftUIViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonContainerSwiftUIViewModel.swift; sourceTree = "<group>"; };
 		313E30672C22B21200375D4B /* InAppContentBlockCarouselViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppContentBlockCarouselViewController.swift; sourceTree = "<group>"; };
 		314CF9262BD8F2820000EFD9 /* SegmentationSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentationSpec.swift; sourceTree = "<group>"; };
+		31513E282CA97F4700A975F8 /* ManualSegmentationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualSegmentationManager.swift; sourceTree = "<group>"; };
 		315598072C09CAE500FBED42 /* CarouselInAppContentBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselInAppContentBlockView.swift; sourceTree = "<group>"; };
 		315DCDFE2B6A67E9004BD7A7 /* beefree-actiontype.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "beefree-actiontype.png"; sourceTree = "<group>"; };
 		317536852BD27D910062A5E5 /* SegmentDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentDTO.swift; sourceTree = "<group>"; };
@@ -743,16 +826,36 @@
 		3189E2DE2C4B965100C4CD68 /* ContentBlockCarouselCallback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockCarouselCallback.swift; sourceTree = "<group>"; };
 		3189E2E02C4EBEC300C4CD68 /* CarouselContentBlockViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselContentBlockViewCell.swift; sourceTree = "<group>"; };
 		3189E2E22C4EBEFE00C4CD68 /* InAppCarouselStateType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppCarouselStateType.swift; sourceTree = "<group>"; };
-		3189E2E42C4EBF1000C4CD68 /* CarouselOnShowMessageData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselOnShowMessageData.swift; sourceTree = "<group>"; };
-		3189E2E62C4EBF2300C4CD68 /* CarouselOnChangeData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselOnChangeData.swift; sourceTree = "<group>"; };
 		318B55292A80E52B00934902 /* DeeplinkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeeplinkManager.swift; sourceTree = "<group>"; };
+		318EFF432D898984004C5E1F /* InAppImageComponentConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppImageComponentConfig.swift; sourceTree = "<group>"; };
+		318EFF452D8989EA004C5E1F /* SlideInAppImageComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideInAppImageComponent.swift; sourceTree = "<group>"; };
+		318EFF472D898A1E004C5E1F /* InAppLabelConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppLabelConfig.swift; sourceTree = "<group>"; };
+		318EFF492D898A5A004C5E1F /* Sttring+calculatePaddings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sttring+calculatePaddings.swift"; sourceTree = "<group>"; };
+		318EFF4B2D898A74004C5E1F /* ButtonTextWithAttributedString.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonTextWithAttributedString.swift; sourceTree = "<group>"; };
+		318EFF4D2D898A97004C5E1F /* UIFont+styles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIFont+styles.swift"; sourceTree = "<group>"; };
+		318EFF4F2D898AA7004C5E1F /* TextWithAttributedString.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextWithAttributedString.swift; sourceTree = "<group>"; };
+		318EFF512D898B30004C5E1F /* InAppButtonLayoutType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonLayoutType.swift; sourceTree = "<group>"; };
+		318EFF532D898B3C004C5E1F /* InAppButtonAlignmentType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonAlignmentType.swift; sourceTree = "<group>"; };
+		318EFF552D898B46004C5E1F /* InAppButtonMarginType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonMarginType.swift; sourceTree = "<group>"; };
+		318EFF572D898B53004C5E1F /* InAppButtonEdge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonEdge.swift; sourceTree = "<group>"; };
+		318EFF592D898B5F004C5E1F /* InAppButtonFontData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppButtonFontData.swift; sourceTree = "<group>"; };
+		318EFF5B2D898B9E004C5E1F /* InAppCloseButtonConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppCloseButtonConfig.swift; sourceTree = "<group>"; };
+		318EFF5D2D898BB2004C5E1F /* InAppModalTypeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppModalTypeConfig.swift; sourceTree = "<group>"; };
+		318EFF5F2D898BC0004C5E1F /* MessagePosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePosition.swift; sourceTree = "<group>"; };
+		318EFF612D898BE4004C5E1F /* InAppLayoutConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppLayoutConfig.swift; sourceTree = "<group>"; };
+		318EFF632D898BF1004C5E1F /* InAppViewConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppViewConfig.swift; sourceTree = "<group>"; };
 		319FEBF32BD6DA4300E0EB11 /* SegmentationStoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentationStoring.swift; sourceTree = "<group>"; };
+		31A1D21A2C6F8A6300606633 /* GiftHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiftHelper.swift; sourceTree = "<group>"; };
+		31A277DC2C74E08E00354CD2 /* GIFTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GIFTest.swift; sourceTree = "<group>"; };
+		31B689532CEF4DE500C45E44 /* InAppDialogContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppDialogContainerView.swift; sourceTree = "<group>"; };
+		31B689552CEF537E00C45E44 /* ExponeaAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaAsyncImage.swift; sourceTree = "<group>"; };
 		31C7B4232A822848001BA5E2 /* Coordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coordinator.swift; sourceTree = "<group>"; };
 		31C7B4252A822FE7001BA5E2 /* ExponeaTabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaTabBarController.swift; sourceTree = "<group>"; };
 		31CC0B732BD2519000608057 /* SegmentationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentationManager.swift; sourceTree = "<group>"; };
 		31CC0B762BD251E200608057 /* SegmentationDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentationDataProvider.swift; sourceTree = "<group>"; };
 		31CC0B782BD255D300608057 /* SegmentationRequests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentationRequests.swift; sourceTree = "<group>"; };
 		31CC0B7A2BD2562000608057 /* LinkIdsRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkIdsRequest.swift; sourceTree = "<group>"; };
+		31CD7B852D81C5E4006DE6E5 /* IntegrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationManager.swift; sourceTree = "<group>"; };
 		31CFEF6B2A6692B2005402E5 /* Sequence+RemoveNil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sequence+RemoveNil.swift"; sourceTree = "<group>"; };
 		31CFEF6E2A66940E005402E5 /* SequenceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequenceTest.swift; sourceTree = "<group>"; };
 		31E9CBA12AE9494B00A333C8 /* URL+Init.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "URL+Init.swift"; sourceTree = "<group>"; };
@@ -776,7 +879,6 @@
 		31EBB8672A6AC3470003AAA5 /* SampleInappContentBlocks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SampleInappContentBlocks.swift; sourceTree = "<group>"; };
 		31EBB86A2A6AC3500003AAA5 /* InAppContentBlocksManagerSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InAppContentBlocksManagerSpec.swift; sourceTree = "<group>"; };
 		31EBB86C2A6AC3570003AAA5 /* TrackManager+IdentifyCustomerSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "TrackManager+IdentifyCustomerSpec.swift"; sourceTree = "<group>"; };
-		31EC209F2C528A0900CE7BE9 /* CustomCarouselCallback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCarouselCallback.swift; sourceTree = "<group>"; };
 		3377ABFB29897F4C00E530FB /* ExpoInitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpoInitManager.swift; sourceTree = "<group>"; };
 		3384EFC529965EEB009A5981 /* Execute+AfterInit.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Execute+AfterInit.swift"; sourceTree = "<group>"; };
 		33FC6CC129A90ED5001F113F /* OnMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnMain.swift; sourceTree = "<group>"; };
@@ -785,18 +887,22 @@
 		33FC6CC729A912CC001F113F /* Extension+UIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extension+UIView.swift"; sourceTree = "<group>"; };
 		33FC6CC929A9158F001F113F /* Reusable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reusable.swift; sourceTree = "<group>"; };
 		33FC6CCB29A9195B001F113F /* Typealiases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typealiases.swift; sourceTree = "<group>"; };
-		486299A97905BE77A09EC216 /* Pods_ExponeaSDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ExponeaSDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		459AF2F44CB7570664A3FC4D /* Pods-ExponeaSDK.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ExponeaSDK.debug.xcconfig"; path = "Target Support Files/Pods-ExponeaSDK/Pods-ExponeaSDK.debug.xcconfig"; sourceTree = "<group>"; };
 		4C169E3022B6524C00C425DA /* TrackUniversalLinkSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TrackUniversalLinkSpec.swift; sourceTree = "<group>"; };
 		4C3F5F2C22DF98C00069E71D /* MockExponea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockExponea.swift; sourceTree = "<group>"; };
 		4C6BD13522ABA743004487A8 /* CampaignData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignData.swift; sourceTree = "<group>"; };
+		551301362D072338005C71C8 /* CampaignRepositoryType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignRepositoryType.swift; sourceTree = "<group>"; };
+		551301382D07288D005C71C8 /* CampaignRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignRepository.swift; sourceTree = "<group>"; };
+		5513013A2D088AC1005C71C8 /* CampaignRepositorySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignRepositorySpec.swift; sourceTree = "<group>"; };
 		55130C4828DDC81600B4FE77 /* TrackingConsentManagerType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingConsentManagerType.swift; sourceTree = "<group>"; };
 		55130C4A28DDCA6800B4FE77 /* TrackingConsentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingConsentManager.swift; sourceTree = "<group>"; };
 		55130C4E28E3C50D00B4FE77 /* GdprTrackingSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GdprTrackingSpec.swift; sourceTree = "<group>"; };
 		55130C5028E425D600B4FE77 /* TrackConsentManagerSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackConsentManagerSpec.swift; sourceTree = "<group>"; };
-		551F65192BAAD0F60072B980 /* Build */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Build; path = ../Carthage/Build; sourceTree = "<group>"; };
 		552772C628ED86E0000ACFD5 /* ExponeaInternal+AppInbox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "ExponeaInternal+AppInbox.swift"; sourceTree = "<group>"; };
 		552772CA28EDAF3A000ACFD5 /* AppInboxListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInboxListViewController.swift; sourceTree = "<group>"; };
 		5527979C28D98C15002B2B77 /* GdprTracking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GdprTracking.swift; sourceTree = "<group>"; };
+		5529AE952E13BBD6007FB0C8 /* EventLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLog.swift; sourceTree = "<group>"; };
+		5529AE972E13BC44007FB0C8 /* SentryTelemetryUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryTelemetryUpload.swift; sourceTree = "<group>"; };
 		55391D482953051E001D95B8 /* AppInboxParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInboxParser.swift; sourceTree = "<group>"; };
 		55391D4A295342C7001D95B8 /* AppInboxManagerSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInboxManagerSpec.swift; sourceTree = "<group>"; };
 		55391D4C295497A7001D95B8 /* AppInboxProviderSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInboxProviderSpec.swift; sourceTree = "<group>"; };
@@ -823,6 +929,7 @@
 		557856022BC7BF9300420072 /* InAppContentBlockDisplayStatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppContentBlockDisplayStatusStore.swift; sourceTree = "<group>"; };
 		558453A0297E8D26000707E4 /* AppInboxTrackingSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInboxTrackingSpec.swift; sourceTree = "<group>"; };
 		558DFADC2B2B442400177800 /* ExampleInAppContentBlockCallback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleInAppContentBlockCallback.swift; sourceTree = "<group>"; };
+		55977A162E8688790087F301 /* UIAnimatedImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAnimatedImageView.swift; sourceTree = "<group>"; };
 		559D97072962FCF0006D4499 /* ImageUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUtils.swift; sourceTree = "<group>"; };
 		559E7608296E0E5C00F27BC9 /* MessageItemSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageItemSpec.swift; sourceTree = "<group>"; };
 		55A468CF296F154C00E62438 /* WebActionsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebActionsManager.swift; sourceTree = "<group>"; };
@@ -832,6 +939,12 @@
 		55C08DCE2A5689F4000BA66A /* FileCacheType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheType.swift; sourceTree = "<group>"; };
 		55C08DD02A568A55000BA66A /* FileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCache.swift; sourceTree = "<group>"; };
 		55C08DD22A568C74000BA66A /* FileUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileUtils.swift; sourceTree = "<group>"; };
+		55C269B32E0FECB5004CB427 /* ThreadInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadInfo.swift; sourceTree = "<group>"; };
+		55C269B52E0FED20004CB427 /* ErrorStackTraceElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorStackTraceElement.swift; sourceTree = "<group>"; };
+		55C7817A2E0EA75700B1DEF3 /* ExponeaSentryEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaSentryEnvelope.swift; sourceTree = "<group>"; };
+		55CD47532E2013F700E8BF3F /* SentryTelemetryUploadSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryTelemetryUploadSpec.swift; sourceTree = "<group>"; };
+		55CD47622E29310300E8BF3F /* BuildConfigurationShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildConfigurationShared.swift; sourceTree = "<group>"; };
+		55CD476A2E3905C500E8BF3F /* Sequence+RemoveInfinity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sequence+RemoveInfinity.swift"; sourceTree = "<group>"; };
 		55D054392B230C9600BC773A /* InAppContentBlockCallbackType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppContentBlockCallbackType.swift; sourceTree = "<group>"; };
 		55D0543B2B2351A000BC773A /* InAppContentBlockAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppContentBlockAction.swift; sourceTree = "<group>"; };
 		55D0543D2B29BE2200BC773A /* ExtensionUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionUtils.swift; sourceTree = "<group>"; };
@@ -848,13 +961,53 @@
 		55F5F23C2C3E89070094B558 /* ArrayComparisonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrayComparisonTests.swift; sourceTree = "<group>"; };
 		55F6A41729891F130029D628 /* ExampleAuthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleAuthProvider.swift; sourceTree = "<group>"; };
 		55F6A41929891F710029D628 /* CustomerTokenStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomerTokenStorage.swift; sourceTree = "<group>"; };
-		6B72A7E229C068BC00E1A1F9 /* SwiftSoup.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = SwiftSoup.xcframework; path = ../Carthage/Build/SwiftSoup.xcframework; sourceTree = "<group>"; };
+		55F6A41C29891F730029D62B /* MockJwtService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockJwtService.swift; sourceTree = "<group>"; };
+		5C2B1E5FFF8D1D6FBBC6C981 /* Pods-Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Example.release.xcconfig"; path = "Target Support Files/Pods-Example/Pods-Example.release.xcconfig"; sourceTree = "<group>"; };
+		602F9B5F2FB5DB84007D5F5B /* SelfCheckApplicationIDWiringSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfCheckApplicationIDWiringSpec.swift; sourceTree = "<group>"; };
+		602F9B632FB5F137007D5F5B /* PushSelfCheckRequestSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushSelfCheckRequestSpec.swift; sourceTree = "<group>"; };
+		603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnonymizeWithIntegrationAndCompletionSpec.swift; sourceTree = "<group>"; };
+		60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallIdResetSpec.swift; sourceTree = "<group>"; };
+		60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryUtilitySpec.swift; sourceTree = "<group>"; };
+		60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerRepositoryAuthWiringSpec.swift; sourceTree = "<group>"; };
+		605C41812F23C0B500946118 /* PushNotificationManagerStreamSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManagerStreamSpec.swift; sourceTree = "<group>"; };
+		608B3A9D2F152D7100DF41B0 /* RecommendationsStreamRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationsStreamRequest.swift; sourceTree = "<group>"; };
+		608B3A9F2F152D9B00DF41B0 /* RecommendationsStreamResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationsStreamResponse.swift; sourceTree = "<group>"; };
+		608B3AA32F162CCA00DF41B0 /* config_valid_stream.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config_valid_stream.plist; sourceTree = "<group>"; };
+		608B3AA92F1649DC00DF41B0 /* config_valid2_stream.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config_valid2_stream.plist; sourceTree = "<group>"; };
+		608B3AAB2F16890300DF41B0 /* ExponeaConfigStream.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ExponeaConfigStream.plist; sourceTree = "<group>"; };
+		608CB4E22F27BAEC00F8FF46 /* SegmentationStreamSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentationStreamSpec.swift; sourceTree = "<group>"; };
+		60AB12012F30000100000001 /* MockJwtTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockJwtTokenStore.swift; sourceTree = "<group>"; };
+		60AB12022F30000100000002 /* JwtAuthManagerSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtAuthManagerSpec.swift; sourceTree = "<group>"; };
+		60AB12032F30000100000003 /* CustomerIdentitySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomerIdentitySpec.swift; sourceTree = "<group>"; };
+		60AB12042F30000100000004 /* JwtErrorContextSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtErrorContextSpec.swift; sourceTree = "<group>"; };
+		60AB12052F30000100000005 /* ConfigurationStreamIntegrationSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationStreamIntegrationSpec.swift; sourceTree = "<group>"; };
+		60AB12062F30000100000006 /* JwtIntegrationSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtIntegrationSpec.swift; sourceTree = "<group>"; };
+		60D28F302F71901300F95CD0 /* StopIntegrationSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopIntegrationSpec.swift; sourceTree = "<group>"; };
+		60D5E6B22FBB17BE00C2CB5D /* DeliveredNotificationStateResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveredNotificationStateResolver.swift; sourceTree = "<group>"; };
+		60D5E6B42FBB182E00C2CB5D /* DeliveredNotificationStateResolverSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveredNotificationStateResolverSpec.swift; sourceTree = "<group>"; };
+		6B4040A1000000000000A102 /* AnonymizeNotificationStateValidSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnonymizeNotificationStateValidSpec.swift; sourceTree = "<group>"; };
 		6BA73FEC29B6377E009F92DF /* AtomicValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicValue.swift; sourceTree = "<group>"; };
 		6BA73FEF29B63A14009F92DF /* AtomicValueSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtomicValueSpec.swift; sourceTree = "<group>"; };
+		719B0B82B310EE3E7FEC5428 /* Pods_ExponeaSDKTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ExponeaSDKTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		7F417D6738618D5F30397815 /* InAppMessageWebView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InAppMessageWebView.swift; sourceTree = "<group>"; };
 		7F417E0EA9B478FEF72999D9 /* HtmlNormalizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HtmlNormalizer.swift; sourceTree = "<group>"; };
 		7F417FBE26AB2DD5FE31707E /* HtmlNormalizerSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HtmlNormalizerSpec.swift; sourceTree = "<group>"; };
-		A64D92FEFD20D8844C3C3BF9 /* Pods_ExponeaSDKTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ExponeaSDKTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AE5764CF33A9235B3D5051E /* Pods-ExponeaSDKTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ExponeaSDKTests.release.xcconfig"; path = "Target Support Files/Pods-ExponeaSDKTests/Pods-ExponeaSDKTests.release.xcconfig"; sourceTree = "<group>"; };
+		A30AC9DC2F07DEEA00E51E34 /* ExponeaSettings+Integration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ExponeaSettings+Integration.swift"; sourceTree = "<group>"; };
+		A30AC9DE2F0AC64E00E51E34 /* DatabaseModel v7.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "DatabaseModel v7.xcdatamodel"; sourceTree = "<group>"; };
+		A30AC9DF2F111EBB00E51E34 /* ExponeaIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaIntegration.swift; sourceTree = "<group>"; };
+		A30AC9E12F111EDA00E51E34 /* ExponeaIntegrationType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaIntegrationType.swift; sourceTree = "<group>"; };
+		A30AC9E32F111EF300E51E34 /* IntegrationSourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationSourceType.swift; sourceTree = "<group>"; };
+		A349F1B32FBCF5C900BD0C19 /* PreInitTokenBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreInitTokenBuffer.swift; sourceTree = "<group>"; };
+		A349F1B52FBCF5E700BD0C19 /* PreInitTokenBufferSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreInitTokenBufferSpec.swift; sourceTree = "<group>"; };
+		A370CD7F2F2BE72400073A3D /* JwtAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtAuthManager.swift; sourceTree = "<group>"; };
+		A370CD802F2BE72400073A3D /* JwtStreamAuthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtStreamAuthProvider.swift; sourceTree = "<group>"; };
+		A370CD812F2BE72400073A3D /* JwtTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtTokenStore.swift; sourceTree = "<group>"; };
+		A370CD822F2BE72400073A3D /* KeychainJwtTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainJwtTokenStore.swift; sourceTree = "<group>"; };
+		A370CD872F2BE79800073A3D /* ExponeaInternal+Jwt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ExponeaInternal+Jwt.swift"; sourceTree = "<group>"; };
+		A370CD892F2BE7CE00073A3D /* Configuration+StreamIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Configuration+StreamIntegration.swift"; sourceTree = "<group>"; };
+		A370CD8B2F2BE7DA00073A3D /* JwtErrorContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtErrorContext.swift; sourceTree = "<group>"; };
+		A370CD8C2F2BE7DA00073A3D /* CustomerIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomerIdentity.swift; sourceTree = "<group>"; };
 		B40E9F5C22FAD25A0085B8A1 /* TokenTrackFrequency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenTrackFrequency.swift; sourceTree = "<group>"; };
 		B40E9F5E22FAD58E0085B8A1 /* DatabaseModel v4.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "DatabaseModel v4.xcdatamodel"; sourceTree = "<group>"; };
 		B42DA68822B03F7700BBA225 /* Consent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Consent.swift; sourceTree = "<group>"; };
@@ -864,6 +1017,7 @@
 		B42DA69122B05A0100BBA225 /* get-consents.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "get-consents.json"; sourceTree = "<group>"; };
 		B4AF83BA22C6108200061350 /* String+URLValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+URLValidation.swift"; sourceTree = "<group>"; };
 		B4C957CA2267800400F8EC19 /* ExponeaSDK-Notifications.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; name = "ExponeaSDK-Notifications.podspec"; path = "../ExponeaSDK-Notifications.podspec"; sourceTree = "<group>"; };
+		BDEE2C0B168D360B2154ACA5 /* Pods_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		C01E19E920C02A4D00DF64F9 /* MultipleErrorResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipleErrorResponse.swift; sourceTree = "<group>"; };
 		C028C3A12110980600B03ED4 /* JSONValueSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValueSpec.swift; sourceTree = "<group>"; };
 		C02C562821C9B71D0087A990 /* ExponeaNotificationAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaNotificationAction.swift; sourceTree = "<group>"; };
@@ -921,7 +1075,7 @@
 		C0ED33B621A6FB10003649C3 /* ExponeaSDKNotifications.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExponeaSDKNotifications.h; sourceTree = "<group>"; };
 		C0ED33B721A6FB10003649C3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C0ED33C021A6FB6B003649C3 /* ExponeaNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaNotificationService.swift; sourceTree = "<group>"; };
-		C0ED33C621A72EE6003649C3 /* ExponeaSDK.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; name = ExponeaSDK.podspec; path = ../ExponeaSDK.podspec; sourceTree = "<group>"; };
+		C0ED33C621A72EE6003649C3 /* ExponeaSDK.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; name = ExponeaSDK.podspec; path = ../ExponeaSDK.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		C0F2406920BC38EC00CAF7CE /* Swizzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swizzle.swift; sourceTree = "<group>"; };
 		C0F2406B20BC50A000CAF7CE /* ExponeaInternal+Fetching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ExponeaInternal+Fetching.swift"; sourceTree = "<group>"; };
 		C0F2406D20BC511500CAF7CE /* ExponeaInternal+Tracking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ExponeaInternal+Tracking.swift"; sourceTree = "<group>"; };
@@ -936,7 +1090,6 @@
 		C0F6C4EC2098A1AC00834E21 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C0F6C4EE2098A1AC00834E21 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C0F7A59C21AE921300BA392F /* NotificationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationData.swift; sourceTree = "<group>"; };
-		C9BB6439F5B63A6520815A14 /* Pods-ExponeaSDKTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ExponeaSDKTests.debug.xcconfig"; path = "Target Support Files/Pods-ExponeaSDKTests/Pods-ExponeaSDKTests.debug.xcconfig"; sourceTree = "<group>"; };
 		CC06F95025FA037800F38D93 /* RequestFactorySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestFactorySpec.swift; sourceTree = "<group>"; };
 		CC0C484C281935BC003E8BF8 /* ExponeaVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaVersion.swift; sourceTree = "<group>"; };
 		CC80290427ABF04F00187887 /* InAppMessageDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppMessageDelegate.swift; sourceTree = "<group>"; };
@@ -970,7 +1123,9 @@
 		F0E757EF207D027300FE8C21 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		F0E757F2207D02F100FE8C21 /* ExponeaSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaSpec.swift; sourceTree = "<group>"; };
 		F0E757F4207D032500FE8C21 /* ExponeaConfig.plist */ = {isa = PBXFileReference; explicitFileType = text.plist.xml; path = ExponeaConfig.plist; sourceTree = "<group>"; };
-		F61795D2F1CCFF97A40ED80E /* Pods-ExponeaSDKTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ExponeaSDKTests.release.xcconfig"; path = "Target Support Files/Pods-ExponeaSDKTests/Pods-ExponeaSDKTests.release.xcconfig"; sourceTree = "<group>"; };
+		F13968EA8462C6BF9B18AC43 /* Pods-Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Example.debug.xcconfig"; path = "Target Support Files/Pods-Example/Pods-Example.debug.xcconfig"; sourceTree = "<group>"; };
+		F1EBB4AA67FF97A56D6B8EE2 /* Pods-ExponeaSDK.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ExponeaSDK.release.xcconfig"; path = "Target Support Files/Pods-ExponeaSDK/Pods-ExponeaSDK.release.xcconfig"; sourceTree = "<group>"; };
+		F7D1B75F2134960EE05ED518 /* Pods-ExponeaSDKTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ExponeaSDKTests.debug.xcconfig"; path = "Target Support Files/Pods-ExponeaSDKTests/Pods-ExponeaSDKTests.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1019,8 +1174,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0843CF120B6E7C900FAF0CB /* ExponeaSDK.framework in Frameworks */,
-				3388E6D129E8475B00F28C46 /* SwiftSoup.xcframework in Frameworks */,
 				C0ED33BB21A6FB10003649C3 /* ExponeaSDKNotifications.framework in Frameworks */,
+				AC8C40ED947A60A1F0B36644 /* Pods_Example.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1028,8 +1183,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				551F651A2BAAD0FC0072B980 /* SwiftSoup.xcframework in Frameworks */,
-				55C08DCD2A4ED5EE000BA66A /* (null) in Frameworks */,
+				A33A77012E02E5C900EA9145 /* Pods_ExponeaSDK.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1039,7 +1193,7 @@
 			files = (
 				05BB22B3236B1F740098C406 /* ExponeaSDKNotifications.framework in Frameworks */,
 				F021E863206CF10200788ABC /* ExponeaSDK.framework in Frameworks */,
-				792F2F886D9F14542DF0E97D /* Pods_ExponeaSDKTests.framework in Frameworks */,
+				576C22ACED554D0D7372B5E1 /* Pods_ExponeaSDKTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1069,10 +1223,6 @@
 			children = (
 				05A931F22375AB1F00D45200 /* ExponeaSDKTests.h */,
 				F021E869206CF10200788ABC /* Info.plist */,
-				05B97D302417CD4A00FE9309 /* mock_notification_request.h */,
-				05B97D252417B55400FE9309 /* mock_notification_request.m */,
-				05A931ED2375A4EE00D45200 /* mock_notification_response.h */,
-				05A931EE2375A50100D45200 /* mock_notification_response.m */,
 			);
 			path = "Supporting Files";
 			sourceTree = "<group>";
@@ -1080,10 +1230,10 @@
 		01EC2DA1207E3D000031BFEB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				F0E757F4207D032500FE8C21 /* ExponeaConfig.plist */,
+				608B3AAD2F169EDA00DF41B0 /* ExponeaConfig */,
+				608B3AA22F162C4F00DF41B0 /* ConfigValid2 */,
+				608B3AA12F162C4200DF41B0 /* ConfigValid */,
 				0509610123216C7D00D59C01 /* TrackingManagerUpdate.plist */,
-				01764BC52087775800D0D673 /* config_valid.plist */,
-				01764BC72087793F00D0D673 /* config_valid2.plist */,
 				057F4492239960650070DF30 /* lena.jpeg */,
 				057F4493239960650070DF30 /* mountain.png */,
 			);
@@ -1093,6 +1243,7 @@
 		01EC2DA2207E3D060031BFEB /* Specs */ = {
 			isa = PBXGroup;
 			children = (
+				60AB120D2F3000010000000D /* Jwt */,
 				314CF9252BD8F2620000EFD9 /* Segmentation */,
 				55EFD790291A6C08002569FB /* AppInbox */,
 				6BA73FEE29B639F6009F92DF /* Attomicity */,
@@ -1147,7 +1298,7 @@
 		05324BEE23D19F7B00AE91D9 /* Upload */ = {
 			isa = PBXGroup;
 			children = (
-				05324BEF23D19F8C00AE91D9 /* VSAppCenterTelemetryUploadSpec.swift */,
+				55CD47532E2013F700E8BF3F /* SentryTelemetryUploadSpec.swift */,
 			);
 			path = Upload;
 			sourceTree = "<group>";
@@ -1155,6 +1306,7 @@
 		053E12C923A26040009CEF03 /* Recommendation */ = {
 			isa = PBXGroup;
 			children = (
+				608B3A9C2F152D6100DF41B0 /* DataHub */,
 				053E12CA23A26098009CEF03 /* Recommendation.swift */,
 				053E12CC23A26187009CEF03 /* RecommendationOptions.swift */,
 			);
@@ -1164,8 +1316,9 @@
 		05583E9C23608ABD00F7084E /* Push Notifications */ = {
 			isa = PBXGroup;
 			children = (
+				A349F1B52FBCF5E700BD0C19 /* PreInitTokenBufferSpec.swift */,
+				605C41802F23C09300946118 /* PushNotificationManagerSpec */,
 				0567723E237464990082167C /* PushNotificationDelegateObserverSpec.swift */,
-				05BB22B4236B2F780098C406 /* PushNotificationManagerSpec.swift */,
 				05583E9D23608AE400F7084E /* PushNotificationParserSpec.swift */,
 				0567724023746B9B0082167C /* PushNotificationSwizzlerSpec.swift */,
 				057D476C23C889BE00AEE902 /* PushNotificationsTestData.swift */,
@@ -1186,6 +1339,9 @@
 		056182A525AD95B3001E30A3 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
+				A370CD892F2BE7CE00073A3D /* Configuration+StreamIntegration.swift */,
+				A30AC9DC2F07DEEA00E51E34 /* ExponeaSettings+Integration.swift */,
+				55CD47552E29234400E8BF3F /* Telemetry */,
 				0191639D207E14C9005FD174 /* Logging */,
 				058DD8E12411189300E5BF91 /* Models */,
 				058DD937241131F400E5BF91 /* Other */,
@@ -1276,6 +1432,8 @@
 		058DD8E12411189300E5BF91 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A370CD8B2F2BE7DA00073A3D /* JwtErrorContext.swift */,
+				A370CD8C2F2BE7DA00073A3D /* CustomerIdentity.swift */,
 				058DD8E62411192200E5BF91 /* Networking */,
 				058DD8E22411189E00E5BF91 /* Notifications */,
 				C0EB5DA420BB59A500F1031F /* Parameters */,
@@ -1293,6 +1451,7 @@
 		058DD8E22411189E00E5BF91 /* Notifications */ = {
 			isa = PBXGroup;
 			children = (
+				60D5E6B22FBB17BE00C2CB5D /* DeliveredNotificationStateResolver.swift */,
 				C02C562821C9B71D0087A990 /* ExponeaNotificationAction.swift */,
 				C03B23D721AAFDBB00360EE6 /* ExponeaNotificationActionType.swift */,
 				C09C33CA221C097100715603 /* NotificationData+Properties.swift */,
@@ -1304,11 +1463,14 @@
 		058DD8E62411192200E5BF91 /* Networking */ = {
 			isa = PBXGroup;
 			children = (
+				A30AC9E32F111EF300E51E34 /* IntegrationSourceType.swift */,
 				C0D9B08020A3C0D50066FB1E /* Authorization.swift */,
 				05714B72243758FA00E62206 /* ExponeaProject.swift */,
 				F029BF26208A096900342498 /* HTTPMethod.swift */,
 				F029BF24208A08F800342498 /* Result.swift */,
 				F029BF28208A099500342498 /* Routes.swift */,
+				A30AC9DF2F111EBB00E51E34 /* ExponeaIntegration.swift */,
+				A30AC9E12F111EDA00E51E34 /* ExponeaIntegrationType.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -1344,6 +1506,8 @@
 				0570E76A246EBE7400E92ACF /* UIImage+Gif.swift */,
 				C0329E5E20F76EB00051F5DF /* URLRequest+Debug.swift */,
 				C0329E6020F76EBF0051F5DF /* URLResponse+Debug.swift */,
+				55CD47622E29310300E8BF3F /* BuildConfigurationShared.swift */,
+				55CD476A2E3905C500E8BF3F /* Sequence+RemoveInfinity.swift */,
 			);
 			path = Other;
 			sourceTree = "<group>";
@@ -1391,6 +1555,7 @@
 		05BB22B0236B1DFE0098C406 /* Notifications */ = {
 			isa = PBXGroup;
 			children = (
+				60D5E6B42FBB182E00C2CB5D /* DeliveredNotificationStateResolverSpec.swift */,
 				05B97D202417B2C300FE9309 /* DeliveredNotificationTrackerSpec.swift */,
 				05BB22B1236B1E0C0098C406 /* ExponeaNotificationServiceSpec.swift */,
 			);
@@ -1428,6 +1593,7 @@
 		05CDD8332391147E00C7291A /* InAppMessages */ = {
 			isa = PBXGroup;
 			children = (
+				311268D92CD10E4D00C38394 /* Style */,
 				05D2D39D23DF023C00E3E79A /* View */,
 				053EC59A23AA3309004D1C8B /* InAppMessageDisplayStateStore.swift */,
 				0580BBC823969D1F0058323D /* InAppMessagePresenter.swift */,
@@ -1466,12 +1632,9 @@
 		05F3EFCB237E9237006E83F4 /* Telemetry */ = {
 			isa = PBXGroup;
 			children = (
-				05F3EFD6237E9381006E83F4 /* Model */,
 				05F3EFD1237E9283006E83F4 /* Storage */,
-				05F3EFD0237E927C006E83F4 /* Upload */,
 				05F3EFCE237E926B006E83F4 /* CrashManager.swift */,
 				05F3EFCC237E9260006E83F4 /* TelemetryManager.swift */,
-				05F3EFE32382BAB6006E83F4 /* TelemetryUtility.swift */,
 			);
 			path = Telemetry;
 			sourceTree = "<group>";
@@ -1480,8 +1643,7 @@
 			isa = PBXGroup;
 			children = (
 				05F3EFD4237E92A4006E83F4 /* TelemetryUpload.swift */,
-				05F3EFF02382C757006E83F4 /* VSAppCenterAPIModel.swift */,
-				05F3EFE52382BB88006E83F4 /* VSAppCenterTelemetryUpload.swift */,
+				5529AE972E13BC44007FB0C8 /* SentryTelemetryUpload.swift */,
 			);
 			path = Upload;
 			sourceTree = "<group>";
@@ -1501,6 +1663,10 @@
 				05F3EFD7237E938D006E83F4 /* CrashLog.swift */,
 				05F3EFD9237E9415006E83F4 /* ErrorData.swift */,
 				05457FAD241BCFF30067226F /* TelemetryEventType.swift */,
+				55C7817A2E0EA75700B1DEF3 /* ExponeaSentryEnvelope.swift */,
+				55C269B32E0FECB5004CB427 /* ThreadInfo.swift */,
+				55C269B52E0FED20004CB427 /* ErrorStackTraceElement.swift */,
+				5529AE952E13BBD6007FB0C8 /* EventLog.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -1508,11 +1674,12 @@
 		05F3EFDD237E99E4006E83F4 /* Telemetry */ = {
 			isa = PBXGroup;
 			children = (
+				60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */,
+				60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */,
 				05F3EFDE237E99ED006E83F4 /* Storage */,
 				05324BEE23D19F7B00AE91D9 /* Upload */,
 				05F3EFE12382A814006E83F4 /* CrashManagerSpec.swift */,
 				05080C3D23D736C400E4241B /* TelemetryManagerSpec.swift */,
-				05F3EFEE2382C192006E83F4 /* TelemetryUtilitySpec.swift */,
 			);
 			path = Telemetry;
 			sourceTree = "<group>";
@@ -1558,9 +1725,45 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		311268D92CD10E4D00C38394 /* Style */ = {
+			isa = PBXGroup;
+			children = (
+				311557C12CE9DF070027B481 /* InAppImageComponent.swift */,
+				31B689552CEF537E00C45E44 /* ExponeaAsyncImage.swift */,
+				311557BD2CE9DEBD0027B481 /* InAppLabel.swift */,
+				318EFF4F2D898AA7004C5E1F /* TextWithAttributedString.swift */,
+				318EFF4B2D898A74004C5E1F /* ButtonTextWithAttributedString.swift */,
+				318EFF472D898A1E004C5E1F /* InAppLabelConfig.swift */,
+				311268DA2CD10E9C00C38394 /* InAppButtonContainer.swift */,
+				311268DC2CD1135900C38394 /* InAppButtonConfig.swift */,
+				318EFF592D898B5F004C5E1F /* InAppButtonFontData.swift */,
+				318EFF572D898B53004C5E1F /* InAppButtonEdge.swift */,
+				318EFF552D898B46004C5E1F /* InAppButtonMarginType.swift */,
+				318EFF532D898B3C004C5E1F /* InAppButtonAlignmentType.swift */,
+				318EFF512D898B30004C5E1F /* InAppButtonLayoutType.swift */,
+				313C07032CD4EB8F0020DE64 /* InAppButtonContainerSwiftUI.swift */,
+				313C07052CD4EBC10020DE64 /* InAppButtonSwiftUI.swift */,
+				313C07072CD4EBDD0020DE64 /* InAppButtonContainerSwiftUIViewModel.swift */,
+				313444962CDA65B500931147 /* InAppCloseButtonComponent.swift */,
+				318EFF5B2D898B9E004C5E1F /* InAppCloseButtonConfig.swift */,
+				311557C32CEB3EE30027B481 /* InAppView.swift */,
+				318EFF632D898BF1004C5E1F /* InAppViewConfig.swift */,
+				318EFF612D898BE4004C5E1F /* InAppLayoutConfig.swift */,
+				318EFF5F2D898BC0004C5E1F /* MessagePosition.swift */,
+				318EFF5D2D898BB2004C5E1F /* InAppModalTypeConfig.swift */,
+				31B689532CEF4DE500C45E44 /* InAppDialogContainerView.swift */,
+				318EFF432D898984004C5E1F /* InAppImageComponentConfig.swift */,
+				318EFF452D8989EA004C5E1F /* SlideInAppImageComponent.swift */,
+				318EFF492D898A5A004C5E1F /* Sttring+calculatePaddings.swift */,
+				318EFF4D2D898A97004C5E1F /* UIFont+styles.swift */,
+			);
+			path = Style;
+			sourceTree = "<group>";
+		};
 		314CF9252BD8F2620000EFD9 /* Segmentation */ = {
 			isa = PBXGroup;
 			children = (
+				608CB4E22F27BAEC00F8FF46 /* SegmentationStreamSpec.swift */,
 				314CF9262BD8F2820000EFD9 /* SegmentationSpec.swift */,
 			);
 			path = Segmentation;
@@ -1573,9 +1776,6 @@
 				3189E2DE2C4B965100C4CD68 /* ContentBlockCarouselCallback.swift */,
 				3189E2E02C4EBEC300C4CD68 /* CarouselContentBlockViewCell.swift */,
 				3189E2E22C4EBEFE00C4CD68 /* InAppCarouselStateType.swift */,
-				3189E2E42C4EBF1000C4CD68 /* CarouselOnShowMessageData.swift */,
-				3189E2E62C4EBF2300C4CD68 /* CarouselOnChangeData.swift */,
-				31EC209F2C528A0900CE7BE9 /* CustomCarouselCallback.swift */,
 			);
 			path = Carousel;
 			sourceTree = "<group>";
@@ -1598,6 +1798,14 @@
 			path = Helper;
 			sourceTree = "<group>";
 		};
+		31A1D2192C6F8A5A00606633 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				31A1D21A2C6F8A6300606633 /* GiftHelper.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
 		31CC0B722BD2518500608057 /* Segmentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -1605,6 +1813,7 @@
 				317536842BD27D870062A5E5 /* Model */,
 				31CC0B752BD251D700608057 /* API */,
 				31CC0B732BD2519000608057 /* SegmentationManager.swift */,
+				31513E282CA97F4700A975F8 /* ManualSegmentationManager.swift */,
 			);
 			path = Segmentation;
 			sourceTree = "<group>";
@@ -1771,6 +1980,16 @@
 			path = MessageInbox;
 			sourceTree = "<group>";
 		};
+		55CD47552E29234400E8BF3F /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				05F3EFD6237E9381006E83F4 /* Model */,
+				05F3EFD0237E927C006E83F4 /* Upload */,
+				05F3EFE32382BAB6006E83F4 /* TelemetryUtility.swift */,
+			);
+			path = Telemetry;
+			sourceTree = "<group>";
+		};
 		55EFD790291A6C08002569FB /* AppInbox */ = {
 			isa = PBXGroup;
 			children = (
@@ -1781,6 +2000,91 @@
 			path = AppInbox;
 			sourceTree = "<group>";
 		};
+		6030B3F52F51CDB90092016B /* JWT */ = {
+			isa = PBXGroup;
+			children = (
+				6030B3F72F51CDCF0092016B /* Internal */,
+				6030B3F62F51CDC80092016B /* Public */,
+			);
+			path = JWT;
+			sourceTree = "<group>";
+		};
+		6030B3F62F51CDC80092016B /* Public */ = {
+			isa = PBXGroup;
+			children = (
+				A370CD872F2BE79800073A3D /* ExponeaInternal+Jwt.swift */,
+			);
+			path = Public;
+			sourceTree = "<group>";
+		};
+		6030B3F72F51CDCF0092016B /* Internal */ = {
+			isa = PBXGroup;
+			children = (
+				A370CD7F2F2BE72400073A3D /* JwtAuthManager.swift */,
+				A370CD812F2BE72400073A3D /* JwtTokenStore.swift */,
+				A370CD822F2BE72400073A3D /* KeychainJwtTokenStore.swift */,
+				A370CD802F2BE72400073A3D /* JwtStreamAuthProvider.swift */,
+			);
+			path = Internal;
+			sourceTree = "<group>";
+		};
+		605C41802F23C09300946118 /* PushNotificationManagerSpec */ = {
+			isa = PBXGroup;
+			children = (
+				605C41812F23C0B500946118 /* PushNotificationManagerStreamSpec.swift */,
+				05BB22B4236B2F780098C406 /* PushNotificationManagerProjectSpec.swift */,
+			);
+			path = PushNotificationManagerSpec;
+			sourceTree = "<group>";
+		};
+		608B3A9C2F152D6100DF41B0 /* DataHub */ = {
+			isa = PBXGroup;
+			children = (
+				608B3A9F2F152D9B00DF41B0 /* RecommendationsStreamResponse.swift */,
+				608B3A9D2F152D7100DF41B0 /* RecommendationsStreamRequest.swift */,
+			);
+			path = DataHub;
+			sourceTree = "<group>";
+		};
+		608B3AA12F162C4200DF41B0 /* ConfigValid */ = {
+			isa = PBXGroup;
+			children = (
+				608B3AA32F162CCA00DF41B0 /* config_valid_stream.plist */,
+				01764BC52087775800D0D673 /* config_valid.plist */,
+			);
+			path = ConfigValid;
+			sourceTree = "<group>";
+		};
+		608B3AA22F162C4F00DF41B0 /* ConfigValid2 */ = {
+			isa = PBXGroup;
+			children = (
+				608B3AA92F1649DC00DF41B0 /* config_valid2_stream.plist */,
+				01764BC72087793F00D0D673 /* config_valid2.plist */,
+			);
+			path = ConfigValid2;
+			sourceTree = "<group>";
+		};
+		608B3AAD2F169EDA00DF41B0 /* ExponeaConfig */ = {
+			isa = PBXGroup;
+			children = (
+				F0E757F4207D032500FE8C21 /* ExponeaConfig.plist */,
+				608B3AAB2F16890300DF41B0 /* ExponeaConfigStream.plist */,
+			);
+			path = ExponeaConfig;
+			sourceTree = "<group>";
+		};
+		60AB120D2F3000010000000D /* Jwt */ = {
+			isa = PBXGroup;
+			children = (
+				60AB12022F30000100000002 /* JwtAuthManagerSpec.swift */,
+				60AB12032F30000100000003 /* CustomerIdentitySpec.swift */,
+				60AB12042F30000100000004 /* JwtErrorContextSpec.swift */,
+				60AB12052F30000100000005 /* ConfigurationStreamIntegrationSpec.swift */,
+				60AB12062F30000100000006 /* JwtIntegrationSpec.swift */,
+			);
+			path = Jwt;
+			sourceTree = "<group>";
+		};
 		6BA73FEE29B639F6009F92DF /* Attomicity */ = {
 			isa = PBXGroup;
 			children = (
@@ -1789,15 +2093,28 @@
 			path = Attomicity;
 			sourceTree = "<group>";
 		};
+		72E416FFD03ACFCEE7851858 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				459AF2F44CB7570664A3FC4D /* Pods-ExponeaSDK.debug.xcconfig */,
+				F1EBB4AA67FF97A56D6B8EE2 /* Pods-ExponeaSDK.release.xcconfig */,
+				F7D1B75F2134960EE05ED518 /* Pods-ExponeaSDKTests.debug.xcconfig */,
+				9AE5764CF33A9235B3D5051E /* Pods-ExponeaSDKTests.release.xcconfig */,
+				F13968EA8462C6BF9B18AC43 /* Pods-Example.debug.xcconfig */,
+				5C2B1E5FFF8D1D6FBBC6C981 /* Pods-Example.release.xcconfig */,
+			);
+			name = Pods;
+			path = ../Pods;
+			sourceTree = "<group>";
+		};
 		A3613BD1E2C1D4616B6A9767 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				551F65192BAAD0F60072B980 /* Build */,
-				6B72A7E229C068BC00E1A1F9 /* SwiftSoup.xcframework */,
 				C08D53CE21B9474E00EA2C13 /* UserNotifications.framework */,
 				C08D53D021B9474E00EA2C13 /* UserNotificationsUI.framework */,
-				486299A97905BE77A09EC216 /* Pods_ExponeaSDK.framework */,
-				A64D92FEFD20D8844C3C3BF9 /* Pods_ExponeaSDKTests.framework */,
+				1834092C0840A684D9848A58 /* Pods_ExponeaSDK.framework */,
+				719B0B82B310EE3E7FEC5428 /* Pods_ExponeaSDKTests.framework */,
+				BDEE2C0B168D360B2154ACA5 /* Pods_Example.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -1809,16 +2126,6 @@
 				B42DA68B22B03FBF00BBA225 /* ConsentSources.swift */,
 			);
 			path = Consents;
-			sourceTree = "<group>";
-		};
-		B6A4CF01E198F01B4A325F3A /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				C9BB6439F5B63A6520815A14 /* Pods-ExponeaSDKTests.debug.xcconfig */,
-				F61795D2F1CCFF97A40ED80E /* Pods-ExponeaSDKTests.release.xcconfig */,
-			);
-			name = Pods;
-			path = ../Pods;
 			sourceTree = "<group>";
 		};
 		C028C3A0211097D500B03ED4 /* Other */ = {
@@ -1834,6 +2141,7 @@
 				0566424B237318CF00CCDB98 /* SwizzlerSpec.swift */,
 				057F44842399301A0070DF30 /* UIColor+FromHexStringSpec.swift */,
 				55F5F23C2C3E89070094B558 /* ArrayComparisonTests.swift */,
+				31A277DC2C74E08E00354CD2 /* GIFTest.swift */,
 			);
 			path = Other;
 			sourceTree = "<group>";
@@ -1902,6 +2210,7 @@
 			isa = PBXGroup;
 			children = (
 				55F6A41929891F710029D628 /* CustomerTokenStorage.swift */,
+				55F6A41C29891F730029D62B /* MockJwtService.swift */,
 				C0F2406F20BD98EB00CAF7CE /* MemoryLogger.swift */,
 				318B55292A80E52B00934902 /* DeeplinkManager.swift */,
 				31C7B4232A822848001BA5E2 /* Coordinator.swift */,
@@ -1948,6 +2257,7 @@
 		C0EB5D9120B811DE00F1031F /* Push Notifications */ = {
 			isa = PBXGroup;
 			children = (
+				A349F1B32FBCF5C900BD0C19 /* PreInitTokenBuffer.swift */,
 				C030AF4D216FA154004413F0 /* PushNotificationDelegateObserver.swift */,
 				C030AF4B216F96F3004413F0 /* PushNotificationManager+NSObject.swift */,
 				C030AF49216F4910004413F0 /* PushNotificationManager+UIResponder.swift */,
@@ -2079,11 +2389,11 @@
 				0561829825AD959C001E30A3 /* ExponeaSDKShared */,
 				F021E866206CF10200788ABC /* ExponeaSDKTests */,
 				A3613BD1E2C1D4616B6A9767 /* Frameworks */,
-				B6A4CF01E198F01B4A325F3A /* Pods */,
 				F021E85A206CF10200788ABC /* Products */,
 				05E1A3802359B3A500E5EDDE /* .swiftlint.yml */,
 				B4C957CA2267800400F8EC19 /* ExponeaSDK-Notifications.podspec */,
 				C0ED33C621A72EE6003649C3 /* ExponeaSDK.podspec */,
+				72E416FFD03ACFCEE7851858 /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -2107,6 +2417,7 @@
 			children = (
 				F0E757EC207D023A00FE8C21 /* Classes */,
 				F021E873206CFADF00788ABC /* Supporting Files */,
+				31CD7B852D81C5E4006DE6E5 /* IntegrationManager.swift */,
 			);
 			path = ExponeaSDK;
 			sourceTree = "<group>";
@@ -2135,9 +2446,12 @@
 		F04BEA892111215A00591950 /* Repository */ = {
 			isa = PBXGroup;
 			children = (
+				602F9B5F2FB5DB84007D5F5B /* SelfCheckApplicationIDWiringSpec.swift */,
+				60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */,
 				F04BEA8A2111217700591950 /* RepositoryErrorSpec.swift */,
 				05AA63BB2342362B00D78452 /* ServerRepository.swift */,
 				053E12CE23A264AD009CEF03 /* ServerRepositoryFetchRecommendationsSpec.swift */,
+				5513013A2D088AC1005C71C8 /* CampaignRepositorySpec.swift */,
 			);
 			path = Repository;
 			sourceTree = "<group>";
@@ -2172,6 +2486,7 @@
 		F0BE60FE21107D290082ABD8 /* Parameters */ = {
 			isa = PBXGroup;
 			children = (
+				602F9B632FB5F137007D5F5B /* PushSelfCheckRequestSpec.swift */,
 				F04BEA9A2111AF7E00591950 /* RequestParametersTypeSpec.swift */,
 				F0BE60FF21107D3A0082ABD8 /* TrackingParametersSpec.swift */,
 			);
@@ -2206,6 +2521,7 @@
 				05AA63BD2342413E00D78452 /* NetworkStubbing.swift */,
 				057F447C239904050070DF30 /* SampleInAppMessage.swift */,
 				31EBB8672A6AC3470003AAA5 /* SampleInappContentBlocks.swift */,
+				60AB12012F30000100000001 /* MockJwtTokenStore.swift */,
 			);
 			path = Mocking;
 			sourceTree = "<group>";
@@ -2233,10 +2549,13 @@
 			isa = PBXGroup;
 			children = (
 				558453A0297E8D26000707E4 /* AppInboxTrackingSpec.swift */,
+				603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */,
+				60D28F302F71901300F95CD0 /* StopIntegrationSpec.swift */,
 				55130C5028E425D600B4FE77 /* TrackConsentManagerSpec.swift */,
 				31EBB86C2A6AC3570003AAA5 /* TrackManager+IdentifyCustomerSpec.swift */,
 				4C169E3022B6524C00C425DA /* TrackUniversalLinkSpec.swift */,
 				050960FF2321566000D59C01 /* TrackingManagerSpec.swift */,
+				6B4040A1000000000000A102 /* AnonymizeNotificationStateValidSpec.swift */,
 			);
 			path = Tracking;
 			sourceTree = "<group>";
@@ -2244,6 +2563,7 @@
 		F0E757DE207CF98600FE8C21 /* Others */ = {
 			isa = PBXGroup;
 			children = (
+				55977A162E8688790087F301 /* UIAnimatedImageView.swift */,
 				31E9CBA12AE9494B00A333C8 /* URL+Init.swift */,
 				55391D482953051E001D95B8 /* AppInboxParser.swift */,
 				6BA73FEC29B6377E009F92DF /* AtomicValue.swift */,
@@ -2283,6 +2603,8 @@
 				053CA1FF247D4A42003B699C /* ServerRepository+SelfCheckRepository.swift */,
 				CCB87B7B28169FF5005DFB8E /* ServerRepository+VersionCheckRepository.swift */,
 				CCB87B7928169F4B005DFB8E /* VersionCheckRepository.swift */,
+				551301362D072338005C71C8 /* CampaignRepositoryType.swift */,
+				551301382D07288D005C71C8 /* CampaignRepository.swift */,
 			);
 			path = Repository;
 			sourceTree = "<group>";
@@ -2290,6 +2612,8 @@
 		F0E757EC207D023A00FE8C21 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
+				6030B3F52F51CDB90092016B /* JWT */,
+				31A1D2192C6F8A5A00606633 /* Helpers */,
 				31CC0B722BD2518500608057 /* Segmentation */,
 				C0EB5D9E20BB530000F1031F /* ExponeaType.swift */,
 				552772C328ED86E0000ACFD5 /* AppInbox */,
@@ -2341,8 +2665,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				055EAD252417CE7900E2F364 /* ExponeaSDKTests.h in Headers */,
-				055EAD262417CE9D00E2F364 /* mock_notification_response.h in Headers */,
-				055EAD242417CE3100E2F364 /* mock_notification_request.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2461,11 +2783,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C0F6C4F12098A1AC00834E21 /* Build configuration list for PBXNativeTarget "Example" */;
 			buildPhases = (
+				26BD233C36A18A4063B0EA56 /* [CP] Check Pods Manifest.lock */,
 				C0F6C4DC2098A1AB00834E21 /* Sources */,
 				C0F6C4DD2098A1AB00834E21 /* Frameworks */,
 				C0F6C4DE2098A1AB00834E21 /* Resources */,
 				C0843CF320B6E7CA00FAF0CB /* Embed Frameworks */,
 				C0ED33AE21A6FA31003649C3 /* Embed App Extensions */,
+				A5CEEF5DF0CE87C9AECE86D0 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -2484,11 +2808,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = F021E86D206CF10200788ABC /* Build configuration list for PBXNativeTarget "ExponeaSDK" */;
 			buildPhases = (
+				9A4FF9ADB27E77ADC6786223 /* [CP] Check Pods Manifest.lock */,
 				F021E856206CF10200788ABC /* Headers */,
 				F021E854206CF10200788ABC /* Sources */,
 				F021E855206CF10200788ABC /* Frameworks */,
 				F021E857206CF10200788ABC /* Resources */,
-				052F68602327EF53002DDCD4 /* ShellScript */,
+				052F68602327EF53002DDCD4 /* Run Script */,
+				A33A77032E02E5C900EA9145 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -2505,12 +2831,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = F021E870206CF10200788ABC /* Build configuration list for PBXNativeTarget "ExponeaSDKTests" */;
 			buildPhases = (
-				7CD73E495AE7E437F9149C47 /* [CP] Check Pods Manifest.lock */,
+				A025228BE32EDA621A751EAB /* [CP] Check Pods Manifest.lock */,
 				05B97D3A2417CE0D00FE9309 /* Headers */,
 				F021E85E206CF10200788ABC /* Sources */,
 				F021E85F206CF10200788ABC /* Frameworks */,
 				F021E860206CF10200788ABC /* Resources */,
-				1DEFD40D4828D9528A7AABB6 /* [CP] Embed Pods Frameworks */,
+				94A12B35F1A9372D93AB64A6 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -2546,10 +2872,12 @@
 					C08D53CC21B9474E00EA2C13 = {
 						CreatedOnToolsVersion = 10.0;
 						LastSwiftMigration = 1020;
+						ProvisioningStyle = Manual;
 					};
 					C0ED33A221A6FA31003649C3 = {
 						CreatedOnToolsVersion = 10.0;
 						LastSwiftMigration = 1020;
+						ProvisioningStyle = Manual;
 						SystemCapabilities = {
 							com.apple.ApplicationGroups.iOS = {
 								enabled = 1;
@@ -2564,6 +2892,7 @@
 					C0F6C4DF2098A1AB00834E21 = {
 						CreatedOnToolsVersion = 9.3;
 						LastSwiftMigration = 1020;
+						ProvisioningStyle = Manual;
 						SystemCapabilities = {
 							com.apple.ApplicationGroups.iOS = {
 								enabled = 1;
@@ -2597,9 +2926,6 @@
 				Base,
 			);
 			mainGroup = F021E84F206CF10200788ABC;
-			packageReferences = (
-				552F73BC2A56E7ED0006659D /* XCRemoteSwiftPackageReference "SwiftSoup" */,
-			);
 			productRefGroup = F021E85A206CF10200788ABC /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -2682,7 +3008,10 @@
 				01764BC62087775800D0D673 /* config_valid.plist in Resources */,
 				05AF25F0252B2A49006E28B7 /* get-consents2.json in Resources */,
 				01764BC82087794000D0D673 /* config_valid2.plist in Resources */,
+				608B3AAC2F16890300DF41B0 /* ExponeaConfigStream.plist in Resources */,
 				B42DA69222B05A0100BBA225 /* get-consents.json in Resources */,
+				608B3AAA2F1649DC00DF41B0 /* config_valid2_stream.plist in Resources */,
+				608B3AA62F162CCA00DF41B0 /* config_valid_stream.plist in Resources */,
 				057F4495239960650070DF30 /* mountain.png in Resources */,
 				057F4494239960650070DF30 /* lena.jpeg in Resources */,
 				0509610223216C7D00D59C01 /* TrackingManagerUpdate.plist in Resources */,
@@ -2692,7 +3021,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		052F68602327EF53002DDCD4 /* ShellScript */ = {
+		052F68602327EF53002DDCD4 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -2701,6 +3030,7 @@
 			);
 			inputPaths = (
 			);
+			name = "Run Script";
 			outputFileListPaths = (
 			);
 			outputPaths = (
@@ -2709,7 +3039,29 @@
 			shellPath = /bin/sh;
 			shellScript = "if which ../Pods/SwiftLint/swiftlint >/dev/null; then\ncd ..\n./Pods/SwiftLint/swiftlint lint --reporter xcode\nelse\necho \"warning: SwiftLint not installed run `pod install`\"\nfi\n";
 		};
-		1DEFD40D4828D9528A7AABB6 /* [CP] Embed Pods Frameworks */ = {
+		26BD233C36A18A4063B0EA56 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Example-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		94A12B35F1A9372D93AB64A6 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -2720,6 +3072,7 @@
 				"${BUILT_PRODUCTS_DIR}/Nimble/Nimble.framework",
 				"${BUILT_PRODUCTS_DIR}/Quick/Quick.framework",
 				"${BUILT_PRODUCTS_DIR}/URITemplate/URITemplate.framework",
+				"${BUILT_PRODUCTS_DIR}/SwiftSoup/SwiftSoup.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
@@ -2727,13 +3080,36 @@
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Nimble.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Quick.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/URITemplate.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SwiftSoup.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ExponeaSDKTests/Pods-ExponeaSDKTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		7CD73E495AE7E437F9149C47 /* [CP] Check Pods Manifest.lock */ = {
+		9A4FF9ADB27E77ADC6786223 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-ExponeaSDK-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A025228BE32EDA621A751EAB /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -2755,6 +3131,24 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		A5CEEF5DF0CE87C9AECE86D0 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Example/Pods-Example-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/SwiftSoup/SwiftSoup.framework",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SwiftSoup.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Example/Pods-Example-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -2762,12 +3156,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A30AC9DD2F07DEF200E51E34 /* ExponeaSettings+Integration.swift in Sources */,
 				053BC79B25ADDDCB007D70D4 /* RequestFactory.swift in Sources */,
 				0561832F25ADB1BD001E30A3 /* TokenTrackFrequency.swift in Sources */,
 				0561832825ADB1BC001E30A3 /* HTTPMethod.swift in Sources */,
 				053BC76025ADD16B007D70D4 /* Configuration+Validation.swift in Sources */,
+				A30AC9E42F111EFB00E51E34 /* IntegrationSourceType.swift in Sources */,
 				056182FC25AD9E25001E30A3 /* Logger.swift in Sources */,
 				053BC79E25ADDDCB007D70D4 /* ServerRepository+TrackingRepository.swift in Sources */,
+				A30AC9E22F111EDA00E51E34 /* ExponeaIntegrationType.swift in Sources */,
 				0561832225ADB1BC001E30A3 /* ExponeaNotificationActionType.swift in Sources */,
 				0561832425ADB1BC001E30A3 /* RequestParametersType.swift in Sources */,
 				056182AD25AD97E4001E30A3 /* Constants.swift in Sources */,
@@ -2775,11 +3172,16 @@
 				053BC79F25ADDDCB007D70D4 /* TrackingRepository.swift in Sources */,
 				056182E825AD9E05001E30A3 /* Exponea.swift in Sources */,
 				0561833025ADB1BD001E30A3 /* DataType.swift in Sources */,
+				55CD47582E292D9100E8BF3F /* TelemetryUpload.swift in Sources */,
+				55CD475D2E292DB200E8BF3F /* TelemetryEventType.swift in Sources */,
 				0561832325ADB1BC001E30A3 /* Result.swift in Sources */,
 				0561832E25ADB1BD001E30A3 /* TrackingParameters.swift in Sources */,
+				55CD476B2E3905C500E8BF3F /* Sequence+RemoveInfinity.swift in Sources */,
 				053BC75E25ADD16B007D70D4 /* Configuration+UserDefaults.swift in Sources */,
 				0561830F25AD9EEB001E30A3 /* URLRequest+Debug.swift in Sources */,
 				31EBB8662A6AC3330003AAA5 /* Extension+CleanURL.swift in Sources */,
+				A370CD8D2F2BE7DA00073A3D /* CustomerIdentity.swift in Sources */,
+				A370CD8E2F2BE7DA00073A3D /* JwtErrorContext.swift in Sources */,
 				0561831225AD9EEB001E30A3 /* JSONConvertible.swift in Sources */,
 				056182E725AD9E05001E30A3 /* ExponeaError.swift in Sources */,
 				0561832625ADB1BC001E30A3 /* DataType+Codable.swift in Sources */,
@@ -2790,15 +3192,27 @@
 				053BC76825ADD27F007D70D4 /* Configuration+Anonymize.swift in Sources */,
 				053BC79D25ADDDCB007D70D4 /* ServerRepository.swift in Sources */,
 				056182EF25AD9E22001E30A3 /* LogLevel.swift in Sources */,
+				55CD475A2E292D9D00E8BF3F /* TelemetryUtility.swift in Sources */,
+				55CD475F2E292DBA00E8BF3F /* ThreadInfo.swift in Sources */,
 				5527979D28D98C15002B2B77 /* GdprTracking.swift in Sources */,
 				0561832D25ADB1BD001E30A3 /* Authorization.swift in Sources */,
+				55CD475E2E292DB600E8BF3F /* ExponeaSentryEnvelope.swift in Sources */,
+				60D5E6B32FBB17BF00C2CB5D /* DeliveredNotificationStateResolver.swift in Sources */,
 				0561831125AD9EEB001E30A3 /* URLResponse+Debug.swift in Sources */,
+				55CD475C2E292DAE00E8BF3F /* ErrorData.swift in Sources */,
 				0561831325AD9EEB001E30A3 /* UIImage+Gif.swift in Sources */,
 				0561832125ADB1BC001E30A3 /* EventType.swift in Sources */,
+				A370CD8A2F2BE7CE00073A3D /* Configuration+StreamIntegration.swift in Sources */,
 				0561832A25ADB1BC001E30A3 /* ExponeaProject.swift in Sources */,
+				55CD47602E292DBE00E8BF3F /* ErrorStackTraceElement.swift in Sources */,
+				55CD47632E29310300E8BF3F /* BuildConfigurationShared.swift in Sources */,
+				55CD47612E292DC200E8BF3F /* EventLog.swift in Sources */,
+				A30AC9E02F111EBB00E51E34 /* ExponeaIntegration.swift in Sources */,
 				31CFEF6D2A66933A005402E5 /* Sequence+RemoveNil.swift in Sources */,
 				0561832B25ADB1BD001E30A3 /* Routes.swift in Sources */,
+				55CD47592E292D9600E8BF3F /* SentryTelemetryUpload.swift in Sources */,
 				0561832C25ADB1BD001E30A3 /* NotificationData.swift in Sources */,
+				55CD475B2E292DA900E8BF3F /* CrashLog.swift in Sources */,
 				0561831025AD9EEB001E30A3 /* JSON+SnakeCase.swift in Sources */,
 				053BC79C25ADDDCB007D70D4 /* RepositoryError.swift in Sources */,
 				0561832525ADB1BC001E30A3 /* ExponeaNotificationAction.swift in Sources */,
@@ -2845,6 +3259,7 @@
 			files = (
 				C0EB5D9D20B8193A00F1031F /* TrackingViewController.swift in Sources */,
 				55F6A41A29891F710029D628 /* CustomerTokenStorage.swift in Sources */,
+				55F6A41D29891F730029D62B /* MockJwtService.swift in Sources */,
 				31C7B4242A822848001BA5E2 /* Coordinator.swift in Sources */,
 				55F6A41829891F130029D628 /* ExampleAuthProvider.swift in Sources */,
 				C0F6C4E52098A1AB00834E21 /* AuthenticationViewController.swift in Sources */,
@@ -2870,6 +3285,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				608B3A9E2F152D8300DF41B0 /* RecommendationsStreamRequest.swift in Sources */,
 				C0EB5D9320B811F900F1031F /* PushNotificationManager.swift in Sources */,
 				33FC6CC429A910BA001F113F /* SafeIndex.swift in Sources */,
 				31CC0B7B2BD2562000608057 /* LinkIdsRequest.swift in Sources */,
@@ -2885,10 +3301,10 @@
 				C0F2406C20BC50A000CAF7CE /* ExponeaInternal+Fetching.swift in Sources */,
 				0567723B237462FB0082167C /* UIApplication+UIApplicationDelegating.swift in Sources */,
 				C0A6DEAE20EAC32700C5F744 /* DatabaseManager+DataType.swift in Sources */,
+				318EFF442D898984004C5E1F /* InAppImageComponentConfig.swift in Sources */,
 				05FEBDC023A7BA2A007C2372 /* InAppMessageTrackingDelegate.swift in Sources */,
 				05BA5804250649F000E10994 /* PushOpenedData.swift in Sources */,
 				3189E2DF2C4B965100C4CD68 /* ContentBlockCarouselCallback.swift in Sources */,
-				3189E2E72C4EBF2300C4CD68 /* CarouselOnChangeData.swift in Sources */,
 				3175368C2BD2AFF70062A5E5 /* Debouncer.swift in Sources */,
 				05CDD8392391193E00C7291A /* InAppMessagesCache.swift in Sources */,
 				0591905D23EC1A550037BD88 /* EventFilterConstraint.swift in Sources */,
@@ -2896,32 +3312,35 @@
 				057A4ED223EAC22200C94556 /* EventFilter.swift in Sources */,
 				057F448F23995DC20070DF30 /* InAppMessagePresenterType.swift in Sources */,
 				31EBB85F2A6AC3020003AAA5 /* InAppContentBlockResponse.swift in Sources */,
+				31513E292CA97F4700A975F8 /* ManualSegmentationManager.swift in Sources */,
 				6BA73FED29B6377E009F92DF /* AtomicValue.swift in Sources */,
 				053E12CD23A26187009CEF03 /* RecommendationOptions.swift in Sources */,
+				318EFF622D898BE4004C5E1F /* InAppLayoutConfig.swift in Sources */,
 				01EC2DBD207E68BF0031BFEB /* DatabaseManager.swift in Sources */,
 				5568874C2A17598000498B40 /* ProgressBarStyle.swift in Sources */,
 				55C08DD32A568C74000BA66A /* FileUtils.swift in Sources */,
 				55130C4928DDC81600B4FE77 /* TrackingConsentManagerType.swift in Sources */,
 				55DA6EC2290AE44300B5B285 /* AppInboxMarkReadRequest.swift in Sources */,
+				31CD7B862D81C5E4006DE6E5 /* IntegrationManager.swift in Sources */,
 				C0A6DEA120EAC16900C5F744 /* KeyValueItem.swift in Sources */,
 				5568874A2A17574A00498B40 /* ListScreenStyle.swift in Sources */,
 				5567C09629091B8E00318E68 /* AppInboxRequest.swift in Sources */,
-				05F3EFF12382C757006E83F4 /* VSAppCenterAPIModel.swift in Sources */,
+				318EFF462D8989EA004C5E1F /* SlideInAppImageComponent.swift in Sources */,
+				A349F1B42FBCF5C900BD0C19 /* PreInitTokenBuffer.swift in Sources */,
 				23E725E4214AA7A900B552B8 /* Reachability.swift in Sources */,
 				31EBB85A2A6AC3020003AAA5 /* UsedInAppContentBlocks.swift in Sources */,
-				05F3EFE42382BAB6006E83F4 /* TelemetryUtility.swift in Sources */,
 				55DA6EBC290ABD7500B5B285 /* AppInboxManager.swift in Sources */,
 				05C289312428A13D0021220C /* SessionManager.swift in Sources */,
-				05F3EFD8237E938D006E83F4 /* CrashLog.swift in Sources */,
 				05F3EFDC237E96FA006E83F4 /* FileTelemetryStorage.swift in Sources */,
 				B42DA68E22B0556100BBA225 /* ConsentsResponse.swift in Sources */,
-				05F3EFDA237E9415006E83F4 /* ErrorData.swift in Sources */,
 				01EC2DB6207E5F600031BFEB /* TrackingManagerType.swift in Sources */,
 				05880538241682F8001AAE8A /* ExponeaInternal.swift in Sources */,
+				313C07042CD4EB8F0020DE64 /* InAppButtonContainerSwiftUI.swift in Sources */,
 				0564D14225ADE46300FDCAE5 /* ExponeaSharedExports.swift in Sources */,
 				31EBB8622A6AC3020003AAA5 /* InappContentBlocksDataProvider.swift in Sources */,
 				05F3EFCF237E926B006E83F4 /* CrashManager.swift in Sources */,
 				55734B022A5E9B9400F24427 /* RegExpExtensions.swift in Sources */,
+				55977A172E8688950087F301 /* UIAnimatedImageView.swift in Sources */,
 				05C289332428A1480021220C /* SessionManagerType.swift in Sources */,
 				556887562A176B0200498B40 /* NSDictionary+getSafely.swift in Sources */,
 				5567C090290808F600318E68 /* MessageItemContent.swift in Sources */,
@@ -2931,49 +3350,60 @@
 				5567C092290809EB00318E68 /* MessageItemAction.swift in Sources */,
 				05B4D64C238FEB9200F5010F /* InAppMessagesResponse.swift in Sources */,
 				556887462A17570100498B40 /* TextViewStyle.swift in Sources */,
+				311557C42CEB3EE30027B481 /* InAppView.swift in Sources */,
+				6030B3F82F51CE2F0092016B /* JwtAuthManager.swift in Sources */,
+				6030B3F92F51CE2F0092016B /* KeychainJwtTokenStore.swift in Sources */,
+				6030B3FA2F51CE2F0092016B /* JwtTokenStore.swift in Sources */,
 				C0A6DEA820EAC16900C5F744 /* Customer.swift in Sources */,
 				5568874E2A1759A000498B40 /* AppInboxListViewStyle.swift in Sources */,
 				B42DA68922B03F7700BBA225 /* Consent.swift in Sources */,
+				A370CD882F2BE79800073A3D /* ExponeaInternal+Jwt.swift in Sources */,
 				0591905B23EC1A170037BD88 /* EventFilterAttribute.swift in Sources */,
 				01EC2DBF207E68BF0031BFEB /* DatabaseModel.xcdatamodeld in Sources */,
+				318EFF642D898BF1004C5E1F /* InAppViewConfig.swift in Sources */,
 				05F3EFD3237E9291006E83F4 /* TelemetryStorage.swift in Sources */,
 				056772452374703B0082167C /* PushNotificationManagerType.swift in Sources */,
-				05F3EFCD237E9260006E83F4 /* TelemetryManager.swift in Sources */,
+				318EFF5C2D898B9E004C5E1F /* InAppCloseButtonConfig.swift in Sources */,
 				3189E2E12C4EBEC300C4CD68 /* CarouselContentBlockViewCell.swift in Sources */,
 				55DA6EBE290AD5E900B5B285 /* AppInboxCacheType.swift in Sources */,
 				C0D9B07F20A3B8070066FB1E /* DatabaseManagerError.swift in Sources */,
 				31EBB85B2A6AC3020003AAA5 /* PersonalizedInAppContentBlockResponse.swift in Sources */,
+				31B689562CEF537E00C45E44 /* ExponeaAsyncImage.swift in Sources */,
 				31EBB8592A6AC3020003AAA5 /* InAppContentBlocksManager.swift in Sources */,
 				05CDD83B23911A1400C7291A /* InAppMessagesCacheType.swift in Sources */,
 				31EBB85E2A6AC3020003AAA5 /* CalculatorData.swift in Sources */,
+				55CD47572E29236600E8BF3F /* TelemetryManager.swift in Sources */,
+				A370CD862F2BE72400073A3D /* JwtStreamAuthProvider.swift in Sources */,
 				C030AF4C216F96F3004413F0 /* PushNotificationManager+NSObject.swift in Sources */,
 				33FC6CC629A9123E001F113F /* Autolayout.swift in Sources */,
 				053CA1FE247D4A0F003B699C /* SelfCheckRepository.swift in Sources */,
 				552772C928ED86E0000ACFD5 /* ExponeaInternal+AppInbox.swift in Sources */,
 				55DA6EBA290ABD4800B5B285 /* AppInboxManagerType.swift in Sources */,
 				55C08DCF2A5689F4000BA66A /* FileCacheType.swift in Sources */,
+				318EFF542D898B3C004C5E1F /* InAppButtonAlignmentType.swift in Sources */,
 				556887502A175A0900498B40 /* AppInboxListItemStyle.swift in Sources */,
 				31EBB85C2A6AC3020003AAA5 /* StaticReturnData.swift in Sources */,
 				315598082C09CAE500FBED42 /* CarouselInAppContentBlockView.swift in Sources */,
 				058DD92924112FBE00E5BF91 /* ServerRepository+FetchingRepository.swift in Sources */,
-				3189E2E52C4EBF1000C4CD68 /* CarouselOnShowMessageData.swift in Sources */,
 				3377ABFC29897F4C00E530FB /* ExpoInitManager.swift in Sources */,
+				31A1D21B2C6F8A6300606633 /* GiftHelper.swift in Sources */,
 				057D476923C87F8500AEE902 /* UrlOpener.swift in Sources */,
 				CCB87B7C28169FF5005DFB8E /* ServerRepository+VersionCheckRepository.swift in Sources */,
 				31EBB8572A6AC3020003AAA5 /* WKWebViewHeightCalculator.swift in Sources */,
 				05677239237453250082167C /* PushNotificationSwizzler.swift in Sources */,
 				CCB87B7828169C6C005DFB8E /* VersionChecker.swift in Sources */,
+				318EFF582D898B53004C5E1F /* InAppButtonEdge.swift in Sources */,
 				CC0C484D281935BC003E8BF8 /* ExponeaVersion.swift in Sources */,
 				01EC2DB2207E55CB0031BFEB /* TrackingManager.swift in Sources */,
 				559D97082962FCF0006D4499 /* ImageUtils.swift in Sources */,
 				55C08DD12A568A55000BA66A /* FileCache.swift in Sources */,
-				05457FAE241BCFF30067226F /* TelemetryEventType.swift in Sources */,
 				31EBB8562A6AC3020003AAA5 /* InAppContentBlocksTrackingEvent.swift in Sources */,
-				05F3EFE62382BB88006E83F4 /* VSAppCenterTelemetryUpload.swift in Sources */,
+				318EFF5A2D898B5F004C5E1F /* InAppButtonFontData.swift in Sources */,
 				55A468D0296F154C00E62438 /* WebActionsManager.swift in Sources */,
 				01EC2DC1207F63970031BFEB /* FlushingMode.swift in Sources */,
 				B42DA68C22B03FBF00BBA225 /* ConsentSources.swift in Sources */,
 				5567C0942909196C00318E68 /* AppInboxResponse.swift in Sources */,
+				318EFF502D898AA7004C5E1F /* TextWithAttributedString.swift in Sources */,
 				C0A6DEA520EAC16900C5F744 /* TrackCustomer.swift in Sources */,
 				05B4D651238FEF3900F5010F /* InAppMessagePayload.swift in Sources */,
 				556887442A1756E500498B40 /* DetailViewStyle.swift in Sources */,
@@ -2989,10 +3419,11 @@
 				05CDD837239114F700C7291A /* InAppMessagesManagerType.swift in Sources */,
 				05BF1C7A23A1139B00FDC101 /* RecommendationResponse.swift in Sources */,
 				053EC59B23AA3309004D1C8B /* InAppMessageDisplayStateStore.swift in Sources */,
-				31EC20A02C528A0900CE7BE9 /* CustomCarouselCallback.swift in Sources */,
+				313C07062CD4EBC10020DE64 /* InAppButtonSwiftUI.swift in Sources */,
 				057D476723C87F0B00AEE902 /* UrlOpenerType.swift in Sources */,
 				317536882BD27DEB0062A5E5 /* SegmentCategory.swift in Sources */,
 				CCB87B7E2816A6A6005DFB8E /* GitHubReleaseResponse.swift in Sources */,
+				318EFF562D898B46004C5E1F /* InAppButtonMarginType.swift in Sources */,
 				05E81632247555DD00AA28E3 /* ExponeaAppDelegate.swift in Sources */,
 				05CDD835239114A900C7291A /* InAppMessagesManager.swift in Sources */,
 				55391D492953051E001D95B8 /* AppInboxParser.swift in Sources */,
@@ -3009,6 +3440,7 @@
 				C0EB5D9520B8123200F1031F /* PushNotificationSelectors.swift in Sources */,
 				31CC0B742BD2519000608057 /* SegmentationManager.swift in Sources */,
 				05D2D39C23DEF1E300E3E79A /* InAppMessageAlertView.swift in Sources */,
+				551301392D07288D005C71C8 /* CampaignRepository.swift in Sources */,
 				053CA200247D4A42003B699C /* ServerRepository+SelfCheckRepository.swift in Sources */,
 				556887542A176A6800498B40 /* AppInboxStyleParser.swift in Sources */,
 				3189E2E32C4EBEFE00C4CD68 /* InAppCarouselStateType.swift in Sources */,
@@ -3016,14 +3448,20 @@
 				CCB87B7A28169F4B005DFB8E /* VersionCheckRepository.swift in Sources */,
 				31EBB8602A6AC3020003AAA5 /* StaticQueueData.swift in Sources */,
 				053E12CB23A26098009CEF03 /* Recommendation.swift in Sources */,
+				31B689542CEF4DE500C45E44 /* InAppDialogContainerView.swift in Sources */,
+				313444972CDA65B500931147 /* InAppCloseButtonComponent.swift in Sources */,
+				318EFF4A2D898A5A004C5E1F /* Sttring+calculatePaddings.swift in Sources */,
 				31CC0B792BD255D300608057 /* SegmentationRequests.swift in Sources */,
+				318EFF5E2D898BB2004C5E1F /* InAppModalTypeConfig.swift in Sources */,
 				052979782419224500A90526 /* UNAuthorizationStatusProvider.swift in Sources */,
 				33FC6CCA29A9158F001F113F /* Reusable.swift in Sources */,
+				311557C22CE9DF070027B481 /* InAppImageComponent.swift in Sources */,
 				0591906223EC1CEC0037BD88 /* GenericOperators.swift in Sources */,
 				058DD92524112F5600E5BF91 /* FetchRepository.swift in Sources */,
 				F0E757EB207CFA9700FE8C21 /* RepositoryType.swift in Sources */,
 				319FEBF42BD6DA4300E0EB11 /* SegmentationStoring.swift in Sources */,
 				01EC2DBE207E68BF0031BFEB /* DatabaseManagerType.swift in Sources */,
+				318EFF482D898A1E004C5E1F /* InAppLabelConfig.swift in Sources */,
 				5524BD662B2B5DBE005CF699 /* ExponeaType.swift in Sources */,
 				55DA6EC0290AD65200B5B285 /* AppInboxCache.swift in Sources */,
 				0567723D237463650082167C /* UNUserNotificationCenter+UNUserNotificationCenterDelegating.swift in Sources */,
@@ -3034,20 +3472,26 @@
 				05D0E5562386C63800413AE2 /* Exponea+Configuration.swift in Sources */,
 				55130C4B28DDCA6800B4FE77 /* TrackingConsentManager.swift in Sources */,
 				058DD93F24113F2100E5BF91 /* FlushableObject.swift in Sources */,
+				608B3AA02F152DA400DF41B0 /* RecommendationsStreamResponse.swift in Sources */,
 				556DBCBC28F03238009E3154 /* MessageItemCell.swift in Sources */,
 				55BB0E1E28F44EDA00D6243A /* AppInboxDetailViewController.swift in Sources */,
 				C09A6499212D871600DCAC06 /* NSManagedObjectContext+Perform.swift in Sources */,
 				C030AF4E216FA154004413F0 /* PushNotificationDelegateObserver.swift in Sources */,
-				05F3EFD5237E92A4006E83F4 /* TelemetryUpload.swift in Sources */,
 				C0EB5D8E20B710A900F1031F /* Data+TokenString.swift in Sources */,
+				551301372D072338005C71C8 /* CampaignRepositoryType.swift in Sources */,
+				311268DB2CD10E9C00C38394 /* InAppButtonContainer.swift in Sources */,
 				C030AF4A216F4910004413F0 /* PushNotificationManager+UIResponder.swift in Sources */,
 				F0CA58F6207F612200C89A7F /* DeviceProperties.swift in Sources */,
 				C0F2407420BDA42600CAF7CE /* ExportFormat.swift in Sources */,
+				318EFF4E2D898A97004C5E1F /* UIFont+styles.swift in Sources */,
 				556887402A17564800498B40 /* AppInboxStyle.swift in Sources */,
 				0591906823EC1D2C0037BD88 /* BooleanOperators.swift in Sources */,
 				55D0543C2B2351A000BC773A /* InAppContentBlockAction.swift in Sources */,
 				05735EA323A3975100DA0FA9 /* FlushingManagerType.swift in Sources */,
+				318EFF4C2D898A74004C5E1F /* ButtonTextWithAttributedString.swift in Sources */,
+				313C07082CD4EBDD0020DE64 /* InAppButtonContainerSwiftUIViewModel.swift in Sources */,
 				0591906423EC1D030037BD88 /* StringOperators.swift in Sources */,
+				311557BF2CE9DEBD0027B481 /* InAppLabel.swift in Sources */,
 				31E9CBA22AE9494B00A333C8 /* URL+Init.swift in Sources */,
 				31EBB8552A6AC3020003AAA5 /* StaticInAppContentBlockView.swift in Sources */,
 				C0753E9720A5808C00A779FF /* NSPersistentContainer+Bundle.swift in Sources */,
@@ -3056,9 +3500,12 @@
 				C0A6DEA920EAC16900C5F744 /* TrackEvent.swift in Sources */,
 				31CC0B772BD251E200608057 /* SegmentationDataProvider.swift in Sources */,
 				0580BBC923969D1F0058323D /* InAppMessagePresenter.swift in Sources */,
+				318EFF602D898BC0004C5E1F /* MessagePosition.swift in Sources */,
 				33FC6CC229A90ED5001F113F /* OnMain.swift in Sources */,
+				311268DD2CD1135900C38394 /* InAppButtonConfig.swift in Sources */,
 				0580BBC7239698E60058323D /* UIColor+FromHexString.swift in Sources */,
 				31EBB8612A6AC3020003AAA5 /* InAppContentBlockContentType.swift in Sources */,
+				318EFF522D898B30004C5E1F /* InAppButtonLayoutType.swift in Sources */,
 				55EFD79F29224FFF002569FB /* AppInboxProvider.swift in Sources */,
 				05D2D39A23DEE60200E3E79A /* InAppMessageView.swift in Sources */,
 				C0EB5D9020B7F8A900F1031F /* DispatchQueue+OnceTracker.swift in Sources */,
@@ -3072,25 +3519,32 @@
 			buildActionMask = 2147483647;
 			files = (
 				057F447F239908650070DF30 /* InAppMessagesManagerSpec.swift in Sources */,
-				055EAD272417CF3C00E2F364 /* mock_notification_response.m in Sources */,
-				05324BF023D19F8C00AE91D9 /* VSAppCenterTelemetryUploadSpec.swift in Sources */,
 				05AA63BC2342362B00D78452 /* ServerRepository.swift in Sources */,
 				4C3F5F2D22DF98C00069E71D /* MockExponea.swift in Sources */,
 				05B4D658238FF6DC00F5010F /* InAppMessageSpec.swift in Sources */,
 				314CF9272BD8F2820000EFD9 /* SegmentationSpec.swift in Sources */,
+				60AB12072F30000100000007 /* MockJwtTokenStore.swift in Sources */,
+				60AB12082F30000100000008 /* JwtAuthManagerSpec.swift in Sources */,
+				60AB12092F30000100000009 /* CustomerIdentitySpec.swift in Sources */,
+				60AB120A2F3000010000000A /* JwtErrorContextSpec.swift in Sources */,
+				60AB120B2F3000010000000B /* ConfigurationStreamIntegrationSpec.swift in Sources */,
+				60AB120C2F3000010000000C /* JwtIntegrationSpec.swift in Sources */,
 				31EBB86D2A6AC3570003AAA5 /* TrackManager+IdentifyCustomerSpec.swift in Sources */,
 				0529797A241925DB00A90526 /* MockUNAuthorizationStatusProviding.swift in Sources */,
 				559E7609296E0E5C00F27BC9 /* MessageItemSpec.swift in Sources */,
 				057F448323990E320070DF30 /* MockInAppMessagesCache.swift in Sources */,
+				55CD47542E2013F700E8BF3F /* SentryTelemetryUploadSpec.swift in Sources */,
+				605C41822F23C0B700946118 /* PushNotificationManagerStreamSpec.swift in Sources */,
 				F0BE6105211080F30082ABD8 /* MockData.swift in Sources */,
+				A349F1B62FBCF5E700BD0C19 /* PreInitTokenBufferSpec.swift in Sources */,
 				31EBB8682A6AC3470003AAA5 /* SampleInappContentBlocks.swift in Sources */,
 				31EBB86B2A6AC3500003AAA5 /* InAppContentBlocksManagerSpec.swift in Sources */,
 				05C289362428DDAA0021220C /* SessionManagerSpec.swift in Sources */,
 				55EFD792291A6C26002569FB /* AppInboxCacheSpec.swift in Sources */,
 				019163A3207E15FB005FD174 /* LoggerSpec.swift in Sources */,
 				050961002321566000D59C01 /* TrackingManagerSpec.swift in Sources */,
+				6B4040A1000000000000A101 /* AnonymizeNotificationStateValidSpec.swift in Sources */,
 				55130C4F28E3C50D00B4FE77 /* GdprTrackingSpec.swift in Sources */,
-				05F3EFEF2382C192006E83F4 /* TelemetryUtilitySpec.swift in Sources */,
 				4C169E3122B6524C00C425DA /* TrackUniversalLinkSpec.swift in Sources */,
 				057D476D23C889BE00AEE902 /* PushNotificationsTestData.swift in Sources */,
 				C09A6497212D83E600DCAC06 /* DatabaseManagerSpec.swift in Sources */,
@@ -3112,6 +3566,7 @@
 				F04BEA8B2111217700591950 /* RepositoryErrorSpec.swift in Sources */,
 				057D476B23C885D800AEE902 /* MockUrlOpener.swift in Sources */,
 				050805732326510100BDA235 /* MockUserDefaults.swift in Sources */,
+				608CB4E32F27BAF200F8FF46 /* SegmentationStreamSpec.swift in Sources */,
 				019163A5207E1904005FD174 /* LogLevelSpec.swift in Sources */,
 				558453A1297E8D26000707E4 /* AppInboxTrackingSpec.swift in Sources */,
 				05297974241919BF00A90526 /* ExponeaSDKQuickConfiguration.swift in Sources */,
@@ -3121,11 +3576,13 @@
 				F01ADE622084D58600E20662 /* DevicePropertiesSpec.swift in Sources */,
 				0566424C237318CF00CCDB98 /* SwizzlerSpec.swift in Sources */,
 				05BA580625064E4600E10994 /* PushOpenedDataSpec.swift in Sources */,
+				60D28F312F71901300F95CD0 /* StopIntegrationSpec.swift in Sources */,
 				0566424E2373198B00CCDB98 /* SwizzleTestClass.swift in Sources */,
 				05BB22B2236B1E0C0098C406 /* ExponeaNotificationServiceSpec.swift in Sources */,
 				057F44852399301A0070DF30 /* UIColor+FromHexStringSpec.swift in Sources */,
 				0567723F237464990082167C /* PushNotificationDelegateObserverSpec.swift in Sources */,
 				55130C5128E425D600B4FE77 /* TrackConsentManagerSpec.swift in Sources */,
+				60D5E6B52FBB182F00C2CB5D /* DeliveredNotificationStateResolverSpec.swift in Sources */,
 				05D95C44250100B5001DA2DA /* MockInAppMessagesManager.swift in Sources */,
 				057F44872399322D0070DF30 /* InAppMessageDialogViewSpec.swift in Sources */,
 				05FBB15D244709C500BDF234 /* DatabaseManager+Clear.swift in Sources */,
@@ -3138,20 +3595,25 @@
 				C028C3A22110980600B03ED4 /* JSONValueSpec.swift in Sources */,
 				3384EFC629965EEB009A5981 /* Execute+AfterInit.swift in Sources */,
 				0591907523EC5C740037BD88 /* EventFilterAttributeSpec.swift in Sources */,
+				5513013B2D088AC1005C71C8 /* CampaignRepositorySpec.swift in Sources */,
+				602F9B642FB5F138007D5F5B /* PushSelfCheckRequestSpec.swift in Sources */,
+				602F9B602FB5DB87007D5F5B /* SelfCheckApplicationIDWiringSpec.swift in Sources */,
 				CC06F95125FA037800F38D93 /* RequestFactorySpec.swift in Sources */,
 				05D9F62E2387EE6600C47509 /* Exponea+ConfigurationSpec.swift in Sources */,
+				60486AF92F7E44CE0068F7D0 /* InstallIdResetSpec.swift in Sources */,
+				60486AFB2F7E451C0068F7D0 /* TelemetryUtilitySpec.swift in Sources */,
 				0591906F23EC4E8C0037BD88 /* GenericOperatorsSpec.swift in Sources */,
+				31A277DD2C74E08E00354CD2 /* GIFTest.swift in Sources */,
 				052F685D2327D3DF002DDCD4 /* DatabaseManagerErrorSpec.swift in Sources */,
 				05C024E223EAEBDD0046CCFC /* EventFilterSpec.swift in Sources */,
 				05583E9E23608AE400F7084E /* PushNotificationParserSpec.swift in Sources */,
 				0567724323746DDC0082167C /* MockPushNotificationManager.swift in Sources */,
-				05BB22B5236B2F780098C406 /* PushNotificationManagerSpec.swift in Sources */,
+				05BB22B5236B2F780098C406 /* PushNotificationManagerProjectSpec.swift in Sources */,
 				052F685F2327D404002DDCD4 /* ExponeaErrorSpec.swift in Sources */,
 				05F3EFE22382A814006E83F4 /* CrashManagerSpec.swift in Sources */,
 				05BB22B7236B300F0098C406 /* MockTrackingManager.swift in Sources */,
 				05B97D212417B2C400FE9309 /* DeliveredNotificationTrackerSpec.swift in Sources */,
 				05D2D3A023DF07E800E3E79A /* InAppMessageAlertViewSpec.swift in Sources */,
-				055EAD282417CF4700E2F364 /* mock_notification_request.m in Sources */,
 				0565CE0523F4216C0003FEA6 /* DataTypeSpec.swift in Sources */,
 				0591907723EC5F5A0037BD88 /* EventFilterConstraintSpec.swift in Sources */,
 				0591906D23EC45050037BD88 /* StringOperatorsSpec.swift in Sources */,
@@ -3163,6 +3625,8 @@
 				F04BEA9B2111AF7E00591950 /* RequestParametersTypeSpec.swift in Sources */,
 				05735EA723A3B3B700DA0FA9 /* FlushingManagerSpec.swift in Sources */,
 				6BA73FF029B63A14009F92DF /* AtomicValueSpec.swift in Sources */,
+				60486AFF2F7E8A2F0068F7D0 /* ServerRepositoryAuthWiringSpec.swift in Sources */,
+				603CC5802FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift in Sources */,
 				0591907123EC573C0037BD88 /* BooleanOperatorsSpec.swift in Sources */,
 				05AA63BE2342413E00D78452 /* NetworkStubbing.swift in Sources */,
 				05F3EFEA2382BC4C006E83F4 /* MockTelemetryStorage.swift in Sources */,
@@ -3285,11 +3749,7 @@
 				INFOPLIST_FILE = "ExponeaSDKShared/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDKShared;
@@ -3316,11 +3776,7 @@
 				INFOPLIST_FILE = "ExponeaSDKShared/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDKShared;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -3346,11 +3802,7 @@
 				INFOPLIST_FILE = ExponeaSDKObjC/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDKObjC;
@@ -3376,11 +3828,7 @@
 				INFOPLIST_FILE = ExponeaSDKObjC/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDKObjC;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -3400,21 +3848,17 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = UVDCL7YSZS;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = H64X793CLY;
 				INFOPLIST_FILE = ExampleNotificationContent/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MARKETING_VERSION = 2.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.ExponeaSDK-Example2.ExampleNotificationContent";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.sdk.example.notification-content";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea iOS SDK Example App Notification Content";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea SDK Example Notification Content";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -3430,20 +3874,16 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = UVDCL7YSZS;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = H64X793CLY;
 				INFOPLIST_FILE = ExampleNotificationContent/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MARKETING_VERSION = 2.2.0;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.ExponeaSDK-Example2.ExampleNotificationContent";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.sdk.example.notification-content";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea iOS SDK Example App Notification Content";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea SDK Example Notification Content";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -3460,21 +3900,17 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = UVDCL7YSZS;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = H64X793CLY;
 				INFOPLIST_FILE = ExampleNotificationService/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MARKETING_VERSION = 2.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.ExponeaSDK-Example2.ExampleNotificationService";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.sdk.example.notification-service";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea iOS SDK Example App Notification Service";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea SDK Example Notification Service";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -3491,20 +3927,16 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = UVDCL7YSZS;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = H64X793CLY;
 				INFOPLIST_FILE = ExampleNotificationService/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MARKETING_VERSION = 2.2.0;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.ExponeaSDK-Example2.ExampleNotificationService";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.sdk.example.notification-service";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea iOS SDK Example App Notification Service";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea SDK Example Notification Service";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -3522,18 +3954,16 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = UVDCL7YSZS;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = H64X793CLY;
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = H64X793CLY;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/ExponeaSDK-Notifications/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MARKETING_VERSION = 2.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -3563,11 +3993,7 @@
 				INFOPLIST_FILE = "$(SRCROOT)/ExponeaSDK-Notifications/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MARKETING_VERSION = 2.2.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDKNotifications;
@@ -3581,6 +4007,7 @@
 		};
 		C0F6C4EF2098A1AC00834E21 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F13968EA8462C6BF9B18AC43 /* Pods-Example.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -3590,18 +4017,15 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = UVDCL7YSZS;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = H64X793CLY;
 				INFOPLIST_FILE = "$(SRCROOT)/Example/Resources/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 2.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.ExponeaSDK-Example2";
+				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.sdk.example;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea iOS SDK Example App";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea SDK Example App";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -3609,6 +4033,7 @@
 		};
 		C0F6C4F02098A1AC00834E21 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5C2B1E5FFF8D1D6FBBC6C981 /* Pods-Example.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -3618,18 +4043,15 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 32;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = UVDCL7YSZS;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = H64X793CLY;
 				INFOPLIST_FILE = "$(SRCROOT)/Example/Resources/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 2.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.exponea.ExponeaSDK-Example2";
+				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.sdk.example;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea iOS SDK Example App";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Exponea SDK Example App";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -3751,8 +4173,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -3762,6 +4183,7 @@
 		};
 		F021E86E206CF10200788ABC /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 459AF2F44CB7570664A3FC4D /* Pods-ExponeaSDK.debug.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -3772,15 +4194,11 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				FRAMEWORK_SEARCH_PATHS = "";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = "$(SRCROOT)/ExponeaSDK/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MARKETING_VERSION = 2.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDK;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -3795,6 +4213,7 @@
 		};
 		F021E86F206CF10200788ABC /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1EBB4AA67FF97A56D6B8EE2 /* Pods-ExponeaSDK.release.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
@@ -3805,16 +4224,12 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				FRAMEWORK_SEARCH_PATHS = "";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = "$(SRCROOT)/ExponeaSDK/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MARKETING_VERSION = 2.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDK;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -3827,18 +4242,14 @@
 		};
 		F021E871206CF10200788ABC /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C9BB6439F5B63A6520815A14 /* Pods-ExponeaSDKTests.debug.xcconfig */;
+			baseConfigurationReference = F7D1B75F2134960EE05ED518 /* Pods-ExponeaSDKTests.debug.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = UVDCL7YSZS;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = "ExponeaSDKTests/Supporting Files/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDKTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -3851,18 +4262,14 @@
 		};
 		F021E872206CF10200788ABC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F61795D2F1CCFF97A40ED80E /* Pods-ExponeaSDKTests.release.xcconfig */;
+			baseConfigurationReference = 9AE5764CF33A9235B3D5051E /* Pods-ExponeaSDKTests.release.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = UVDCL7YSZS;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = "ExponeaSDKTests/Supporting Files/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 13;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.exponea.ExponeaSDKTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -3958,17 +4365,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		552F73BC2A56E7ED0006659D /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
-			requirement = {
-				kind = exactVersion;
-				version = 2.6.1;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCVersionGroup section */
 		01EC2DBB207E68BF0031BFEB /* DatabaseModel.xcdatamodeld */ = {
 			isa = XCVersionGroup;
@@ -3978,9 +4374,10 @@
 				B40E9F5E22FAD58E0085B8A1 /* DatabaseModel v4.xcdatamodel */,
 				05A7BB4E243B0DBE00680B2E /* DatabaseModel v5.xcdatamodel */,
 				056848F22445DE9F002EB2B6 /* DatabaseModel v6.xcdatamodel */,
+				A30AC9DE2F0AC64E00E51E34 /* DatabaseModel v7.xcdatamodel */,
 				01EC2DBC207E68BF0031BFEB /* DatabaseModel.xcdatamodel */,
 			);
-			currentVersion = 056848F22445DE9F002EB2B6 /* DatabaseModel v6.xcdatamodel */;
+			currentVersion = A30AC9DE2F0AC64E00E51E34 /* DatabaseModel v7.xcdatamodel */;
 			path = DatabaseModel.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

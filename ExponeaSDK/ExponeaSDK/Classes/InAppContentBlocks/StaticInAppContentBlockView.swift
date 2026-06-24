@@ -8,6 +8,9 @@
 
 import UIKit
 import WebKit
+#if canImport(ExponeaSDKShared)
+import ExponeaSDKShared
+#endif
 
 public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
 
@@ -15,6 +18,7 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
     public var contentReadyCompletion: TypeBlock<Bool>?
     public var heightCompletion: TypeBlock<Int>?
     public var behaviourCallback: InAppContentBlockCallbackType = DefaultInAppContentBlockCallback()
+    public var skipNativeRendering: Bool = false
 
     private lazy var webview: WKWebView = {
         let userScript: WKUserScript = .init(source: inAppContentBlocksManager.disableZoomSource, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
@@ -44,11 +48,12 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
 
     private let placeholder: String
     private lazy var inAppContentBlocksManager = InAppContentBlocksManager.manager
-    private lazy var calculator: WKWebViewHeightCalculator = .init()
+    public lazy var calculator: WKWebViewHeightCalculator = .init()
     private var html: String = ""
     private var height: NSLayoutConstraint?
     private var contentReadyFlag: Bool?
     private var assignedMessage: InAppContentBlockResponse?
+    private var didReportMessageShown = false
 
     public init(placeholder: String, deferredLoad: Bool = false, heightCompletion: TypeBlock<Int>? = nil) {
         self.placeholder = placeholder
@@ -57,51 +62,54 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
 
         webview.navigationDelegate = self
         calculator.heightUpdate = { [weak self] height in
-            guard let self, height.height > 0 else {
-                guard let self else {
-                    return
-                }
+            guard let self else { return }
+            guard height.height > 0 else {
                 self.notifyContentReadyState(true)
-                guard let message = self.assignedMessage else {
-                    return
-                }
-                self.behaviourCallback.onMessageShown(
-                    placeholderId: placeholder,
-                    contentBlock: message
-                )
+                self.reportMessageShownIfNeeded()
                 return
             }
             let usableHeight = height.height - calculator.defaultPadding
+            if self.webview.superview != nil {
+                onMain {
+                    self.height?.constant = usableHeight
+                    self.heightCompletion?(Int(usableHeight))
+                    self.webview.loadHTMLString(self.html, baseURL: nil)
+                    self.webview.layoutIfNeeded()
+                    self.reportMessageShownIfNeeded()
+                }
+                return
+            }
             self.replacePlaceholder(inputView: self, loadedInAppContentBlocksView: self.webview, height: usableHeight) {
                 self.heightCompletion?(Int(usableHeight))
                 self.prepareContentReadyState(true)
-                guard let message = self.assignedMessage else {
-                    return
-                }
-                self.behaviourCallback.onMessageShown(
-                    placeholderId: placeholder,
-                    contentBlock: message
-                )
+                self.reportMessageShownIfNeeded()
             }
-            Exponea.shared.telemetryManager?.report(
-                eventWithType: .showInAppMessage,
-                properties: ["messageType": InAppContentBlockType.contentBlock.type]
-            )
         }
         if !deferredLoad {
             getContent()
         }
+
+        IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
+            guard let self else { return }
+            self.height?.constant = 0
+            self.sizeToFit()
+            self.layoutIfNeeded()
+        }
     }
 
     public func reload() {
-        getContent()
+        getContent(force: true)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func getContent() {
+    private func getContent(force: Bool = false) {
+        guard !IntegrationManager.shared.isStopped else {
+            Exponea.logger.log(.verbose, message: "In-app content blocks UI is unavailable, SDK is stopping")
+            return
+        }
         guard !placeholder.isEmpty else {
             replacePlaceholder(inputView: self, loadedInAppContentBlocksView: .init(frame: .zero), height: 0) {
                 self.prepareContentReadyState(false)
@@ -109,12 +117,20 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
             }
             return
         }
-        let data = inAppContentBlocksManager.prepareInAppContentBlocksStaticView(placeholderId: placeholder)
+        let data = inAppContentBlocksManager.prepareInAppContentBlocksStaticView(
+            placeholderId: placeholder,
+            makeResourcesOffline: !skipNativeRendering
+        )
         webview.tag = data.tag
-        if data.html.isEmpty {
-            inAppContentBlocksManager.refreshStaticViewContent(staticQueueData: .init(tag: data.tag, placeholderId: placeholder) {
-                self.webview.tag = $0.tag
-                self.loadContent(html: $0.html, message: $0.message)
+        if data.html.isEmpty || force {
+            inAppContentBlocksManager.refreshStaticViewContent(staticQueueData: .init(
+                tag: data.tag,
+                placeholderId: placeholder,
+                makeResourcesOffline: !skipNativeRendering
+            ) { [weak self] result in
+                guard let self else { return }
+                self.webview.tag = result.tag
+                self.loadContent(html: result.html, message: result.message)
             })
         } else {
             loadContent(html: data.html, message: data.message)
@@ -123,16 +139,30 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
 
     private func loadContent(html: String, message: InAppContentBlockResponse?) {
         guard !html.isEmpty else {
-            replacePlaceholder(inputView: self, loadedInAppContentBlocksView: .init(frame: .zero), height: 0) {
-                self.prepareContentReadyState(true)
-                self.behaviourCallback.onNoMessageFound(placeholderId: self.placeholder)
+            if skipNativeRendering {
+                onMain {
+                    self.notifyContentReadyState(true)
+                    self.behaviourCallback.onNoMessageFound(placeholderId: self.placeholder)
+                }
+            } else {
+                replacePlaceholder(inputView: self, loadedInAppContentBlocksView: .init(frame: .zero), height: 0) {
+                    self.prepareContentReadyState(true)
+                    self.behaviourCallback.onNoMessageFound(placeholderId: self.placeholder)
+                }
             }
             return
         }
         self.html = html
         self.assignedMessage = message
-        calculator.loadHtml(placedholderId: placeholder, html: html)
-        // calls `notifyContentReadyState` inside calculator
+        self.didReportMessageShown = false
+        if skipNativeRendering {
+            onMain {
+                self.notifyContentReadyState(true)
+                self.reportMessageShownIfNeeded()
+            }
+        } else {
+            calculator.loadHtml(placedholderId: placeholder, html: html)
+        }
     }
 
     private func replacePlaceholder(
@@ -194,15 +224,26 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
             return .browser
         case .deeplink:
             return .deeplink
-        case .unknown:
-            if action.actionUrl == "https://exponea.com/close_action" {
-                return .close
-            }
-            if action.actionUrl.starts(with: "http://") || action.actionUrl.starts(with: "https://") {
-                return .browser
-            }
-            return .deeplink
+        case .close:
+            return .close
         }
+    }
+
+    private func reportMessageShownIfNeeded() {
+        guard !didReportMessageShown, let message = assignedMessage else { return }
+        didReportMessageShown = true
+        behaviourCallback.onMessageShown(
+            placeholderId: placeholder,
+            contentBlock: message
+        )
+        Exponea.shared.telemetryManager?.report(
+            eventWithType: .contentBlockShown,
+            properties: [
+                "type": (message.content == nil ? "personal" : "static"),
+                "messageId": message.id,
+                "placeholders": TelemetryUtility.toJson(message.placeholders)
+            ]
+        )
     }
 
     // directly calls `contentReadyCompletion` with given contentReady flag
@@ -239,7 +280,7 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
             // webView has to stop navigation, missing message data are internal issue
             return true
         }
-        let webAction: WebActionManager = .init {
+        let webAction: WebActionManager = .init { _ in
             InAppContentBlocksManager.manager.updateInteractedState(for: message.id)
             self.behaviourCallback.onCloseClicked(placeholderId: self.placeholder, contentBlock: message)
             self.reload()

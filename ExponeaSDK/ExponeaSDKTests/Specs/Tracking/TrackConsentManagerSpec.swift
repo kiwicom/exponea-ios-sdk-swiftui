@@ -10,6 +10,7 @@ import Foundation
 import Nimble
 import Mockingjay
 import Quick
+import UserNotifications
 
 @testable import ExponeaSDK
 @testable import ExponeaSDKShared
@@ -35,6 +36,7 @@ final class TrackConsentManagerSpec: QuickSpec {
             var trackingManager: MockTrackingManager!
             var trackingConsentManager: TrackingConsentManagerType!
             beforeEach {
+                IntegrationManager.shared.isStopped = false
                 onEventOccuredCalls = 0
                 trackingManager = MockTrackingManager(onEventCallback: { _, _ in
                     onEventOccuredCalls += 1
@@ -114,11 +116,16 @@ final class TrackConsentManagerSpec: QuickSpec {
                             hasTrackingConsent: true,
                             consentCategoryTracking: "I have consent"
                         )
-                        manager.trackInAppMessageClose(message: message, mode: mode, isUserInteraction: true)
+                        manager.trackInAppMessageClose(
+                            message: message,
+                            buttonText: nil,
+                            mode: mode,
+                            isUserInteraction: true
+                        )
                     },
                     expectingConsentCategory: "I have consent",
                     expectingTrackType: .banner,
-                    expectedInapEventType: .close
+                    expectedInapEventType: .close(buttonLabel: nil)
                 ),
                 TestCaseSetup(
                     expectTrackEvent: true,
@@ -129,11 +136,16 @@ final class TrackConsentManagerSpec: QuickSpec {
                             hasTrackingConsent: true,
                             consentCategoryTracking: "I have consent"
                         )
-                        manager.trackInAppMessageClose(message: message, mode: mode, isUserInteraction: true)
+                        manager.trackInAppMessageClose(
+                            message: message,
+                            buttonText: nil,
+                            mode: mode,
+                            isUserInteraction: true
+                        )
                     },
                     expectingConsentCategory: "I have consent",
                     expectingTrackType: .banner,
-                    expectedInapEventType: .close
+                    expectedInapEventType: .close(buttonLabel: nil)
                 ),
                 TestCaseSetup(
                     expectTrackEvent: false,
@@ -144,7 +156,12 @@ final class TrackConsentManagerSpec: QuickSpec {
                             hasTrackingConsent: false,
                             consentCategoryTracking: "I have consent"
                         )
-                        manager.trackInAppMessageClose(message: message, mode: mode, isUserInteraction: true)
+                        manager.trackInAppMessageClose(
+                            message: message,
+                            buttonText: nil,
+                            mode: mode,
+                            isUserInteraction: true
+                        )
                     },
                     expectingConsentCategory: nil,
                     expectingTrackType: nil,
@@ -159,11 +176,16 @@ final class TrackConsentManagerSpec: QuickSpec {
                             hasTrackingConsent: false,
                             consentCategoryTracking: "I have consent"
                         )
-                        manager.trackInAppMessageClose(message: message, mode: mode, isUserInteraction: true)
+                        manager.trackInAppMessageClose(
+                            message: message,
+                            buttonText: nil,
+                            mode: mode,
+                            isUserInteraction: true
+                        )
                     },
                     expectingConsentCategory: "I have consent",
                     expectingTrackType: .banner,
-                    expectedInapEventType: .close
+                    expectedInapEventType: .close(buttonLabel: nil)
                 ),
                 // INAPP Error
                 TestCaseSetup(
@@ -756,10 +778,15 @@ final class TrackConsentManagerSpec: QuickSpec {
                 checkForEventWithoutForceTrack()
             }
             it("Should not contains track_forced field for closed inapp") {
-                trackingConsentManager.trackInAppMessageClose(message: SampleInAppMessage.getSampleInAppMessage(
-                    hasTrackingConsent: true,
-                    consentCategoryTracking: "I have consent"
-                ), mode: .IGNORE_CONSENT, isUserInteraction: true)
+                trackingConsentManager.trackInAppMessageClose(
+                    message: SampleInAppMessage.getSampleInAppMessage(
+                        hasTrackingConsent: true,
+                        consentCategoryTracking: "I have consent"
+                    ),
+                    buttonText: nil,
+                    mode: .IGNORE_CONSENT,
+                    isUserInteraction: true
+                )
                 checkForEventWithoutForceTrack()
             }
             it("Should not contains track_forced field for error inapp") {
@@ -842,6 +869,72 @@ final class TrackConsentManagerSpec: QuickSpec {
                 }
                 let trackedEvent = trackingManager.trackedEvents[0]
                 expect(trackedEvent.data?.properties["tracking_forced"]).toNot(beNil())
+            }
+
+            describe("delivered push state resolution from lastSnapshot") {
+                var originalProvider: DeliveryAuthorizationProviding!
+                var originalSnapshot: DeliveryAuthorizationSnapshot?
+
+                beforeEach {
+                    originalProvider = DeliveryAuthorizationProvider.current
+                    originalSnapshot = DeliveryAuthorizationProvider.lastSnapshot
+                }
+
+                afterEach {
+                    DeliveryAuthorizationProvider.current = originalProvider
+                    DeliveryAuthorizationProvider.lastSnapshot = originalSnapshot
+                }
+
+                func makeNotificationData() -> NotificationData {
+                    return NotificationData.deserialize(
+                        attributes: [:],
+                        campaignData: [:],
+                        consentCategoryTracking: nil,
+                        hasTrackingConsent: true,
+                        considerConsent: false
+                    )!
+                }
+
+                it("should resolve state to shown when lastSnapshot is authorized with alerts enabled") {
+                    DeliveryAuthorizationProvider.lastSnapshot = DeliveryAuthorizationSnapshot(
+                        authorizationStatus: .authorized,
+                        alertSetting: .enabled
+                    )
+                    trackingConsentManager.trackDeliveredPush(data: makeNotificationData(), mode: .IGNORE_CONSENT)
+                    expect(trackingManager.trackedEvents.count).to(equal(1))
+                    let state = trackingManager.trackedEvents[0].data?.properties["state"] as? String
+                    expect(state).to(equal(DeliveredNotificationStateResolver.shownValue))
+                }
+
+                it("should resolve state to not_shown when lastSnapshot is denied") {
+                    DeliveryAuthorizationProvider.lastSnapshot = DeliveryAuthorizationSnapshot(
+                        authorizationStatus: .denied,
+                        alertSetting: .disabled
+                    )
+                    trackingConsentManager.trackDeliveredPush(data: makeNotificationData(), mode: .IGNORE_CONSENT)
+                    expect(trackingManager.trackedEvents.count).to(equal(1))
+                    let state = trackingManager.trackedEvents[0].data?.properties["state"] as? String
+                    expect(state).to(equal(DeliveredNotificationStateResolver.notShownValue))
+                }
+
+                it("should resolve state to not_shown when authorized but alerts disabled") {
+                    DeliveryAuthorizationProvider.lastSnapshot = DeliveryAuthorizationSnapshot(
+                        authorizationStatus: .authorized,
+                        alertSetting: .disabled
+                    )
+                    trackingConsentManager.trackDeliveredPush(data: makeNotificationData(), mode: .IGNORE_CONSENT)
+                    expect(trackingManager.trackedEvents.count).to(equal(1))
+                    let state = trackingManager.trackedEvents[0].data?.properties["state"] as? String
+                    expect(state).to(equal(DeliveredNotificationStateResolver.notShownValue))
+                }
+
+                it("should fall back to shown when lastSnapshot is nil") {
+                    DeliveryAuthorizationProvider.lastSnapshot = nil
+                    trackingConsentManager.trackDeliveredPush(data: makeNotificationData(), mode: .IGNORE_CONSENT)
+                    expect(trackingManager.trackedEvents.count).to(equal(1))
+                    let state = trackingManager.trackedEvents[0].data?.properties["state"] as? String
+                    expect(state).to(equal(DeliveredNotificationStateResolver.shownValue))
+                }
             }
         }
     }

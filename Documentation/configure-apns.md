@@ -1,18 +1,21 @@
 ---
-title: Configure Apple Push Notification Service
-excerpt: Configure the Apple Push Notification Service Integration for Engagement
+title: Configure Apple Push Notification Service for iOS SDK
 slug: ios-sdk-configure-apns
-categorySlug: integrations
-parentDocSlug: ios-sdk-push-notifications
+category:
+  uri: /branches/2/categories/guides/Developers
+parent:
+  uri: ios-sdk-push-notifications
+content:
+  excerpt: Configure the Apple Push Notification Service Integration for Engagement
 ---
 
-To be able to send [iOS push notifications](https://documentation.bloomreach.com/engagement/docs/ios-sdk-push-notifications) using Engagement, you must obtain an Apple Push Notification service (APNs) authentication token signing key and configure the APNs integration in the Engagement web app.
+To be able to send [Push notifications for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-push-notifications) using Engagement, you must obtain an Apple Push Notification service (APNs) authentication token signing key and configure the APNs integration in the Engagement web app.
 
 > 📘
 >
 > Refer to the [Apple Push Notifications developer documentation](https://developer.apple.com/documentation/usernotifications) for details.
 
-## Obtain an APNs Key
+## Obtain an APNs key
 
 1. In your [Apple Developer account](https://developer.apple.com/account/resources/authkeys/list), navigate to `Certificates, Identifiers & Profiles` > `Keys`.
 ![Apple Developer - APNs keys](https://raw.githubusercontent.com/exponea/exponea-ios-sdk/main/Documentation/images/apns1.png)
@@ -27,7 +30,7 @@ To be able to send [iOS push notifications](https://documentation.bloomreach.com
 >
 > Make sure to save the downloaded key in a secure place, as you cannot download this more than once.
 
-## Add APNs Key to Engagement
+## Add APNs key to Engagement
 
 1. Open the Engagement web application and navigate to `Data & Assets` > `Integrations`. Click `+ Add new integration`.
 ![Engagement Integrations - Add new integration](https://raw.githubusercontent.com/exponea/exponea-ios-sdk/main/Documentation/images/apns4.png)

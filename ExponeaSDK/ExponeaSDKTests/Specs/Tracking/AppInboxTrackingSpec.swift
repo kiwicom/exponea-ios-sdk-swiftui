@@ -19,7 +19,8 @@ final class AppInboxTrackingSpec: QuickSpec {
     let configuration = try! Configuration(
         projectToken: "token",
         authorization: Authorization.none,
-        baseUrl: "baseUrl"
+        baseUrl: "baseUrl",
+        appGroup: "group"
     )
 
     override func spec() {
@@ -32,16 +33,23 @@ final class AppInboxTrackingSpec: QuickSpec {
 
         describe("AppInbox tracking") {
             beforeEach {
+                // Reset the shared SDK instance so state from other test specs
+                // (e.g. ExponeaSpec, SegmentationSpec) does not contaminate these tests.
+                Exponea.shared = ExponeaInternal()
+                IntegrationManager.shared.isStopped = false
                 repository = MockRepository(configuration: self.configuration)
                 flushManager = MockFlushingManager()
                 database = try! MockDatabaseManager()
+                let userDefaults = UserDefaults()
                 trackingManager = try! TrackingManager(
                     repository: repository,
                     database: database,
                     flushingManager: flushManager,
                     inAppMessageManager: nil,
                     trackManagerInitializator: { _ in },
-                    userDefaults: UserDefaults(),
+                    userDefaults: userDefaults,
+                    campaignRepository: CampaignRepository(userDefaults: userDefaults),
+                    requirePushAuthorization: self.configuration.requirePushAuthorization,
                     onEventCallback: { _, _ in
                         // nothing
                     })
@@ -50,7 +58,7 @@ final class AppInboxTrackingSpec: QuickSpec {
                     trackingManager: trackingManager,
                     database: database
                 )
-                AppInboxCache().clear()
+                AppInboxCache.shared.clear()
                 trackingConsentManager = TrackingConsentManager(trackingManager: trackingManager)
             }
 
@@ -78,6 +86,13 @@ final class AppInboxTrackingSpec: QuickSpec {
                 let customerIds = try identifyCustomer(["registered": "test@example.com"]).ids
                 let testMessage = try fetchTestMessage(id: "id1", syncToken: "sync123")
                 trackingConsentManager.trackAppInboxOpened(message: testMessage, mode: .IGNORE_CONSENT)
+                let trackedEvents = try fetchTrackEvents()
+                expect(trackedEvents.count).to(equal(1))
+                waitUntil(timeout: .seconds(10)) { done in
+                    Exponea.shared.stopIntegration { done() }
+                }
+                expect(IntegrationManager.shared.isStopped).to(beTrue())
+                IntegrationManager.shared.isStopped = false
             }
 
             it("should track clicked AppInbox") {
@@ -91,6 +106,13 @@ final class AppInboxTrackingSpec: QuickSpec {
                     buttonLink: actionUrl,
                     mode: .IGNORE_CONSENT
                 )
+                let trackedEvents = try fetchTrackEvents()
+                expect(trackedEvents.count).to(equal(1))
+                waitUntil(timeout: .seconds(10)) { done in
+                    Exponea.shared.stopIntegration { done() }
+                }
+                expect(IntegrationManager.shared.isStopped).to(beTrue())
+                IntegrationManager.shared.isStopped = false
             }
 
             it("should NOT track opened Message without assignment") {
@@ -142,6 +164,13 @@ final class AppInboxTrackingSpec: QuickSpec {
                     buttonLink: actionUrl,
                     mode: .IGNORE_CONSENT
                 )
+                let trackedEvents = try fetchTrackEvents()
+                expect(trackedEvents.count).to(equal(1))
+                waitUntil(timeout: .seconds(10)) { done in
+                    Exponea.shared.stopIntegration { done() }
+                }
+                expect(IntegrationManager.shared.isStopped).to(beTrue())
+                IntegrationManager.shared.isStopped = false
             }
         }
 
@@ -168,7 +197,7 @@ final class AppInboxTrackingSpec: QuickSpec {
             )
             repository.fetchAppInboxResult = Result.success(response)
             var fetchedMessage: MessageItem?
-            waitUntil(timeout: .seconds(30)) { done in
+            waitUntil(timeout: .seconds(20)) { done in
                 appInboxManager.fetchAppInbox { result in
                     fetchedMessage = result.value?.first
                     done()

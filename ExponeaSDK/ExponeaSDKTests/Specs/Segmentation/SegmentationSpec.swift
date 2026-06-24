@@ -20,73 +20,64 @@ class SegmentationSpec: QuickSpec {
     )
 
     override func spec() {
-        Exponea.shared.configure(with: configuration)
-        let manager: SegmentationManagerType = Exponea.shared.segmentationManager!
+        var manager: SegmentationManagerType?
+        
+        beforeEach {
+            // Reset Exponea shared instance to ensure clean state
+            Exponea.shared = ExponeaInternal()
+            Exponea.shared.configure(with: self.configuration)
+            manager = Exponea.shared.segmentationManager
+            expect(manager).notTo(beNil(), description: "SegmentationManager should be available after configuration")
+            manager?.removeAll()
+        }
 
         it("union segments") {
+            guard let manager = manager else {
+                fail("Manager should not be nil")
+                return
+            }
             let discovery: SegmentCategory = .discovery(data: [
                 .init(id: "id1", segmentationId: "segmentationId1"),
                 .init(id: "id2", segmentationId: "segmentationId2"),
-                .init(id: "id2", segmentationId: "segmentationId3"),
+                .init(id: "id2", segmentationId: "segmentationId3")
             ])
-            let discovery2: SegmentCategory = .discovery(data: [
+            let content: SegmentCategory = .content(data: [
+                .init(id: "id1", segmentationId: "segmentationId1")
+            ])
+            let merchandising: SegmentCategory = .merchandising(data: [
                 .init(id: "id2", segmentationId: "segmentationId2"),
                 .init(id: "id5", segmentationId: "segmentationId5"),
-                .init(id: "id1", segmentationId: "segmentationId1"),
+                .init(id: "id1", segmentationId: "segmentationId1")
             ])
-            let discovery3: SegmentCategory = .discovery(data: [
-                .init(id: "id6", segmentationId: "segmentationId6"),
-                .init(id: "id6", segmentationId: "segmentationId6"),
-                .init(id: "id6", segmentationId: "segmentationId6"),
-                .init(id: "id8", segmentationId: "segmentationId8"),
-                .init(id: "id7", segmentationId: "segmentationId7"),
-            ])
-
-            let content: SegmentCategory = .content(data: [
-                .init(id: "id1", segmentationId: "segmentationId1"),
-            ])
-            let content2: SegmentCategory = .content(data: [
-                .init(id: "id2", segmentationId: "segmentationId2"),
-                .init(id: "id3", segmentationId: "segmentationId3"),
-                .init(id: "id3", segmentationId: "segmentationId5"),
-            ])
-            let content1: SegmentCategory = .content(data: [
-                .init(id: "id3", segmentationId: "segmentationId3"),
-                .init(id: "id4", segmentationId: "segmentationId4"),
-                .init(id: "id4", segmentationId: "segmentationId4"),
-            ])
-
-            let fetch = [discovery, content2, discovery3]
-            let cache = [discovery2, content1, content]
-
-            let result = manager.unionSegments(first: fetch, second: cache)
+            let fetch = [discovery, content]
+            let cache = [content, merchandising]
+            let unionSegments = manager.unionSegments(fetchedCategories: fetch, cachedCategories: cache, newbies: [])
+            // discovery + content + merchandising
+            expect(unionSegments.count).to(equal(3))
             var numberOfDiscovery = 0
             var numberOfContent = 0
-
-            for category in result {
+            var numberOfMerchandising = 0
+            for category in unionSegments {
                 switch category {
                 case let .discovery(data):
                     numberOfDiscovery = data.count
-                default: continue
-                }
-            }
-
-            for category in result {
-                switch category {
                 case let .content(data):
                     numberOfContent = data.count
+                case let .merchandising(data):
+                    numberOfMerchandising = data.count
                 default: continue
                 }
             }
-
-            expect(numberOfDiscovery).to(equal(7))
-            expect(numberOfContent).to(equal(5))
-
-            expect(result.filter { $0.id == SegmentCategory.discovery().id }.count).to(equal(1))
-            expect(result.filter { $0.id == SegmentCategory.content().id }.count).to(equal(1))
+            expect(numberOfDiscovery).to(equal(3))  // is in Fetch
+            expect(numberOfContent).to(equal(1))  // is in Fetch
+            expect(numberOfMerchandising).to(equal(0))  // is only in cache, so Fetch is empty
         }
 
         it("callbacks") {
+            guard let manager = manager else {
+                fail("Manager should not be nil")
+                return
+            }
             var totalFiredCallback = 0
             var totalFiredNewbies = 0
 
@@ -136,6 +127,10 @@ class SegmentationSpec: QuickSpec {
         }
 
         it("remove and anonymize") {
+            guard let manager = manager else {
+                fail("Manager should not be nil")
+                return
+            }
             manager.removeAll()
             let callback: SegmentCallbackData = .init(category: .discovery(), isIncludeFirstLoad: false) { _ in }
             let callback2: SegmentCallbackData = .init(category: .discovery(), isIncludeFirstLoad: true) { _ in }
@@ -162,6 +157,10 @@ class SegmentationSpec: QuickSpec {
         }
 
         it("synchronize") {
+            guard let manager = manager else {
+                fail("Manager should not be nil")
+                return
+            }
             @SegmentationStoring  var storedSegmentations: SegmentStore?
             let segment: SegmentDataDTO = .init(categories: [.discovery(data: [.init(id: "1", segmentationId: "1")])])
             let segment2: SegmentDataDTO = .init(categories: [.discovery(data: [.init(id: "2", segmentationId: "1")])])
@@ -193,6 +192,23 @@ class SegmentationSpec: QuickSpec {
             storedSegmentations = .init(customerIds: ["customer": "test"], segmentData: .init(categories: [.discovery(data: [.init(id: "id", segmentationId: "id")])]))
             let result4 = manager.synchronizeSegments(customerIds: ["customer": "oldText"], input: .init(categories: []))
             expect(result4.count).to(equal(0))
+        }
+
+        it("lifetime") {
+            let manualDTO: ManualSegmentsCacheDTO = .init(
+                timestamp: Date().timeIntervalSince1970,
+                data: .init(categories: [.content()]),
+                assignedCustomer: ["user": "123"]
+            )
+            expect(manualDTO.isWithinTime).to(beTrue())
+            var isExpired = false
+            waitUntil(timeout: .seconds(8)) { done in
+                DispatchQueue.global().asyncAfter(deadline: .now() + 5.5) {
+                    isExpired = !manualDTO.isWithinTime
+                    done()
+                }
+            }
+            expect(isExpired).to(beTrue())
         }
     }
 }

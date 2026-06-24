@@ -11,13 +11,14 @@ import Foundation
 final class AppInboxCache: AppInboxCacheType {
     static let appInboxFolder = "exponeasdk_app_inbox"
     static let appInboxFileName = "app_inbox.json"
+    static let shared = AppInboxCache()
     // we should use our own instance of filemanager, host app can implement delegate on default one
     private let fileManager: FileManager = FileManager()
     private let semaphore: DispatchQueue = DispatchQueue(label: "AppInboxCacheLockingQueue", attributes: .concurrent)
     private var data: AppInboxData!
 
     init() {
-        data = loadDataFromLocalStorage()
+        self.data = loadDataFromLocalStorage()
     }
 
     private func getCacheDirectoryURL() -> URL? {
@@ -105,18 +106,8 @@ final class AppInboxCache: AppInboxCacheType {
         setMessages(messages: Array(uniqueMessages.values))
     }
 
-    private func getFileName(for imageUrl: String) -> String {
-        guard let data = imageUrl.data(using: .utf8) else {
-            return imageUrl
-        }
-        return data
-            .base64EncodedString()
-            .replacingOccurrences(of: "=", with: "")
-            .replacingOccurrences(of: "/", with: "")
-    }
-
     func deleteImages(except: [String]) {
-        let exceptFileNames = except.map { getFileName(for: $0) }
+        let exceptFileNames = except.map { FileUtils.getFileName(fileUrl: $0) }
         guard let directory = getCacheDirectoryURL() else {
             return
         }
@@ -138,7 +129,7 @@ final class AppInboxCache: AppInboxCacheType {
             Exponea.logger.log(.warning, message: "Unable to get AppInbox image cache directory")
             return false
         }
-        let fileUrl = directory.appendingPathComponent(getFileName(for: imageUrl))
+        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
         let exists = fileManager.fileExists(atPath: fileUrl.path)
         if !exists {
             Exponea.logger.log(.verbose, message: "AppInbox image \(imageUrl) not found in cache.")
@@ -150,7 +141,7 @@ final class AppInboxCache: AppInboxCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return
         }
-        let fileUrl = directory.appendingPathComponent(getFileName(for: imageUrl))
+        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
         try? data.write(to: fileUrl, options: .atomic)
     }
 
@@ -158,8 +149,27 @@ final class AppInboxCache: AppInboxCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return nil
         }
-        let fileUrl = directory.appendingPathComponent(getFileName(for: imageUrl))
+        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
         return try? Data(contentsOf: fileUrl)
+    }
+
+    func tryGetImageData(at imageUrl: String) -> Data? {
+        guard let directory = getCacheDirectoryURL() else {
+            Exponea.logger.log(.warning, message: "Invalid AppInbox cache state - no dir")
+            // try to return online image at least
+            return URL(string: imageUrl).flatMap { try? Data(contentsOf: $0) }
+        }
+        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
+        if let imageData = try? Data(contentsOf: fileUrl) {
+            // from cache
+            return imageData
+        }
+        if let imageData = FileUtils.tryDownloadFile(imageUrl) {
+            // store to cache
+            try? imageData.write(to: fileUrl, options: .atomic)
+            return imageData
+        }
+        return nil
     }
 
     func setSyncToken(token: String?) {

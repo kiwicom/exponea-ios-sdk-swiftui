@@ -93,25 +93,28 @@ final class InAppMessagePresenterSpec: QuickSpec {
                         let presenter = InAppMessagePresenter(window: window)
                         let view = try? presenter.createInAppMessageView(
                             messageType: .modal,
-                            payload: .init(imageUrl: "", title: "", titleTextColor: "", titleTextSize: "", bodyText: "", bodyTextColor: "", bodyTextSize: "", buttons: [], backgroundColor: "", closeButtonColor: "", messagePosition: "", textPosition: "", textOverImage: false),
+                            payload: nil,
+                            oldPayload: .init(imageUrl: "", title: "", titleTextColor: "", titleTextSize: "", bodyText: "", bodyTextColor: "", bodyTextSize: "", buttons: [], backgroundColor: "", closeButtonColor: "", messagePosition: "", textPosition: "", textOverImage: false),
                             payloadHtml: nil,
-                            image: UIImage()
+                            image: UIImage(),
+                            timeout: nil
                         ) { _ in }
-                        dismissCallback: { isUserInteraction in
+                        dismissCallback: { isUserInteraction, _ in
                             expect(isUserInteraction).to(beTrue())
                         }
                         if let inAppMessageDialogView = view as? InAppMessageDialogView {
-                            inAppMessageDialogView.simulateClick()
+                            inAppMessageDialogView.closeButtonAction(InAppMessageActionButton())
                         }
                         presenter.presentInAppMessage(
                             messageType: messageType,
-                            payload: message.payload,
+                            payload: nil,
+                            oldPayload: message.oldPayload,
                             payloadHtml: message.payloadHtml,
                             delay: 0,
                             timeout: nil,
                             imageData: lenaImageData,
                             actionCallback: { _ in },
-                            dismissCallback: { _ in },
+                            dismissCallback: { _, _ in },
                             presentedCallback: { presented, error in
                                 expect(presented).notTo(beNil())
                                 done()
@@ -124,13 +127,14 @@ final class InAppMessagePresenterSpec: QuickSpec {
                         let presenter = InAppMessagePresenter()
                         presenter.presentInAppMessage(
                             messageType: messageType,
-                            payload: message.payload,
+                            payload: nil,
+                            oldPayload: message.oldPayload,
                             payloadHtml: message.payloadHtml,
                             delay: 0,
                             timeout: nil,
                             imageData: lenaImageData,
                             actionCallback: { _ in },
-                            dismissCallback: { _ in },
+                            dismissCallback: { _, _ in },
                             presentedCallback: { presented, error in
                                 expect(presented).to(beNil())
                                 done()
@@ -144,13 +148,14 @@ final class InAppMessagePresenterSpec: QuickSpec {
                     waitUntil(timeout: .seconds(5)) { done in
                         InAppMessagePresenter().presentInAppMessage(
                             messageType: messageType,
-                            payload: message.payload,
+                            payload: nil,
+                            oldPayload: message.oldPayload,
                             payloadHtml: message.payloadHtml,
                             delay: 0,
                             timeout: nil,
                             imageData: "something".data(using: .utf8)!,
                             actionCallback: { _ in },
-                            dismissCallback: { _ in },
+                            dismissCallback: { _, _ in },
                             presentedCallback: { presented, error in
                                 expect(presented).to(beNil())
                                 done()
@@ -165,13 +170,14 @@ final class InAppMessagePresenterSpec: QuickSpec {
                     let present = { callback in
                         presenter.presentInAppMessage(
                             messageType: messageType,
-                            payload: message.payload,
+                            payload: nil,
+                            oldPayload: message.oldPayload,
                             payloadHtml: message.payloadHtml,
                             delay: 0,
                             timeout: nil,
                             imageData: lenaImageData,
                             actionCallback: { _ in },
-                            dismissCallback: { _ in},
+                            dismissCallback: { _, _ in },
                             presentedCallback: callback)
                     }
                     var presentedDialog: InAppMessageView?
@@ -188,7 +194,7 @@ final class InAppMessagePresenterSpec: QuickSpec {
                             done()
                         })
                     }
-                    presentedDialog?.dismissCallback(false)
+                    presentedDialog?.dismissCallback((false, nil))
                     waitUntil(timeout: .seconds(5)) { done in
                         present({ presented, error in
                             expect(presented).notTo(beNil())
@@ -202,13 +208,64 @@ final class InAppMessagePresenterSpec: QuickSpec {
                             done()
                         })
                     }
-                    presentedDialog?.actionCallback(message.payload!.buttons![0])
+                    presentedDialog?.actionCallback(message.oldPayload!.buttons![0])
                     waitUntil(timeout: .seconds(5)) { done in
                         present({ presented, error in
                             expect(presented).notTo(beNil())
                             done()
                         })
                     }
+                }
+
+                it("should dismiss dialog after timeout - \(messageType.rawValue)") {
+                    let message: InAppMessage
+                    switch messageType {
+                    case .modal, .alert, .fullscreen, .slideIn:
+                        message = SampleInAppMessage.getSampleInAppMessage(
+                            messageType: messageType.rawValue,
+                            isHtml: false,
+                            htmlPayload: nil
+                        )
+                    case .freeform:
+                        message = SampleInAppMessage.getSampleInAppMessage(
+                            payload: nil,
+                            variantName: "Variant A",
+                            variantId: 0,
+                            isHtml: true,
+                            htmlPayload: "<html></html>"
+                        )
+                    }
+                    let window = UIWindow(frame: UIScreen.main.bounds)
+                    window.makeKeyAndVisible()
+                    let rootView = UIViewController()
+                    window.rootViewController = rootView
+                    _ = rootView.view
+                    let presenter = InAppMessagePresenter(window: window)
+                    var presentedView: InAppMessageView?
+                    var presentationError: String?
+                    waitUntil(timeout: .seconds(4)) { done in
+                        presenter.presentInAppMessage(
+                            messageType: messageType,
+                            payload: nil,
+                            oldPayload: message.oldPayload,
+                            payloadHtml: message.payloadHtml,
+                            delay: 0,
+                            timeout: 3.0,
+                            imageData: lenaImageData,
+                            actionCallback: { _ in },
+                            dismissCallback: { isUserInteraction, button in
+                                expect(isUserInteraction).to(equal(false))
+                                expect(button).to(beNil())
+                                done()
+                            },
+                            presentedCallback: { presented, error in
+                                presentedView = presented
+                                presentationError = error
+                            }
+                        )
+                    }
+                    expect(presentedView).notTo(beNil())
+                    expect(presentationError).to(beNil())
                 }
             }
         }

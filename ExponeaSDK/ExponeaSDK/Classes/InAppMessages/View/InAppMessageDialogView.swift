@@ -9,6 +9,9 @@
 import UIKit
 
 final class InAppMessageDialogView: UIViewController, InAppMessageView {
+    var showCallback: EmptyBlock?
+    
+    
     enum TextPosition {
         case top
         case bottom
@@ -17,7 +20,7 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
     let payload: InAppMessagePayload
     let image: UIImage
     let actionCallback: ((InAppMessagePayloadButton) -> Void)
-    let dismissCallback: TypeBlock<Bool>
+    var dismissCallback: TypeBlock<(Bool, InAppMessagePayloadButton?)>
     let fullscreen: Bool
 
     let dialogContainerView: UIView = UIView() // whole dialog
@@ -25,7 +28,7 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
 
     let imageView: UIImageView = UIImageView()
     var imageViewHeightConstraint: NSLayoutConstraint?
-    let closeButton: UIButton = UIButton()
+    let closeButton: UIButton = InAppMessageActionButton()
 
     let backgroundView: UIView = UIView() // part of dialog that contains texts and button
     let contentsStackView: UIStackView = UIStackView()
@@ -41,12 +44,15 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
     var textOverImage: Bool {
         return payload.textOverImage == true
     }
+    var isPresented: Bool {
+        return presentingViewController != nil
+    }
 
     init(
         payload: InAppMessagePayload,
         image: UIImage,
         actionCallback: @escaping ((InAppMessagePayloadButton) -> Void),
-        dismissCallback: @escaping TypeBlock<Bool>,
+        dismissCallback: @escaping TypeBlock<(Bool, InAppMessagePayloadButton?)>,
         fullscreen: Bool
     ) {
         self.payload = payload
@@ -60,10 +66,6 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
         modalPresentationStyle = .overFullScreen
         modalTransitionStyle = .crossDissolve
     }
-    
-    func simulateClick() {
-        closeButtonAction(UIButton())
-    }
 
     required init?(coder: NSCoder) {
         return nil
@@ -73,12 +75,23 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
         viewController.present(self, animated: true)
     }
 
-    func dismiss(isUserInteraction: Bool) {
-        dismissCallback(isUserInteraction)
-        guard presentingViewController != nil else {
-            return
+    func dismiss(isUserInteraction: Bool, cancelButton: InAppMessagePayloadButton?) {
+        dismissCallback((isUserInteraction, cancelButton))
+        dismissFromSuperView()
+    }
+
+    func dismiss(actionButton: InAppMessagePayloadButton) {
+        actionCallback(actionButton)
+        dismissFromSuperView()
+    }
+
+    func dismissFromSuperView() {
+        DispatchQueue.main.async { [weak self] in
+            guard self?.presentingViewController != nil else {
+                return
+            }
+            self?.dismiss(animated: true)
         }
-        dismiss(animated: true)
     }
 
     override func loadView() {
@@ -132,8 +145,7 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
     }
 
     @objc private func onTapOutside() {
-        dismissCallback(true)
-        dismiss(animated: true)
+        dismiss(isUserInteraction: true, cancelButton: nil)
     }
 
     private func setupDialogContainer() {
@@ -358,13 +370,11 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
         guard let payload = sender.payload else {
             return
         }
-        dismiss(animated: true)
-        actionCallback(payload)
+        dismiss(actionButton: payload)
     }
 
-    @objc func closeButtonAction(_ sender: Any) {
-        dismissCallback(true)
-        dismiss(animated: true)
+    @objc func closeButtonAction(_ sender: InAppMessageActionButton) {
+        dismiss(isUserInteraction: true, cancelButton: sender.payload)
     }
 
     private func parseFontSize(_ fontSize: String?) -> CGFloat {
@@ -375,6 +385,6 @@ final class InAppMessageDialogView: UIViewController, InAppMessageView {
 // recognizes touches outside of the dialog
 extension InAppMessageDialogView: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        return touch.view?.isDescendant(of: self.view) == false
+        return touch.view?.isDescendant(of: self.dialogContainerView) == false
     }
 }

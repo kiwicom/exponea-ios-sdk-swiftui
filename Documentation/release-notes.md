@@ -1,15 +1,270 @@
 ---
-title: Release Notes
-excerpt: Exponea iOS SDK Release Notes
+title: Release notes for iOS SDK
 slug: ios-sdk-release-notes
-categorySlug: integrations
-parentDocSlug: ios-sdk
+category:
+  uri: /branches/2/categories/guides/Developers
+parent:
+  uri: ios-sdk
+content:
+  excerpt: Exponea iOS SDK release notes
 ---
 
+> 📘
+>
+> Refer to the [SDK version update guide for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-version-update) for details on updating to the next major version.
+
 ## Release Notes
+## Release Notes for 4.2.0
+#### June 04, 2026
+* Added:
+  * Tracks `notification_state` based on notification permission status. The `valid` flag and `description` now reflect the OS-reported authorization status directly, independent of `requirePushAuthorization`.
+  * Detects push notification permission state changes (granted ↔ revoked) and emits a fresh `notification_state` event regardless of the configured `tokenTrackFrequency`.
+  * Adds `application_id` to the push notification self-check request, enabling correct routing in multi-mobile-app projects.
+  * Automatically re-tracks `notification_state` after 30 days to keep customer profiles within the backend validity window.
+  * Adds the `regenerateDeviceIdOnAnonymize` configuration flag (opt-in, default `false`). When enabled, `anonymize()` regenerates the local `device_id` so the new customer profile can't be linked to the previous one through the device identifier. The default behavior preserves `device_id` across `anonymize()`, unchanged from 4.1.0.
+  * Adds calendar-day semantics for the `.daily` token tracking frequency, so the daily refresh runs once per local calendar day instead of once per rolling 24 hours.
+  * Persists the APNs push token across SDK initialization and process crashes through a crash-survivable buffer.
+  * Adds a device snapshot (SDK version, OS version, app version, and device model) to `notification_state` events.
+  * Adds an `anonymize(exponeaIntegrationType:exponeaProjectMapping:completion:)` overload with a main-thread
+  completion callback invoked once the pre-anonymize flush and teardown finish.
+* Fixed:
+  * Fixes the `notification_state` event not being tracked when push notification permission is re-granted after being revoked within the same SDK lifetime (for example, the user opens Settings, revokes permission, re-grants it, and returns to the app).
+  * Fixes a contradictory `notification_state` payload (`valid=true` paired with `Permission denied`) emitted by `anonymize()` and `stopIntegration()` when `requirePushAuthorization` was disabled but the OS denied delivery.
+
+
+## Release Notes for 4.1.0
+#### May 06, 2026
+* Added:
+  * Adds `onActionClickedSafari` callback to `InAppContentBlockCallbackType` and `DefaultContentBlockCarouselCallback` for opening browser actions in an in-app `SFSafariViewController`.
+  * Extends `DefaultContentBlockCarouselCallback` with `onMessagesChanged(count:messages:)` and adds `index`/`count` parameters to `onMessageShown`. The `behaviourCallback` initializer parameter on `CarouselInAppContentBlockView` now passes the custom callback.
+  * Adds `skipNativeRendering` flag to `StaticInAppContentBlockView` for hosts that render the HTML payload outside the SDK.
+  * Optimizes in-app content block loading with batched personalization requests for static placeholders, in-flight fetch deduplication for carousels, and on-disk image cache reuse during image validation.
+  * Replaces the fixed-delay height measurement in `WKWebViewHeightCalculator` with a mutation-observer-driven JavaScript bridge for faster and more responsive carousel and static block height updates.
+* Fixed:
+  * Fixes memory leaks in `CarouselInAppContentBlockView` caused by strong references in the compositional layout provider, foreground/background notification observers, and cell touch/release callbacks. `release()` now correctly cancels Combine subscriptions.
+  * Fixes blank carousel and static content blocks after iOS terminates the `WKWebView` WebContent process while the app is backgrounded, by adding `webViewWebContentProcessDidTerminate` recovery in both the carousel cell and the height calculator.
+  * Fixes an infinite carousel reload loop when unrelated placeholders' messages were past their TTL. The expiration check is now scoped to the placeholder being loaded.
+  * Fixes carousel cold-paint flicker and scroll-position jump when the eligible message set is unchanged between the initial and full load phases.
+  * Fixes race conditions in concurrent carousel loads by introducing per-placeholder validation tokens. Prevents data corruption during personalized message updates by mutating `inAppContentBlockMessages` by id instead of by index.
+
+
+## Release Notes for 4.0.1
+#### April 15, 2026
+* Fixed:
+  * Fixes CocoaPods compilation error.
+
+
+## Release Notes for 4.0.0
+#### April 14, 2026
+* Added:
+  * Adds support for Data hub Event streams integration with optional SDK auth token authorization.
+* Fixed:
+  * Fixes thread-safety issues in Logger and CrashManager, and adds missing log truncation.
+
+
+## Release Notes for 3.11.0
+#### March 11, 2026
+* Fixed:
+  * Fixed tracking of notification_state events when appVersion or applicationId changes.
+  * Disabled custom event logging for telemetry.
+
+
+## Release Notes for 3.10.0
+#### February 24, 2026
+* Added:
+  * Updates Example App's and their extensions bundle IDs.
+  * Updates Example App to handle App Links with the new domain.
+  * Clears device ID when calling stopIntegration() or clearLocalCustomerData().
+  * Updates documentation page titles with "iOS SDK" reference for improved searchability and navigation.
+* Fixed:
+  * Fixes tokenTrackFrequency method invocation.
+  * Fixes in-app message dismissal when user taps outside the dialog.
+
+
+## Release Notes for 3.9.0
+#### November 19, 2025
+* Added:
+  * Documents [major push notification updates](https://documentation.bloomreach.com/engagement/docs/ios-sdk-version-update): notification_state event as a new token tracking method, Application ID configuration, and migration requirements for the Multiple mobile apps feature.
+* Fixed:
+  * Fixes crash that occurs when in app message has 3 buttons.
+  * Fixes incorrect push notification's image aspect ratio.
+  * Fixes crash on wrappers when in app message with stop integration action is called.
+
+
+## Release Notes for 3.8.2
+#### October 22, 2025
+* Added:
+  * Adds device_id parameter to all tracked events.
+  * Adds push notification token invalidation during manual token track and new token registration.
+* Fixed:
+  * Fixes notification_state event tracking not respecting token track frequency setup.
+  * Fixes missing application_id in push notification delivered event.
+  * Fixes in-app message display when alert is presented.
+  * Fixes notification_state event description messages.
+* Removed:
+  * Removes default properties from notification_state event.
+  * Removes push_notification_token, platform, description, device_id and application_id from customer properties.
+
+## Release Notes for 3.8.1
+#### October 07, 2025
+* Fixed:
+  * Fixes GIF image display using CADisplayLink for smoother animation
+
+
+## Release Notes for 3.8.0
+#### October 01, 2025
+* Added:
+  * Adds Multiple Mobile applications feature
+
+
+## Release Notes for 3.7.0
+#### September 25, 2025
+* Added:
+  * Updates SwiftSoup library to next major version (from 2.7.6).
+  * Replace age with timestamp for tracked Engagement events.
+* Fixed:
+  * Fixes Xcode 26 build issues related to 'performAndWait' method.
+
+
+## Release Notes for 3.6.0
+#### July 31, 2025
+* Added:
+  * Sentry integration for telemetry (replacing AppCenter)
+  * SwiftSoup library updated to version 2.7.6
+* Removed:
+  * Carthage package manager distribution
+  * AppCenter telemetry integration
+* Fixed:
+  * Removes Infinity double and float values from event payload before flush, as they aren't supported in JSON
+  * Updates validation steps of PushSelfCheck to support SwiftUI app delegate
+
+
+## Release Notes for 3.5.2
+#### June 16, 2025
+* Fixed:
+  * Event Storage Optimization: Event updates are now stored to the local database only when the context changes, improving performance.
+  * Flush Execution Check: Fixed an issue to ensure the flush process is executed only once, preventing event duplication.
+  * In-app Image Handling: Fixed an issue where an empty URL in in-app message images could cause unexpected crashes.
+
+
+## Release Notes for 3.5.1
+#### May 27, 2025
+* Fixed:
+  * Fixes SafeArea insets usage for In-app dialog showing to accept app layout paddings
+  * Fixes and updates some links in the documentation
+  * Moves caching of In-app images to the background thread to not block the main UI thread
+
+
+## Release Notes for 3.5.0
+#### May 20, 2025
+* Added:
+  * IsRichText public: IsRichText has been made accessible for customers
+  * Custom font cache: Added cache for smooth run
+* Fixed:
+  * Content Block serialization: Removed CodableIngored, which caused an issue with RN
+  * Button style: Corrected button style key
+  * Identify customer: Resolved an issue where only the last identifyCustomer request was persisted due to the inAppRefreshCallback overwriting previous storeTrackEvent requests
+  * URLOpener: Refactored URLOpener to support async/callback-based handling, enabling delayed deep link/URL resolution without breaking existing synchronous logic
+
+
+## Release Notes for 3.4.0
+#### April 22, 2025
+* Added:
+  * Height Calculator: The height calculator of content block has been made accessible for improved height calculations within the SDK.
+* Fixed:
+  * Carousel Freezing Issue: Fixed a bug causing the carousel to freeze under certain conditions.
+  * Carousel Bug Fixes: Multiple issues in the carousel component have been resolved, including inaccuracies in the getShownCount method and performance enhancements.
+  * Banner Count Return Fixes: Specific bug fixes related to the accurate returning of banner counts in the carousel.
+
+
+## Release Notes for 3.3.0
+#### April 11, 2025
+* Added:
+  * Adds a new stopIntegration method for improved SDK integration management and clears all locally stored data.
+  * Minor documentation improvements about using identifyCustomer with soft ID
+
+
+## Release Notes for 3.2.1
+#### March 28, 2025
+* Fixed:
+  * Fixed incorect import of Foundation instead of UIKit which cause compilation errors
+
+
+## Release Notes for 3.2.0
+#### March 27, 2025
+* Added:
+  * Adds rich styling support for native in-app messages.
+  * Improves how in-app personalizations are processed.
+* Fixed:
+  * Removes incorrectly listed customer attributes endpoint from documentation.
+  * Fixes possible dual init case caused by lazy property.
+  * Fixes and updates in-app message carousel type callback inconsistency.
+
+
+## Release Notes for 3.1.0
+#### January 28, 2025
+* Added:
+  * Defines an empty action on tap for an empty App Inbox.
+  * Improves the documentation about manual tracking of push notifications.
+  * Adds support for the iPhone 16 line and new tablets to be correctly identified in tracking events.
+  * Improves logging for the anonymize() method.
+  * Adds in-app content block carousel view updates required by wrappers SDKs.
+* Fixed:
+  * Fixes the invalid parsing of a float number required for an App Inbox style setting.
+  * Fixes an issue with an empty image source for an HTML in-app message by dismissing the HTML in-app view in the main thread.
+  * Fixes an issue where a long URL in an in-app action would cause an error.
+  * Fixes an issue with an empty App Inbox causing "invisible" space around.
+  * Fixes an issue that caused an in-app message to be displayed while the user is anonymized.
+  * Fixes an issue that could cause multiple invocations and initializations of the SDK from multiple threads and adds a sync and check to prevent this from happening.
+  * Fixes an issue where a date filter was not applied and evaluated for in-app content blocks.
+  * Fixes a case in which an in-app content block fetch could be zombied by unlocking refresh inside a guard.
+  * Fixes an issue that caused infinite fetch repeats for zero in-app content blocks without calling onNoMessageFound.
+  * Fixes an issue where dismiss was not handled on the main thread for InAppMessageWebView.
+  * Fixes an issue where in some cases customer IDs and attributes were not tracked correctly and missing when using immediate flush mode.
+  * Fixes an issue where campaign data were not inserted in the session event triggered by a push notification for session_start.
+  * Fixes an incorrect swiftSoup version in .xcodeproj.
+  * Removes unnecessary fetch for in-app content block personalized content in case of zero messages.
+
+
+## Release Notes for 3.0.1
+#### October 17, 2024
+* Fixed:
+  * Fixes SPM compilation error for ManualSegmentationManager.swift due missing Foundation import.
+
+
+## Release Notes for 3.0.0
+#### October 11, 2024
+  * Added:
+    * Aligns GIF support across App Inbox, In-app messages, and In-app content blocks. 
+    * Removes tracking by the SDK of the apple_push_notification_authorized customer parameter. 
+    * Adds tracking of session end when calling anonymize() while auto session tracking is enabled. 
+    * Adds a manualSessionAutoClose configuration parameter to override automatic session end tracking for open sessions when sessionStart is called multiple times.
+    * Adds tracking of a new state parameter to push notification delivery events. 
+    * Updates the default session timeout to 60 seconds. 
+    * Improves In-app content block carousel documentation. 
+    * Improves the behavior of the Segmentation API’s getSegments method. 
+    * Adds the identification of Cancel button clicks in In-app message close events and inclusion of the button label in the tracked event. 
+    * Adds several minor documentation improvements. 
+  * Fixed:
+    * Fixes the Segmentation API linkIds log level and improves the log messages. 
+    * Fixes an issue where manual gestures caused an infinite loop in an In-app content block carousel. 
+    * Fixes an issue where afterInit was called twice for a specific configure() function. 
+    * Fixes an issue causing In-app content block carousel messages to flicker. 
+    * Fixes an issue where reloading In-app messages triggered an infinite loop. 
+    * Fixes an issue where multiple close events were tracked for HTML messages. 
+    * Fixes an issue where fetching App Inbox after calling identifyCustomer returned corrupt data. 
+    * Fixes incorrect URLs in the documentation. 
+    * Fixes an issue where the In-app message selector ignored the presentation state. 
+    * Fixes the InAppMesagePresenter log level. 
+    * Fixes refreshing of In-app content blocks after identifyCustomer. 
+    * Fixes incorrect Segmentation API category enum type from merchandise to merchandising. 
+    * Fixes incorrect handling and tracking of multiple close buttons in HTML messages. 
+    * Fixes case when segmentation callback do not return all data.
+
+
 ## Release Notes for 2.28.0
 #### August 01, 2024
-* Features
+* Added:
   * ContentBlockCarouselCallback extended with additional callback methods.
   * Adds an improvement ensuring that In-App Messages are only fetched while the app is in the foreground.
   * InAppContentBlock.Content struct exposed to have public constructor.
@@ -17,7 +272,7 @@ parentDocSlug: ios-sdk
   * Tracking of campaign/clicks event updated only for cases when xnpe_cmp is present, described more deeply in documentation.
   * AppInboxListViewController extended with onItemClicked callback.
   * Carousel documentation updated.
-* Bug Fixes
+* Fixed:
   * Fixed: InAppContentBlock deserialisation now able to handle NIL.
   * Fixed: Crash caused by calling track events for not configured SDK from multiple threads fixed by adding atomicity to actionBlocks array in ExpoInitManager.
   * Fixed: Carousel timer inconsistency for next message after resuming from action.

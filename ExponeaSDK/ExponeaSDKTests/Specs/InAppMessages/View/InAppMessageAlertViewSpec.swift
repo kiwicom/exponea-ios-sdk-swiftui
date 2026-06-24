@@ -13,13 +13,13 @@ import Quick
 
 final class InAppMessageAlertViewSpec: QuickSpec {
     override func spec() {
-        let payload = SampleInAppMessage.getSampleInAppMessage().payload
+        let payload = SampleInAppMessage.getSampleInAppMessage().oldPayload
 
         it("should setup dialog with payload") {
             let alertController = try! InAppMessageAlertView(
                 payload: payload!,
                 actionCallback: { _ in },
-                dismissCallback: { _ in }
+                dismissCallback: { _, _ in }
             ).alertController
             expect(alertController.title).to(equal(payload?.title))
             expect(alertController.message).to(equal(payload?.bodyText))
