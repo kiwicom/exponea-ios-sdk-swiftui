@@ -13,7 +13,6 @@ content:
 >
 > Refer to the [SDK version update guide for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-version-update) for details on updating to the next major version.
 
-## Release Notes
 ## Release Notes for 4.2.0
 #### June 04, 2026
 * Added:
