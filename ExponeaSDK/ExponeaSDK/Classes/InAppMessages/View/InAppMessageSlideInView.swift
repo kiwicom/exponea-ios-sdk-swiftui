@@ -80,23 +80,6 @@ struct InAppMessageSlideInViewSwiftUI: View {
         }
     }
 
-    private var content: some View {
-        VStack(spacing: 0) {
-            imageArea
-            if isTextVisible {
-                if viewModel.closeButtonConfig.visibility && viewModel.imageConfig.isOverlay {
-                    textArea
-                        .padding(.top, (viewModel.closeButtonConfig.margin.first(where: { $0.edge == .top })?.value ?? 0) + 38)
-                } else {
-                    textArea
-                }
-            } else {
-                VStack(spacing: 0) {}
-                    .frame(width: 600)
-            }
-        }
-    }
-
     private var imageArea: some View {
         SlideInAppImageComponent(
             config: viewModel.imageConfig,
@@ -188,30 +171,6 @@ struct InAppMessageSlideInViewSwiftUI: View {
         }
     }
 
-    private var closeButtonView: some View {
-        VStack(spacing: 0) {
-            GeometryReader { proxy in
-                if viewModel.closeButtonConfig.visibility {
-                    HStack(alignment: .lastTextBaseline, spacing: 0) {
-                        Spacer()
-                        VStack(spacing: 0) {
-                            InAppCloseButton(config: viewModel.closeButtonConfig)
-                                .padding(
-                                    .top,
-                                    viewModel.closeButtonConfig.margin.first(where: { $0.edge == .top })?.value ?? 0
-                                )
-                                .padding(
-                                    .trailing,
-                                    (viewModel.closeButtonConfig.margin.first(where: { $0.edge == .trailing })?.value ?? 0)
-                                )
-                        }
-                    }
-                    .frame(width: proxy.size.width)
-                }
-            }
-        }
-    }
-
     public var body: some View {
         let topMargin = viewModel.layouConfig.margin.first(where: { $0.edge == .top })?.value ?? 0
         let bottomMargin = viewModel.layouConfig.margin.first(where: { $0.edge == .bottom })?.value ?? 0
@@ -249,10 +208,6 @@ struct InAppMessageSlideInViewSwiftUI: View {
                         .padding(.leading, leadingPadding)
                     }
                 }
-                .overlay(
-                    closeButtonView,
-                    alignment: .topTrailing
-                )
             case viewModel.layouConfig.textPosition == .leading:
                 HStack(alignment: .top, spacing: 0) {
                     VStack(spacing: 0) {
@@ -260,20 +215,13 @@ struct InAppMessageSlideInViewSwiftUI: View {
                         buttonArea
                     }
                     imageArea
-                        .overlay(
-                            closeButtonView,
-                            alignment: .topTrailing
-                        )
                 }
             default:
                 HStack(alignment: .top, spacing: 0) {
                     imageArea
-                    ZStack(alignment: .top) {
-                        VStack(spacing: 0) {
-                            textArea
-                            buttonArea
-                        }
-                        closeButtonView
+                    VStack(spacing: 0) {
+                        textArea
+                        buttonArea
                     }
                 }
             }
@@ -282,6 +230,7 @@ struct InAppMessageSlideInViewSwiftUI: View {
         .clipped(antialiased: true)
         .clipShape(RoundedRectangle(cornerRadius: viewModel.layouConfig.cornerRadius))
         .frame(maxWidth: .infinity)
+        .inAppCloseButtonOverlay(config: viewModel.closeButtonConfig)
         .readHeight { height in
             if !viewModel.isHeightSet {
                 heightCompletion?(height)

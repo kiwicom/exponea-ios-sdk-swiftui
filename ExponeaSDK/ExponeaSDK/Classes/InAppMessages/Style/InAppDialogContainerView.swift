@@ -28,23 +28,26 @@ public final class InAppDialogContainerView: UIViewController, InAppMessageView 
     private var calculatedHeight: CGFloat = 0 {
         willSet {
             if newValue != 0 {
-                var top: CGFloat = 0
-                var bottom: CGFloat = 0
+                var safeTop: CGFloat = 0
+                var safeBottom: CGFloat = 0
                 if let window = UIApplication.shared.windows.first {
-                    top = window.safeAreaInsets.top
-                    bottom = window.safeAreaInsets.bottom
+                    safeTop = window.safeAreaInsets.top
+                    safeBottom = window.safeAreaInsets.bottom
                 }
-                var height = newValue
-                if isFullscreen {
-                    height -= top - bottom
-                } else {
-                    height += top + bottom
-                }
-                if height > UIScreen.main.bounds.height {
+                let layoutTop = payLoad.layoutConfig.margin.first(where: { $0.edge == .top })?.value ?? 0
+                let layoutBottom = payLoad.layoutConfig.margin.first(where: { $0.edge == .bottom })?.value ?? 0
+                let availableMaxHeight = UIScreen.main.bounds.height
+                    - safeTop
+                    - safeBottom
+                    - layoutTop
+                    - layoutBottom
+                if newValue > availableMaxHeight {
                     inAppView?.config.shouldBeScrollable = true
-                    heightCons?.constant = UIScreen.main.bounds.height - top - bottom
-                    bottomCons?.constant = bottom
-                } else {
+                    if !isFullscreen {
+                        heightCons?.constant = availableMaxHeight
+                        bottomCons?.constant = safeBottom
+                    }
+                } else if !isFullscreen {
                     heightCons?.constant = newValue
                 }
                 view.layoutIfNeeded()

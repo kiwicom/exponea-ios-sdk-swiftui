@@ -25,7 +25,14 @@ public struct InAppImageComponent: View {
         let layoutTrailing = layoutConfig.margin.first(where: { $0.edge == .trailing })?.value ?? 0
         let trailing = config.margin.first(where: { $0.edge == .trailing })?.value ?? 0
         let leading = config.margin.first(where: { $0.edge == .leading })?.value ?? 0
-        return UIScreen.main.bounds.width - trailing - leading - layoutLeading - layoutTrailing
+        var result = UIScreen.main.bounds.width - trailing - leading - layoutLeading - layoutTrailing
+        if case .fullscreen = config.size {
+            return result
+        }
+        let layoutPadLeading = layoutConfig.padding.first(where: { $0.edge == .leading })?.value ?? 0
+        let layoutPadTrailing = layoutConfig.padding.first(where: { $0.edge == .trailing })?.value ?? 0
+        result -= layoutPadLeading + layoutPadTrailing
+        return result
     }
 
     private func getHeightFromAspectRation(aspectRation: CGSize) -> CGFloat {

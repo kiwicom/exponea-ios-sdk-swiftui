@@ -8,27 +8,17 @@
 
 import SwiftUI
 
-final class InAppButtonSwiftUIModel {
-    var isDownloadingFont = false
-}
-
 struct InAppButtonSwiftUI: View {
 
     var config: InAppButtonConfig
-    @State var newFont: Font
-    let viewModel = InAppButtonSwiftUIModel()
-    @State var height: CGFloat = 0
-
-    init(config: InAppButtonConfig) {
-        self.config = config
-        self.newFont = Font(UIFont.fromStyle(style: config.style, size: config.size))
-    }
 
     var body: some View {
         Button(action: {
             config.actionCallback?(config.payloadButton)
         }) {
-            let font = Font(config.fontData?.loadedFont ?? UIFont.systemFont(ofSize: CGFloat(config.size)))
+            let font = Font(
+                config.fontData?.loadedFont ?? UIFont.fromStyle(style: config.style, size: config.size)
+            )
             let text = SwiftUI.Text(config.title)
                 .multilineTextAlignment(config.textAlignment?.textAlignment ?? .center)
                 .lineSpacing(config.calculatedLineHeight)

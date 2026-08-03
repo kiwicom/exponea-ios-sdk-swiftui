@@ -15,7 +15,7 @@ final class InAppViewConfig: ObservableObject {
             debouncer.debounce {
                 if self.height != 0 && !self.isLoaded {
                     self.isLoaded = true
-                    self.textCompletionHeight?(newValue + self.calculatedPaddings)
+                    self.textCompletionHeight?(newValue)
                 }
             }
         }
@@ -24,7 +24,6 @@ final class InAppViewConfig: ObservableObject {
     var isTitleLoaded = false
     var isBodyLoaded = false
     var isImageLoaded = false
-    var calculatedPaddings: CGFloat = 0
 
     var isLoaded = false
     @Published var shouldBeScrollable = false
