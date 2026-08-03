@@ -352,6 +352,23 @@ Exponea.shared.trackSessionStart()
 Exponea.shared.trackSessionEnd()
 ``` 
 
+### Get the current customer cookie
+
+Use `Exponea.shared.customerCookie` to retrieve the cookie that identifies the current customer being tracked. The value is available only after the SDK is initialized. Before initialization, the API returns `nil`.
+
+By default, the SDK tracks events for an anonymous customer identified by a cookie. When you identify the customer with a hard ID, the SDK keeps using the same cookie alongside the hard ID. The cookie persists until you call:
+
+* `Exponea.shared.anonymize()` to generate a new cookie immediately.
+* `Exponea.shared.stopIntegration()` or `Exponea.shared.clearLocalCustomerData(appGroup: String)` to remove the cookie. A new one is created only on the next SDK initialization.
+
+Use this cookie value to work with the current anonymous identity in your app, for example, to synchronize identity with a webview.
+
+#### Example
+
+``` swift
+let cookie = Exponea.shared.customerCookie
+```
+
 ## Push notifications
 
 If developers [integrate push notification functionality](https://documentation.bloomreach.com/engagement/docs/ios-sdk-push-notifications#integration) in their app, the SDK automatically tracks the push notification token by default.
