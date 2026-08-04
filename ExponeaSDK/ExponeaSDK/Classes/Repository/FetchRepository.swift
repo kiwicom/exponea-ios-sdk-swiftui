@@ -57,6 +57,15 @@ protocol FetchRepository {
         completion: @escaping TypeBlock<Result<PersonalizedInAppContentBlockResponseData>>
     )
 
+    func personalizedInAppContentBlocks(
+        customerIds: [String: String],
+        inAppContentBlocksIds: [String],
+        etag: String?,
+        onNotModified: (() -> Void)?,
+        onEtagHeader: ((String) -> Void)?,
+        completion: @escaping TypeBlock<Result<PersonalizedInAppContentBlockResponseData>>
+    )
+
     func getSegmentations(
         cookie: String,
         completion: @escaping TypeBlock<Result<SegmentDataDTO>>
@@ -67,4 +76,21 @@ protocol FetchRepository {
         externalIds: [String: String],
         completion: @escaping TypeBlock<Result<SegmentDataDTO>>
     )
+}
+
+extension FetchRepository {
+    func personalizedInAppContentBlocks(
+        customerIds: [String: String],
+        inAppContentBlocksIds: [String],
+        etag: String?,
+        onNotModified: (() -> Void)?,
+        onEtagHeader: ((String) -> Void)?,
+        completion: @escaping TypeBlock<Result<PersonalizedInAppContentBlockResponseData>>
+    ) {
+        personalizedInAppContentBlocks(
+            customerIds: customerIds,
+            inAppContentBlocksIds: inAppContentBlocksIds,
+            completion: completion
+        )
+    }
 }

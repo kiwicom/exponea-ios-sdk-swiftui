@@ -97,6 +97,12 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
         }
     }
 
+    /// Triggers deferred loading with conditional revalidation when an ETag is stored.
+    /// Use `reload()` only for an explicit force refresh.
+    public func load() {
+        getContent(force: false)
+    }
+
     public func reload() {
         getContent(force: true)
     }
@@ -126,7 +132,8 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
             inAppContentBlocksManager.refreshStaticViewContent(staticQueueData: .init(
                 tag: data.tag,
                 placeholderId: placeholder,
-                makeResourcesOffline: !skipNativeRendering
+                makeResourcesOffline: !skipNativeRendering,
+                skipEtag: force
             ) { [weak self] result in
                 guard let self else { return }
                 self.webview.tag = result.tag

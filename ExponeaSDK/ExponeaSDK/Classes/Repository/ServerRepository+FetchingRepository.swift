@@ -225,15 +225,41 @@ extension ServerRepository: FetchRepository {
         inAppContentBlocksIds: [String],
         completion: @escaping (Result<PersonalizedInAppContentBlockResponseData>) -> Void
     ) {
+        personalizedInAppContentBlocks(
+            customerIds: customerIds,
+            inAppContentBlocksIds: inAppContentBlocksIds,
+            etag: nil,
+            onNotModified: nil,
+            onEtagHeader: nil,
+            completion: completion
+        )
+    }
+
+    func personalizedInAppContentBlocks(
+        customerIds: [String: String],
+        inAppContentBlocksIds: [String],
+        etag: String?,
+        onNotModified: (() -> Void)?,
+        onEtagHeader: ((String) -> Void)?,
+        completion: @escaping (Result<PersonalizedInAppContentBlockResponseData>) -> Void
+    ) {
         let router = makeRouter(for: .personalizedInAppContentBlocks)
         var executeRequest: ((@escaping (Bool) -> Void) -> Void)?
-        let (handler, startRequest) = router.handler(withRetry: { setRequestHadJwt in executeRequest?(setRequestHadJwt) }, completion: completion)
+        let (handler, startRequest) = router.handler(
+            withRetry: { setRequestHadJwt in executeRequest?(setRequestHadJwt) },
+            onNotModified: onNotModified,
+            onEtagHeader: onEtagHeader,
+            completion: completion
+        )
         executeRequest = { setRequestHadJwt in
             do {
-                let request = try router.prepareRequest(
+                var request = try router.prepareRequest(
                     parameters: InAppContentBlocksRequest(messageIds: inAppContentBlocksIds),
                     customerIds: customerIds
                 )
+                if let etag = etag {
+                    request.setValue(etag, forHTTPHeaderField: "If-None-Match")
+                }
                 setRequestHadJwt(request.value(forHTTPHeaderField: Constants.Repository.headerAuthorization) != nil)
                 self.session.dataTask(with: request, completionHandler: handler).resume()
             } catch {

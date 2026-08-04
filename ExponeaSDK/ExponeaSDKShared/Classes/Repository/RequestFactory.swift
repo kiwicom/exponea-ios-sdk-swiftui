@@ -248,6 +248,8 @@ public extension RequestFactory {
     /// - Returns: (completionHandler, startRequest). Call startRequest() after assigning executeRequest to run the first request.
     func handlerWithRetry(
         executeRequest: @escaping (@escaping (Bool) -> Void) -> Void,
+        onNotModified: (() -> Void)? = nil,
+        onEtagHeader: ((String) -> Void)? = nil,
         completion: @escaping (Result<Data>) -> Void
     ) -> (CompletionHandler, () -> Void) {
         let hasRetried = Ref(false)
@@ -278,7 +280,9 @@ public extension RequestFactory {
                             completion(.failure(RepositoryError.notAuthorized(errorResponse)))
                         }
                     }
-                }
+                },
+                onNotModified: onNotModified,
+                onEtagHeader: onEtagHeader
             )
         }
         return (completionHandler, runRequest)
@@ -303,14 +307,30 @@ public extension RequestFactory {
         withRetry executeRequest: @escaping (@escaping (Bool) -> Void) -> Void,
         completion: @escaping (Result<T>) -> Void
     ) -> (CompletionHandler, () -> Void) {
+        handler(withRetry: executeRequest, onNotModified: nil, onEtagHeader: nil, completion: completion)
+    }
+
+    func handler<T: Decodable>(
+        withRetry executeRequest: @escaping (@escaping (Bool) -> Void) -> Void,
+        onNotModified: (() -> Void)?,
+        onEtagHeader: ((String) -> Void)?,
+        completion: @escaping (Result<T>) -> Void
+    ) -> (CompletionHandler, () -> Void) {
         let jsonDecoder = JSONDecoder()
         jsonDecoder.dateDecodingStrategy = .secondsSince1970
-        let (h, start) = handlerWithRetry(executeRequest: executeRequest) { result in
+        var capturedEtag: String?
+        let (h, start) = handlerWithRetry(
+            executeRequest: executeRequest,
+            onNotModified: onNotModified,
+            onEtagHeader: { etag in capturedEtag = etag }
+        ) { result in
             let mapped: Result<T>
             switch result {
             case .success(let data):
                 do {
-                    mapped = .success(try jsonDecoder.decode(T.self, from: data))
+                    let decoded = try jsonDecoder.decode(T.self, from: data)
+                    if let etag = capturedEtag { onEtagHeader?(etag) }
+                    mapped = .success(decoded)
                 } catch {
                     mapped = .failure(error)
                 }
@@ -339,7 +359,9 @@ public extension RequestFactory {
         error: Error?,
         requestHadJwt: Bool = false,
         resultAction: @escaping ((Result<Data>) -> Void),
-        onRetryableAuthFailure: ((Int, Data?) -> Void)? = nil
+        onRetryableAuthFailure: ((Int, Data?) -> Void)? = nil,
+        onNotModified: (() -> Void)? = nil,
+        onEtagHeader: ((String) -> Void)? = nil
     ) {
         // Check if we have any response at all
         guard let response = response else {
@@ -361,6 +383,18 @@ public extension RequestFactory {
         guard let httpResponse = response as? HTTPURLResponse else {
             DispatchQueue.main.async {
                 resultAction(.failure(RepositoryError.invalidResponse(response)))
+            }
+            return
+        }
+
+        if httpResponse.statusCode == 304 {
+            DispatchQueue.main.async {
+                if let onNotModified = onNotModified {
+                    onNotModified()
+                } else {
+                    // Without onNotModified, empty 304 data fails JSON decode downstream.
+                    resultAction(.success(data ?? Data()))
+                }
             }
             return
         }
@@ -423,6 +457,9 @@ public extension RequestFactory {
                 }
             default:
                 // We assume all other status code are a success
+                if let etag = httpResponse.value(forHTTPHeaderField: "ETag") {
+                    onEtagHeader?(etag)
+                }
                 resultAction(.success(data))
             }
         } else {

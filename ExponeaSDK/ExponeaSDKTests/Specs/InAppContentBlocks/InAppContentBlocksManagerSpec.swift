@@ -1272,5 +1272,82 @@ class InAppContentBlocksManagerSpec: QuickSpec {
             expect(continued?.count).to(equal(1))
             expect(continued?.first?.id).to(equal(validForUnderTest.id))
         }
+
+        it("loadContent fetches once and reaches height calculation through the completion-only personalized helper") {
+            defer { MockingjayProtocol.removeAllStubs() }
+
+            let placeholder = "height-calc-ph"
+            let messageId = "height-calc-msg-\(UUID().uuidString)"
+            manager.addMessage(
+                SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                    id: messageId,
+                    placeholders: [placeholder]
+                )
+            )
+
+            let personalizedBody: Data = {
+                let response = PersonalizedInAppContentBlockResponseData(
+                    data: [
+                        PersonalizedInAppContentBlockResponse(
+                            id: messageId,
+                            status: .ok,
+                            ttlSeconds: 60,
+                            variantId: nil,
+                            hasTrackingConsent: true,
+                            variantName: nil,
+                            contentType: nil,
+                            content: .init(html: "<html><body>height</body></html>"),
+                            htmlPayload: nil,
+                            ttlSeen: nil
+                        )
+                    ]
+                )
+                return (try? JSONEncoder().encode(response)) ?? Data()
+            }()
+
+            var fetchCount = 0
+            MockingjayProtocol.addStub(
+                matcher: { $0.url?.path.contains("inappcontentblocks") == true },
+                builder: { _ in
+                    fetchCount += 1
+                    let response = HTTPURLResponse(
+                        url: URL(string: "https://api.exponea.com/personalize")!,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(personalizedBody))
+                }
+            )
+
+            let indexPath = IndexPath(row: 0, section: 0)
+            var refreshCalled = false
+            waitUntil(timeout: .seconds(15)) { done in
+                manager.refreshCallback = { _ in
+                    refreshCalled = true
+                    done()
+                }
+                _ = manager.prepareInAppContentBlockView(
+                    placeholderId: placeholder,
+                    indexPath: indexPath
+                )
+            }
+
+            expect(refreshCalled).to(beTrue())
+            expect(fetchCount).to(equal(1))
+
+            // Host reloads the cell after refreshCallback; only then is the block marked active.
+            _ = manager.prepareInAppContentBlockView(
+                placeholderId: placeholder,
+                indexPath: indexPath
+            )
+
+            let concreteManager = manager as! InAppContentBlocksManager
+            let stored = concreteManager.getUsedInAppContentBlocks(
+                placeholder: placeholder,
+                indexPath: indexPath
+            )
+            expect(stored?.height).to(beGreaterThan(0))
+        }
     }
 }

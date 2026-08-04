@@ -38,7 +38,7 @@ Then, place the placeholder view at the desired location by adding it as a sub v
 view.addSubview(placeholder)
 ```
 
-Use the `.reload()` method if you need to reload the content block view:
+Use the `.reload()` method if you need to force a fresh fetch of the content block, ignoring any cached state (for example, on a pull-to-refresh action):
 
 ```swift
 placeholder.reload()
@@ -150,6 +150,10 @@ Exponea.shared.inAppContentBlocksManager?.prefetchPlaceholdersWithIds(ids: ["pla
 
 This must be done after SDK [initialization](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize-the-sdk) and after calling `anonymize` or `identifyCustomer`. Prefetching should not be done at any other time.
 
+> 📘
+>
+> Calling `anonymize()` or `stopIntegration()` clears all stored ETag values alongside the personalized content cache. ETags persist across app process restarts (cold start) but are cleared when the SDK session is torn down or the customer identity is reset. This ensures that requests issued under a new customer identity never carry an ETag derived from a previous identity's response.
+
 ### Handle carousel presentation status
 
 If you need to access additional information about content blocks displayed in a carousel, you can use the following methods:
@@ -178,10 +182,29 @@ To add a placeholder to your layout but defer loading of the corresponding in-ap
 let placeholderView = StaticInAppContentBlockView(placeholder: "placeholder", deferredLoad: true)
 ```
 
-Then call `reload()` later when the placeholder becomes visible to the user:
+Then call `load()` when the placeholder becomes visible to the user to trigger the initial non-forced load:
 ```swift
-placeholderView.reload()
+placeholderView.load()
 ```
+
+> 📘
+>
+> Use `load()` for the initial trigger and for re-checking content when navigating back to a screen. Use `reload()` only when an explicit force-refresh is required (for example, a pull-to-refresh action). The difference is:
+> - `load()` uses the server-side TTL to decide whether a network request is needed. When content has not expired, it renders from cache with no network call. When the TTL has expired, the SDK sends a conditional request with an `If-None-Match` header. If the server confirms nothing has changed, it responds with `304 Not Modified` and the cached content is re-displayed without re-downloading the full payload.
+> - `reload()` always sends a fresh unconditional network request without an `If-None-Match` header, ignoring any cached state. The stored ETag is updated with the new value from the resulting `200 OK` response.
+
+### Refresh content on screen re-appearance
+
+To ensure that a placeholder re-checks its content when the user navigates back to a screen (for example, after the server-side TTL has expired), call `load()` in `viewWillAppear`:
+
+```swift
+override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    placeholderView.load()
+}
+```
+
+If the server-side content has changed, the server returns `200 OK` with the updated payload, which the SDK processes and renders normally.
 
 ### Display in-app content block after content has loaded
 
@@ -230,8 +253,8 @@ let placeholderView = StaticInAppContentBlockView(placeholder: "placeholder", de
 let originalBehaviour = placeholderView.behaviourCallback
 placeholderView.behaviourCallback = CustomInAppContentBlockCallback(originalBehaviour: originalBehaviour)
 
-// `placeholderView` has deferred load, so we trigger it
-placeholderView.reload()
+// `placeholderView` has deferred load, so we trigger the initial non-forced load
+placeholderView.load()
 ```
 
 The callback behavior object must implement `InAppContentBlockCallbackType`. The example below calls the original (default) behavior. This is recommended but not required.
@@ -423,7 +446,7 @@ class CustomView: UIViewController {
             placeholder,
             self
         )
-        placeholderView.reload()
+        placeholder.load()
     }
 }
 ```
@@ -559,6 +582,17 @@ This section provides helpful pointers for troubleshooting in-app content blocks
 
 - The SDK can only display an in-app content block after it has been fully loaded (including its content, any images, and its height). Therefore, the in-app content block may only show in the app after a delay.
 - Always ensure that the placeholder IDs in the in-app content block configuration (in the Engagement web app) and in your mobile app match.
+- If the backend environment does not yet support conditional revalidation (no `ETag` header returned), the SDK operates identically to its previous behavior: no `If-None-Match` header is sent and the full payload is downloaded on every TTL re-fetch. No configuration change is needed.
+
+### ETag cache granularity
+
+Conditional revalidation uses batch-level ETag keys derived from the exact set of message IDs included in each network request. This is a deliberate trade-off for the current release:
+
+- For static placeholders batched together, the ID set can vary between queue ticks, so a previously stored ETag may not be reused even when content is unchanged.
+- For embedded list placeholders, ETag is sent only on pure TTL revalidation (when the expired set exactly matches the blocks being fetched). Mixed fresh and expired blocks in one call skip ETag and fetch unconditionally.
+- When one placeholder in a static batch calls `reload()`, the entire batch skips conditional revalidation for that tick.
+
+These cases never serve stale content; they may issue a full fetch where a 304 would have been possible. Finer per-block ETag keys are a possible future improvement.
 
 ### In-app content block shows incorrect image
 
@@ -571,7 +605,7 @@ While troubleshooting in-app content block issues, you can find useful informati
 1. ```
     InAppCB: Placeholder ["placeholder"] has invalid state - action or message is invalid.
     ```
-    Data for the message is nil. Try to call `.reload()` method over static CB.
+    Data for the message is nil. Try to call `.load()` to trigger a non-forced re-check, or `.reload()` to force a full re-fetch.
 
 2. ```
     InAppCB: Unknown action URL: ["url"]
@@ -593,4 +627,9 @@ While troubleshooting in-app content block issues, you can find useful informati
     [HTML] Action ["url"] has been handled
     ```
     Everything is set up correctly.
-    
+
+7. ```
+    ICB: 304 Not Modified — cache hit for placeholder(s): ["placeholder"]
+    ```
+    The server confirmed that the cached content is still current. No new payload was downloaded; the existing cached content is being re-displayed. This is expected behavior after a TTL-driven re-fetch when content has not changed on the backend.
+
