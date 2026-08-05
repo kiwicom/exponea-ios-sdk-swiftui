@@ -365,6 +365,7 @@
 		603CC5802FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */; };
 		603CC5822FD0957F005A7A64 /* CompletionGuaranteesSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603CC5812FD0957E005A7A64 /* CompletionGuaranteesSpec.swift */; };
 		604755463020A979005291B9 /* InAppCloseButtonLayoutSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604755453020A978005291B9 /* InAppCloseButtonLayoutSpec.swift */; };
+		6047554830212930005291B9 /* ExponeaAsyncImageSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6047554730212930005291B9 /* ExponeaAsyncImageSpec.swift */; };
 		60486AF92F7E44CE0068F7D0 /* InstallIdResetSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */; };
 		60486AFB2F7E451C0068F7D0 /* TelemetryUtilitySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */; };
 		60486AFF2F7E8A2F0068F7D0 /* ServerRepositoryAuthWiringSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */; };
@@ -980,6 +981,7 @@
 		603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnonymizeWithIntegrationAndCompletionSpec.swift; sourceTree = "<group>"; };
 		603CC5812FD0957E005A7A64 /* CompletionGuaranteesSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionGuaranteesSpec.swift; sourceTree = "<group>"; };
 		604755453020A978005291B9 /* InAppCloseButtonLayoutSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppCloseButtonLayoutSpec.swift; sourceTree = "<group>"; };
+		6047554730212930005291B9 /* ExponeaAsyncImageSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExponeaAsyncImageSpec.swift; sourceTree = "<group>"; };
 		60486AF82F7E44C50068F7D0 /* InstallIdResetSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallIdResetSpec.swift; sourceTree = "<group>"; };
 		60486AFA2F7E45120068F7D0 /* TelemetryUtilitySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryUtilitySpec.swift; sourceTree = "<group>"; };
 		60486AFE2F7E8A2D0068F7D0 /* ServerRepositoryAuthWiringSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerRepositoryAuthWiringSpec.swift; sourceTree = "<group>"; };
@@ -1644,6 +1646,7 @@
 		05D2D39E23DF07B000E3E79A /* View */ = {
 			isa = PBXGroup;
 			children = (
+				6047554730212930005291B9 /* ExponeaAsyncImageSpec.swift */,
 				604755453020A978005291B9 /* InAppCloseButtonLayoutSpec.swift */,
 				607269E53017A74B00E808CD /* InAppCloseButtonOverlaySpec.swift */,
 				05D2D39F23DF07E800E3E79A /* InAppMessageAlertViewSpec.swift */,
@@ -3611,6 +3614,7 @@
 				F04BEA9221119DD200591950 /* HTTPMethodSpec.swift in Sources */,
 				55391D4B295342C7001D95B8 /* AppInboxManagerSpec.swift in Sources */,
 				B42DA69022B0594D00BBA225 /* FetchConsentsSpec.swift in Sources */,
+				6047554830212930005291B9 /* ExponeaAsyncImageSpec.swift in Sources */,
 				05F3EFED2382BD08006E83F4 /* MockTelemetryUpload.swift in Sources */,
 				55F5F23D2C3E89070094B558 /* ArrayComparisonTests.swift in Sources */,
 				01764BC42087742100D0D673 /* ConfigurationSpec.swift in Sources */,

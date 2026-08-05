@@ -36,7 +36,7 @@ public struct InAppCloseButton: View {
     private var iconView: some View {
         let tint = InAppCloseButtonOverlay.resolvedIconTint(from: config)
         if let imageURL = config.imageURL, let url = URL(string: imageURL) {
-            let image = ExponeaAsyncImage(url: url) { image in
+            let image = ExponeaAsyncImage(url: url) { image, _ in
                 image
                     .resizable()
                     .renderingMode(tint != nil ? .template : .original)

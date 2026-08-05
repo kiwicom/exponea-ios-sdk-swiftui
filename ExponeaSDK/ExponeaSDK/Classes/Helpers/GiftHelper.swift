@@ -29,23 +29,21 @@ extension UIImage {
         return UIImage.animatedImageWithSourceCustom(source)
     }
     
-    public class func gifImageWithURL(_ gifUrl: String) -> UIImage? {
-        guard let url: URL = URL(string: gifUrl) else {
+    class func gifImageWithURL(_ gifUrl: String, completion: @escaping (UIImage?) -> Void) {
+        guard let url = URL(string: gifUrl) else {
             Exponea.logger.log(.error, message: "[GiftHelper] Invalid image url \(gifUrl)")
-            return nil
+            completion(nil)
+            return
         }
-        guard isGif(imageUrl: url), let imageData = try? Data(contentsOf: url) else {
-            Exponea.logger.log(.verbose, message: "[GiftHelper] Image \(gifUrl) is not a gif")
-            return nil
-        }
-        return gifImageWithData(imageData)
-    }
-    
-    private class func isGif(imageUrl: URL) -> Bool {
-        if let data = try? Data(contentsOf: imageUrl) {
-            return isGif(data: data)
-        }
-        return false
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data, isGif(data: data) else {
+                Exponea.logger.log(.verbose, message: "[GiftHelper] Image \(gifUrl) is not a gif")
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+            let image = gifImageWithData(data)
+            DispatchQueue.main.async { completion(image) }
+        }.resume()
     }
     
     public class func isGif(data: Data) -> Bool {

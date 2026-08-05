@@ -8,7 +8,6 @@
 
 import SwiftUI
 import UIKit
-import Combine
 
 public struct InAppImageComponentConfig: Identifiable, Codable {
 
@@ -72,7 +71,6 @@ public struct InAppImageComponentConfig: Identifiable, Codable {
 
     public var id = UUID()
     public let url: URL?
-    public var imageSize: CGSize = .zero
     public let size: SizeType
     public let margin: [InAppButtonEdge]
     public let overlayColor: String?
@@ -88,15 +86,5 @@ public struct InAppImageComponentConfig: Identifiable, Codable {
         self.cornerRadius = cornerRadius
         self.isVisible = isVisible
         self.isOverlay = isOverlay
-        self.imageSize = getImageSize(from: url)
-    }
-
-    func getImageSize(from url: URL?) -> CGSize {
-        if let url,
-           let data = try? Data(contentsOf: url),
-           let image = UIImage(data: data) {
-            return image.size
-        }
-        return .zero
     }
 }

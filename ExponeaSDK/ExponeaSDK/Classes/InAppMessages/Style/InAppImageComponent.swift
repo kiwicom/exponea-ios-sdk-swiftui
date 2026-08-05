@@ -44,7 +44,7 @@ public struct InAppImageComponent: View {
     public var body: some View {
         if config.isVisible {
             VStack(spacing: 0) {
-                ExponeaAsyncImage(url: config.url) { image in
+                ExponeaAsyncImage(url: config.url) { image, imageSize in
                     switch config.size {
                     case .auto:
                         image
@@ -75,10 +75,14 @@ public struct InAppImageComponent: View {
                                 .frame(height: getHeightFromAspectRation(aspectRation: apectRatio))
                                 .clipShape(RoundedRectangle(cornerRadius: config.cornerRadius ?? 0))
                         case .none:
+                            // imageSize is already populated here since `content` only runs once uiImage is decoded;
+                            // the `width` fallback is defensive only (e.g. if Loader wiring changes).
+                            let frameWidth = imageSize.width > 0 ? imageSize.width : width
+                            let frameHeight = imageSize.height > 0 ? imageSize.height : width
                             image
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: config.imageSize.width, height: config.imageSize.height)
+                                .frame(width: frameWidth, height: frameHeight)
                                 .position(x: width / 2, y: getHeightFromAspectRation(aspectRation: apectRatio) / 2)
                                 .frame(width: width, height: getHeightFromAspectRation(aspectRation: apectRatio))
                                 .clipped()
