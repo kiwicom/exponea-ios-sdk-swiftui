@@ -9,11 +9,11 @@ content:
   excerpt: Authorization mode reference for the iOS SDK
 ---
 
-The SDK exchanges data with the Engagement APIs or the [Data hub Event stream](https://documentation.bloomreach.com/data-hub/docs/event-streams-overview) APIs through authorized HTTP/HTTPS communication. The SDK supports three authorization modes:
+The SDK exchanges data with the {user.mkg} APIs or the {user.dh} [event stream](https://documentation.bloomreach.com/data-hub/docs/event-streams-overview) APIs through authorized HTTP/HTTPS communication. The SDK supports three authorization modes:
 
-1. **Token authorization** — default mode for public API access using an API key (Project/Engagement integration).
-2. **Customer token authorization** — optional, more secure mode for private API access using a JWT customer token (Project/Engagement integration).
-3. **Stream JWT authorization** — used exclusively with Data hub / Stream integration, where a backend-issued JWT authenticates all API requests.
+1. **Token authorization** — default mode for public API access using an API key (Project/{user.mkg} integration).
+2. **Customer token authorization** — optional, more secure mode for private API access using a JWT customer token (Project/{user.mkg} integration).
+3. **Stream JWT authorization** — used exclusively with {user.dh} / Stream integration, where a backend-issued JWT authenticates all API requests.
 
 Developers should choose the appropriate authorization mode based on their integration type and required level of security.
 
@@ -43,11 +43,11 @@ Exponea.shared.configure(
 
 ## Customer token authorization
 
-Customer token authorization is optional and provides [private API access](https://documentation.bloomreach.com/engagement/reference/authentication#private-api-access) to select Engagement API endpoints. The [customer token](https://documentation.bloomreach.com/engagement/docs/customer-token) contains encoded customer IDs and a signature. When the Bloomreach Engagement API receives a customer token, it first verifies the signature and only processes the request if the signature is valid.
+Customer token authorization is optional and provides [private API access](https://documentation.bloomreach.com/engagement/reference/authentication#private-api-access) to select {user.mkg} API endpoints. The [customer token](https://documentation.bloomreach.com/engagement/docs/customer-token) contains encoded customer IDs and a signature. When the {user.mkg} API receives a customer token, it first verifies the signature and only processes the request if the signature is valid.
 
 The customer token is encoded using **JSON Web Token (JWT)**, an open industry standard [RFC 7519](https://tools.ietf.org/html/rfc7519) that defines a compact and self-contained way for securely transmitting information between parties.
 
-The SDK sends the customer token in `Bearer <value>` format. Currently, the SDK supports customer token authorization for the following Engagement API endpoints:
+The SDK sends the customer token in `Bearer <value>` format. Currently, the SDK supports customer token authorization for the following {user.mkg} API endpoints:
 
 * `POST /webxp/projects/<projectToken>/appinbox/fetch` for fetching of AppInbox data
 * `POST /webxp/projects/<projectToken>/appinbox/markasread` for marking of AppInbox message as read
@@ -153,9 +153,9 @@ public class ExampleAuthProvider: NSObject, AuthorizationProviderType {
 >
 > A customer token is valid until expiration and is tied to the current customer IDs. If customer IDs change through `identifyCustomer` or `anonymize` methods, the customer token may become invalid for HTTP requests using the new customer IDs.
 
-## Stream JWT authorization (Data Hub)
+## Stream JWT authorization ({user.dh})
 
-When the SDK is configured with **Stream integration** (Data hub), it uses a Stream JWT token for authentication. This is separate from the Engagement customer token and is used for all Stream API requests including tracking, App Inbox, and recommendations.
+When the SDK is configured with **Stream integration** ({user.dh}), it uses a Stream JWT token for authentication. This is separate from the {user.mkg} customer token and is used for all Stream API requests including tracking, App Inbox, and recommendations.
 
 Stream JWT authorization is used for the following API endpoints:
 
@@ -179,7 +179,7 @@ The token is cleared automatically when `anonymize()`, `stopIntegration()`, or `
 
 > ❗️
 >
-> `setSdkAuthToken` only has effect when the SDK is configured with Stream integration. In Project/Engagement mode, the token is ignored.
+> `setSdkAuthToken` only has effect when the SDK is configured with Stream integration. In Project/{user.mkg} mode, the token is ignored.
 
 ### JWT error handling
 
@@ -357,7 +357,7 @@ Exponea.shared.identifyCustomer(context: identity, properties: [:], timestamp: n
 
 ## Configure application ID
 
-**Multiple mobile apps:** If your Engagement project supports multiple mobile apps, specify the `applicationID` in your configuration. This helps distinguish between different apps in your project.
+**Multiple mobile apps:** If your {user.mkg} project supports multiple mobile apps, specify the `applicationID` in your configuration. This helps distinguish between different apps in your project.
 
 ```swift
 Exponea.shared.configure(
@@ -367,6 +367,6 @@ Exponea.shared.configure(
 )
 ```
 
-Make sure your `applicationID` value matches exactly Application ID configured in your Bloomreach Engagement under **Project Settings > Campaigns > Channels > Push Notifications.**
+Make sure your `applicationID` value matches exactly Application ID configured in your {user.mkg} under **Project Settings > Campaigns > Channels > Push Notifications.**
 
-**Single mobile app:** If your Engagement project supports only one app, you can skip the `applicationID` configuration. The SDK will automatically use the default value "default-application".
+**Single mobile app:** If your {user.mkg} project supports only one app, you can skip the `applicationID` configuration. The SDK will automatically use the default value "default-application".

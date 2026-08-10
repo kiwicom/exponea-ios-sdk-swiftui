@@ -13,7 +13,7 @@ This guide will help you upgrade your Exponea SDK to the latest major version.
 
 ## Update from version 3.x.x to 4.x.x
 
-Version 4.0.0 introduces support for [Data hub event stream](https://documentation.bloomreach.com/data-hub/docs/event-streams) integration as an alternative to the existing Project/Engagement integration. The `configure` method now accepts either `Exponea.ProjectSettings` or the new `Exponea.StreamSettings` via the `IntegrationType` protocol.
+Version 4.0.0 introduces support for {user.dh} [event stream](https://documentation.bloomreach.com/data-hub/docs/event-streams) integration as an alternative to the existing Project/{user.mkg} integration. The `configure` method now accepts either `Exponea.ProjectSettings` or the new `Exponea.StreamSettings` via the `IntegrationType` protocol.
 
 Existing integrations using `Exponea.ProjectSettings` continue to work without changes. The sections below describe the deprecated APIs and breaking changes.
 
@@ -131,7 +131,7 @@ The following `Configuration` properties now return `any ExponeaIntegrationType`
 
 If your code accesses these properties with a concrete `ExponeaProject` type, you must update it to use the protocol type or cast as needed.
 
-### New: Stream integration (Data hub)
+### New: Stream integration ({user.dh})
 
 For stream-based integrations, configure the SDK with `Exponea.StreamSettings` and manage [authentication via JWT](https://documentation.bloomreach.com/engagement/docs/ios-sdk-authorization#stream-jwt-authorization-data-hub):
 
@@ -165,7 +165,7 @@ Refer to the [Authorization](https://documentation.bloomreach.com/engagement/doc
 
 ## Update to version 3.8.0 or higher
 
-SDK versions 3.8.0 and higher support multiple mobile applications within a single Bloomreach Engagement project.
+SDK versions 3.8.0 and higher support multiple mobile applications within a single {user.mkg} project.
 
 This update introduces two major changes:
 
@@ -175,7 +175,7 @@ Each mobile application integrated with the SDK can now have its own unique `app
 
 **When to configure Application ID:**
 
-- **Multiple mobile apps:** You must specify a unique `applicationID` for each app in the SDK configuration. The value must match the Application ID configured in Bloomreach Engagement under **Project Settings > Campaigns > Channels > Push Notifications.**
+- **Multiple mobile apps:** You must specify a unique `applicationID` for each app in the SDK configuration. The value must match the Application ID configured in {user.mkg} under **Project Settings > Campaigns > Channels > Push Notifications.**
 - **Single mobile app:** If you use only one mobile application, you don't need to set `applicationID`. The SDK uses the default value `default-application` automatically.
 
 Learn more about [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) and [Configure Application ID](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#configure-application-id).
@@ -188,7 +188,7 @@ Push notification tokens are now tracked using `notification_state` events inste
 
 The SDK automatically generates `notification_state` events. Before upgrading to version 3.8.0 or higher:
 
-- Ensure event creation is enabled for your Bloomreach Engagement project
+- Ensure event creation is enabled for your {user.mkg} project
 - If your project uses custom event schemas or restricts event creation, add `notification_state` to the list of allowed events
 - If your project blocks creation of new event types, push token registration will fail silently
 

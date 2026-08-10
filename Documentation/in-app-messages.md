@@ -11,17 +11,17 @@ content:
     using the iOS SDK
 ---
 
-The SDK enables you to display native in-app messages in your app based on definitions set up in Engagement. 
+The SDK enables you to display native in-app messages in your app based on definitions set up in {user.mkg}. 
 
 In-app messages work out-of-the-box once the [Initial setup for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup) is complete in your app; no development work is required. However, you can customize the behavior to meet your specific requirements.
 
 > 📘
 >
-> Refer to the [In-app messages](https://documentation.bloomreach.com/engagement/docs/in-app-messages) user guide for instructions on how to create in-app messages in the Engagement web app.
+> Refer to the [In-app messages](https://documentation.bloomreach.com/engagement/docs/in-app-messages) user guide for instructions on how to create in-app messages in the {user.mkg} web app.
 
 > 📘
 >
-> Also see [In-app messages FAQ](https://support.bloomreach.com/hc/en-us/articles/18152718785437-In-App-Messages-FAQ) at Bloomreach Support Help Center.
+> Also see [In-app messages FAQ](https://support.bloomreach.com/hc/en-us/articles/18152718785437-In-App-Messages-FAQ) at {user.br} Support Help Center.
 
 ## Tracking
 
@@ -173,16 +173,16 @@ When troubleshooting why an in-app message did not display on your device, alway
 
 #### Troubleshoot in-app messages preloading issues
 
-- The SDK requests in-app messages from the Engagement platform any time one of the following occurs:
+- The SDK requests in-app messages from the {user.mkg} platform any time one of the following occurs:
   - `Exponea.identifyCustomer` is called
   - `Exponea.anonymize` is called
   - Any event (except push notification clicked or opened, or session ends) is tracked **and** the in-app messages cache is older then 30 minutes
-- The SDK should subsequently receive a response from the Engagement platform containing all available in-app messages targeted at the current customer. The SDK preload these messages in a local cache.
-- If you create or modify an in-app message in Engagement, typically any changes you made are reflected in the SDK after 30 minutes due to the in-app messages being cached. Call `Exponea.identifyCustomer` or `Exponea.anonymize` to trigger reloading so changes are reflected immediately.
+- The SDK should subsequently receive a response from the {user.mkg} platform containing all available in-app messages targeted at the current customer. The SDK preload these messages in a local cache.
+- If you create or modify an in-app message in {user.mkg}, typically any changes you made are reflected in the SDK after 30 minutes due to the in-app messages being cached. Call `Exponea.identifyCustomer` or `Exponea.anonymize` to trigger reloading so changes are reflected immediately.
 - Analyze the [log messages](#log-messages) (especially examples 2-5) to determine whether the SDK is requesting and receiving in-app messages and your message was preloaded.
 - If the SDK is requesting and receiving in-app messages but your message is not preloaded:
   - The local cache may be outdated. Wait for or trigger the next preload.
-  - The current customer may not match the audience targeted by the in-app message. Verify the message's audience in Engagement.
+  - The current customer may not match the audience targeted by the in-app message. Verify the message's audience in {user.mkg}.
 
 > ❗️
 >
@@ -192,7 +192,7 @@ When troubleshooting why an in-app message did not display on your device, alway
 
 If your app is successfully requesting and receiving in-app messages but they are not displayed, consider the following:
 
-- In-app messages are triggered when an event is tracked based on conditions set up in Engagement. Once a message passes those filters, the SDK will try to present the message in the top-most `presentedViewController` (except for slide-in messages that use `UIWindow` directly).
+- In-app messages are triggered when an event is tracked based on conditions set up in {user.mkg}. Once a message passes those filters, the SDK will try to present the message in the top-most `presentedViewController` (except for slide-in messages that use `UIWindow` directly).
   It's possible that your application decides to present another `UIViewController` right at the same time, creating a race condition. In this case, the message might be displayed and immediately dismissed because its parent leaves the screen. Keep this in mind if the [logs](#log-messages) tell you your message was displayed but you don't see it.
 
 - In-app messages configured to show on `App load` are displayed when a `session_start` event is tracked. If you close and quickly reopen the app, it's possible that the session did not time out and the message won't be displayed. If you use manual session tracking, the message won't be displayed unless you track a `session_start` event yourself.
@@ -252,7 +252,7 @@ While troubleshooting in-app message issues, you can follow the process of reque
 7. ```
    Picking in-app message for eventTypes ["payment"]. 2 messages available: ["Payment in-app message", "App load in-app message"].
    ```
-   This log message includes a list of **all** in-app messages received from the server and preloaded in the local cache. If you don't see your message here, it's possible it wasn't available yet the last time the SDK request in-app messages. If you have confirmed the message was available when the last preload occurred, the current user may not match the audience targeted by the in-app message. Check the in-app message set up in Engagement. 
+   This log message includes a list of **all** in-app messages received from the server and preloaded in the local cache. If you don't see your message here, it's possible it wasn't available yet the last time the SDK request in-app messages. If you have confirmed the message was available when the last preload occurred, the current user may not match the audience targeted by the in-app message. Check the in-app message set up in {user.mkg}. 
 8. ```
    Got {X} messages available to show. [{message1 name}, {message2 name}, ...].
    ```
@@ -261,7 +261,7 @@ While troubleshooting in-app message issues, you can follow the process of reque
 9. ```
     1 messages available after filtering. Picking highest priority message.
     ```
-    After applying all the filters, there is one in-app message left that satisfies the criteria to be displayed. If more than one messages is eligible, the SDK will select the one that has the highest priority configured in Engagement.
+    After applying all the filters, there is one in-app message left that satisfies the criteria to be displayed. If more than one messages is eligible, the SDK will select the one that has the highest priority configured in {user.mkg}.
     ```
 10. ```
     Picking top message '{message name}' to be shown.

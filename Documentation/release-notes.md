@@ -56,7 +56,7 @@ content:
 ## Release Notes for 4.0.0
 #### April 14, 2026
 * Added:
-  * Adds support for Data hub Event streams integration with optional SDK auth token authorization.
+  * Adds support for {user.dh} event streams integration with optional SDK auth token authorization.
 * Fixed:
   * Fixes thread-safety issues in Logger and CrashManager, and adds missing log truncation.
 
@@ -120,7 +120,7 @@ content:
 #### September 25, 2025
 * Added:
   * Updates SwiftSoup library to next major version (from 2.7.6).
-  * Replace age with timestamp for tracked Engagement events.
+  * Replace age with timestamp for tracked {user.mkg} events.
 * Fixed:
   * Fixes Xcode 26 build issues related to 'performAndWait' method.
 
