@@ -14,6 +14,7 @@ protocol PushNotificationManagerType: AnyObject {
     func handlePushTokenRegistered(dataObject: AnyObject?)
     func handlePushTokenRegistered(token: String)
     func verifyPushStatusAndTrackPushToken()
-    
+    func markEveryLaunchSessionTracked()
+
     var didReceiveSelfPushCheck: Bool { get }
 }

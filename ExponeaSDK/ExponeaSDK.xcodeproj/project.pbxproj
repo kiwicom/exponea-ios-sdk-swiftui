@@ -385,6 +385,7 @@
 		60AB120A2F3000010000000A /* JwtErrorContextSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12042F30000100000004 /* JwtErrorContextSpec.swift */; };
 		60AB120B2F3000010000000B /* ConfigurationStreamIntegrationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12052F30000100000005 /* ConfigurationStreamIntegrationSpec.swift */; };
 		60AB120C2F3000010000000C /* JwtIntegrationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AB12062F30000100000006 /* JwtIntegrationSpec.swift */; };
+		60B15E3430247367003F9281 /* TrackPushTokenSessionTrackingSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B15E3330247366003F9281 /* TrackPushTokenSessionTrackingSpec.swift */; };
 		60D28F312F71901300F95CD0 /* StopIntegrationSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D28F302F71901300F95CD0 /* StopIntegrationSpec.swift */; };
 		60D5E6B32FBB17BF00C2CB5D /* DeliveredNotificationStateResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D5E6B22FBB17BE00C2CB5D /* DeliveredNotificationStateResolver.swift */; };
 		60D5E6B52FBB182F00C2CB5D /* DeliveredNotificationStateResolverSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D5E6B42FBB182E00C2CB5D /* DeliveredNotificationStateResolverSpec.swift */; };
@@ -1001,6 +1002,7 @@
 		60AB12042F30000100000004 /* JwtErrorContextSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtErrorContextSpec.swift; sourceTree = "<group>"; };
 		60AB12052F30000100000005 /* ConfigurationStreamIntegrationSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationStreamIntegrationSpec.swift; sourceTree = "<group>"; };
 		60AB12062F30000100000006 /* JwtIntegrationSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwtIntegrationSpec.swift; sourceTree = "<group>"; };
+		60B15E3330247366003F9281 /* TrackPushTokenSessionTrackingSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackPushTokenSessionTrackingSpec.swift; sourceTree = "<group>"; };
 		60D28F302F71901300F95CD0 /* StopIntegrationSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopIntegrationSpec.swift; sourceTree = "<group>"; };
 		60D5E6B22FBB17BE00C2CB5D /* DeliveredNotificationStateResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveredNotificationStateResolver.swift; sourceTree = "<group>"; };
 		60D5E6B42FBB182E00C2CB5D /* DeliveredNotificationStateResolverSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveredNotificationStateResolverSpec.swift; sourceTree = "<group>"; };
@@ -2119,7 +2121,6 @@
 				F66DD3BE086522A3C028F0FF /* InAppContentBlocksETagStore.swift */,
 				074A479D582BEB49B99C7C96 /* UserDefaultsETagStore.swift */,
 			);
-			name = ETagStore;
 			path = ETagStore;
 			sourceTree = "<group>";
 		};
@@ -2172,7 +2173,6 @@
 				157DB5FA2BD0A7FA8886C540 /* UserDefaultsETagStoreSpec.swift */,
 				6487C60F6EDB0B4BF49AF1CE /* InAppContentBlocksETagSpec.swift */,
 			);
-			name = ETagStore;
 			path = ETagStore;
 			sourceTree = "<group>";
 		};
@@ -2598,6 +2598,7 @@
 		F0CA58F7207F783E00C89A7F /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				60B15E3330247366003F9281 /* TrackPushTokenSessionTrackingSpec.swift */,
 				603CC5812FD0957E005A7A64 /* CompletionGuaranteesSpec.swift */,
 				558453A0297E8D26000707E4 /* AppInboxTrackingSpec.swift */,
 				603CC57F2FD0785C005A7A64 /* AnonymizeWithIntegrationAndCompletionSpec.swift */,
@@ -3643,6 +3644,7 @@
 				057F44872399322D0070DF30 /* InAppMessageDialogViewSpec.swift in Sources */,
 				05FBB15D244709C500BDF234 /* DatabaseManager+Clear.swift in Sources */,
 				F0BE610021107D3A0082ABD8 /* TrackingParametersSpec.swift in Sources */,
+				60B15E3430247367003F9281 /* TrackPushTokenSessionTrackingSpec.swift in Sources */,
 				059A7A6C2581128100A53BAF /* InputStream+readFully.swift in Sources */,
 				C084D0EB2181C5EA005C0CA8 /* MockUserNotificationCenter.swift in Sources */,
 				F04BEA9021119C1500591950 /* AuthorizationSpec.swift in Sources */,

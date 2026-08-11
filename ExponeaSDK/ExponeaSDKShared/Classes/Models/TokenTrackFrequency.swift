@@ -12,7 +12,12 @@ import Foundation
 /// See `Configuration` for ways how to set it up.
 ///
 /// - onTokenChange: Tracked whenever the push token changes.
-/// - everyLaunch: Tracked on every launch of the app. Consider data usage/battery life.
+/// - everyLaunch: Tracked once per app process start (cold launch until process death).
+///   Foreground transitions within the same process do not re-track unless an override applies
+///   (permission change, token change, manual `trackPushToken()`, anonymize/stopIntegration,
+///   etc.). App version or application ID changes are detected at SDK startup and only affect
+///   `onTokenChange`/`daily` staleness checks, not mid-process `.everyLaunch` behavior.
+///   Consider data usage/battery life.
 /// - daily: Once a day on app launch.
 public enum TokenTrackFrequency: String, Codable {
     case onTokenChange

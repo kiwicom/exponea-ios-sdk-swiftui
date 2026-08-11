@@ -418,7 +418,7 @@ allowing you to track multiple push tokens for the same customer across differen
 The SDK automatically tracks `notification_state` events in the following scenarios:
 
 * SDK initialization
-* App transitions from background to foreground
+* App transitions from background to foreground — the SDK re-evaluates whether tracking is needed; under `everyLaunch` this doesn't emit again unless an override applies
 * New token received from APNs
 * Manual token tracking using `Exponea.trackPushToken(...)` (this method allows you to force tracking/sending the current push token via notification_state event)
 * User anonymization via `Exponea.anonymize()`
@@ -436,6 +436,18 @@ UNAuthorizationStatusProvider.current.isAuthorized { granted ->
 ```
 
 The frequency of `notification_state` event tracking depends on the `tokenTrackFrequency` configuration property. [See SDK configuration](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration).
+
+> 📘 Note
+>
+> When `tokenTrackFrequency` is set to `everyLaunch`, the SDK tracks the push token once per app launch (process start). All other SDK operations during that launch reuse this tracking, so each launch produces a single `notification_state` event.
+>
+> Some operations bypass this limit and always trigger tracking mid-process:
+> - OS push authorization status flips (granted ↔ denied) since the last tracked `notification_state`.
+> - Manual tracking through `trackPushToken()`.
+> - Receiving a new token from APNs when the token string changes.
+> - Calling `anonymize()` or `stopIntegration()` (these recreate the push-tracking session, so the next track is a fresh per-process launch rather than a mid-process override).
+>
+>  The SDK detects app version or `application_id` changes at startup. The version or ID affect only the `onTokenChange`/`daily` staleness checks, and aren't a mid-process override for `everyLaunch`. A new process always tracks once regardless of any version or application ID changes.
 
 ### notification_state event properties
 

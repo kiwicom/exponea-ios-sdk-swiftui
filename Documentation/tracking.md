@@ -385,7 +385,9 @@ Use the `trackPushToken()` method to manually track the token for receiving push
 
 Invoking this method will track a push token immediately regardless of the value of `tokenTrackFrequency` (refer to the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) documentation for details).
 
-Each time the app becomes active, the SDK invokes `verifyPushStatusAndTrackPushToken`, which re-evaluates the configured [`tokenTrackFrequency`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) and tracks the token again only when the condition is met (or when an OS push authorization flip is detected, which always forces a fresh `notification_state` regardless of frequency).
+Each time the app becomes active, the SDK invokes `verifyPushStatusAndTrackPushToken`, which re-evaluates the configured [`tokenTrackFrequency`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration). Under `everyLaunch`, this produces up to one frequency-based `notification_state` per app process. Foreground transitions don't re-track unless push permission changed or another override applies. Other frequency modes track in one of the following situations:
+- Their configured condition is met.
+- An OS push authorization flip is detected. This always forces a fresh `notification_state` regardless of frequency.
 
 #### Arguments
 

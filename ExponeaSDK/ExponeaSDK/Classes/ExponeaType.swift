@@ -232,7 +232,22 @@ public protocol ExponeaType: AnyObject {
     /// Tracks the push notification token to Exponea API with string.
     ///
     /// - Parameter token: String containing the push notification token.
-    ///                    If nil, it will delete existing push token.
+    ///                    Under `.everyLaunch`, only one automatic `notification_state`
+    ///                    is allowed per app run. Calling this method uses that allowance,
+    ///                    so the SDK will skip its own automatic track on subsequent init
+    ///                    or foreground checks until the app is restarted.
+    func trackPushToken(_ token: String)
+
+    /// Tracks the push notification token to Exponea API with string.
+    ///
+    /// - Parameter token: String containing the push notification token.
+    ///                    If nil, no `notification_state` event is tracked and an error is logged;
+    ///                    the existing push token is **not** deleted.
+    ///                    Under `.everyLaunch`, only one automatic `notification_state`
+    ///                    is allowed per app run. A non-nil call uses that allowance, so the SDK
+    ///                    will skip its own automatic track on subsequent init or foreground checks
+    ///                    until the app is restarted; a nil call does not.
+    @available(*, deprecated, message: "Please use trackPushToken(_ token: String) instead.")
     func trackPushToken(_ token: String?)
 
     /// Handles push notification token registration - compared to trackPushToken respects requirePushAuthorization

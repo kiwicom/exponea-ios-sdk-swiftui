@@ -146,7 +146,29 @@ extension ExponeaInternal {
     /// Tracks the push notification token to Exponea API with string.
     ///
     /// - Parameter token: String containing the push notification token.
+    ///                    Under `.everyLaunch`, only one automatic `notification_state`
+    ///                    is allowed per app run. Calling this method uses that allowance,
+    ///                    so the SDK will skip its own automatic track on subsequent init
+    ///                    or foreground checks until the app is restarted.
+    public func trackPushToken(_ token: String) {
+        trackPushTokenInternal(token)
+    }
+
+    /// Tracks the push notification token to Exponea API with string.
+    ///
+    /// - Parameter token: String containing the push notification token.
+    ///                    If nil, no `notification_state` event is tracked and an error is logged;
+    ///                    the existing push token is **not** deleted.
+    ///                    Under `.everyLaunch`, only one automatic `notification_state`
+    ///                    is allowed per app run. A non-nil call uses that allowance, so the SDK
+    ///                    will skip its own automatic track on subsequent init or foreground checks
+    ///                    until the app is restarted; a nil call does not.
+    @available(*, deprecated, message: "Please use trackPushToken(_ token: String) instead.")
     public func trackPushToken(_ token: String?) {
+        trackPushTokenInternal(token)
+    }
+
+    private func trackPushTokenInternal(_ token: String?) {
         executeSafelyWithDependencies { dependencies in
             guard dependencies.configuration.hasSufficientAuth else {
                 throw ExponeaError.authorizationInsufficient
@@ -154,11 +176,22 @@ extension ExponeaInternal {
             UNAuthorizationStatusProvider.current.isAuthorized { authorized in
                 // Do the actual tracking
                 self.executeSafely {
+                    guard !IntegrationManager.shared.isStopped else {
+                        Exponea.logger.log(.error, message: "trackPushToken failed, Exponea is stopped")
+                        return
+                    }
                     try dependencies.trackingManager.trackNotificationState(
                         pushToken: token,
                         isValid: authorized,
                         description: authorized ? "Permission granted" : "Permission denied"
                     )
+                    // trackNotificationState just logs and returns on a nil token (it does not
+                    // delete anything), so only mark the once-per-process `.everyLaunch` session as
+                    // satisfied when a token was actually sent — otherwise a nil-token call would
+                    // silently suppress the legitimate automatic track for the rest of the process.
+                    if token != nil {
+                        dependencies.notificationsManager.markEveryLaunchSessionTracked()
+                    }
                 }
             }
         }

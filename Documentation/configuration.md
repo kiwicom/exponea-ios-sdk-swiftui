@@ -93,9 +93,15 @@ This page provides an overview of all configuration parameters for the SDK and s
   * Default value: `onTokenChange`
   * Possible values:
     * `onTokenChange` — tracks the push token whenever it differs from the previously tracked one. The SDK also automatically tracks a new `notification_state` event every 30 days, even when the token hasn't changed, to keep customers within the validity window.
-    * `everyLaunch` — tracks the push token every time the app becomes active. This includes both the initial cold launch and every subsequent background-to-foreground transition while the process is alive, because the SDK re-evaluates `verifyPushStatusAndTrackPushToken` on each `UIApplication.didBecomeActiveNotification`. Use this only when you explicitly want a fresh `notification_state` per session resume; otherwise prefer `onTokenChange`.
+    * `everyLaunch` — tracks the push token once per app launch (process start). All other SDK operations during that process reuse this tracking, so each cold launch produces a single frequency-based `notification_state` event. Background-to-foreground transitions within the same process don't re-track unless an override applies (permission change, token change, or manual `trackPushToken()`).
     * `daily` - tracks the push token at most once per local calendar day. The day boundary follows the device's current calendar/timezone, so a track at 23:59 followed by an app open at 00:05 the next day correctly tracks a fresh `notification_state` event.
   * Regardless of the configured frequency, the SDK always tracks a fresh `notification_state` event when the OS push authorization status flips (granted ↔ denied) so the resulting `valid` flag stays in sync with the user's actual permission state.
+  * Some operations bypass the `everyLaunch` per-process limit and always trigger tracking mid-process:
+    * OS push authorization status flips (granted ↔ denied) since the last tracked `notification_state`.
+    * Manual tracking through `trackPushToken()`.
+    * Receiving a new token from APNs when the token string changes.
+    * Calling `anonymize()` or `stopIntegration()` (these recreate the push-tracking session, so the next track is a fresh per-process launch rather than a mid-process override).
+  *  The SDK detects app version or `application_id` changes at startup. The version or ID affect only the `onTokenChange`/`daily` staleness checks, and aren't a mid-process override for `everyLaunch`. A new process always tracks once regardless of any version or application ID changes.
 
 * `regenerateDeviceIdOnAnonymize`
   * When `true`, calling `Exponea.shared.anonymize()` clears the SDK's persisted telemetry `device_id` (a UUID stored in `UserDefaults`) in addition to creating a new customer profile. The next event tracked after anonymization carries a freshly-generated `device_id`, so the new profile can't be linked back to the previous customer's events through the device identifier.
