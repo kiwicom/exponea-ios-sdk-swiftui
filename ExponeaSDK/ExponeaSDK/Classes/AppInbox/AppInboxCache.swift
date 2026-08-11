@@ -156,8 +156,9 @@ final class AppInboxCache: AppInboxCacheType {
     func tryGetImageData(at imageUrl: String) -> Data? {
         guard let directory = getCacheDirectoryURL() else {
             Exponea.logger.log(.warning, message: "Invalid AppInbox cache state - no dir")
-            // try to return online image at least
-            return URL(string: imageUrl).flatMap { try? Data(contentsOf: $0) }
+            // Keep this path network-backed but avoid synchronous URL loading APIs
+            // that trigger main-thread URL loading warnings.
+            return FileUtils.tryDownloadFile(imageUrl)
         }
         let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
         if let imageData = try? Data(contentsOf: fileUrl) {

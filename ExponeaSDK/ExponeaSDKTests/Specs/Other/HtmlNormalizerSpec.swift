@@ -8,6 +8,8 @@
 
 import Nimble
 import Quick
+import Mockingjay
+import SwiftSoup
 
 @testable import ExponeaSDKShared
 @testable import ExponeaSDK
@@ -29,6 +31,30 @@ final class HtmlNormalizerSpec: QuickSpec {
                     "</body></html>"
             let result = HtmlNormalizer(rawHtml).normalize()
             expect(result.actions.contains(where: { $0.actionType == .browser })).to(beTrue())
+        }
+
+        it("escapes malicious data-link values when wrapping action buttons in anchor tags") {
+            let maliciousLink = "https://evil.com' onclick='alert(1)"
+            let rawHtml = "<html><body>" +
+                "<div data-actiontype=\"browser\" data-link=\"\(maliciousLink)\">Action</div>" +
+                "</body></html>"
+            let result = HtmlNormalizer(rawHtml).normalize(HtmlNormalizerConfig(
+                makeResourcesOffline: false,
+                ensureCloseButton: false
+            ))
+            expect(result.valid).to(beTrue())
+            guard let normalizedHtml = result.html else {
+                fail("Expected normalized HTML")
+                return
+            }
+            do {
+                let document = try SwiftSoup.parse(normalizedHtml)
+                expect(try document.select("a[onclick]").isEmpty()).to(beTrue())
+                expect(try document.select("[onclick]").isEmpty()).to(beTrue())
+                expect(try document.select("a[href]").attr("href")).to(equal(maliciousLink))
+            } catch {
+                fail("Failed to parse normalized HTML: \(error)")
+            }
         }
 
         it("should find data link type - unknown") {
@@ -379,7 +405,7 @@ final class HtmlNormalizerSpec: QuickSpec {
             expect(result.actions.contains { $0.actionUrl == "https://example.com/anchor" }).to(beFalse())
         }
 
-        it("should transform Image URL into Base64") {
+        it("should transform Image URL into offline resource URL") {
             let cache = InAppMessagesCache()
             cache.saveImageData(
                 at: "https://upload.wikimedia.org/wikipedia/commons/9/9a/Gull_portrait_ca_usa.jpg",
@@ -398,10 +424,10 @@ final class HtmlNormalizerSpec: QuickSpec {
                 return
             }
             expect(normalizedHtml.contains("upload.wikimedia.org")).to(equal(false))
-            expect(normalizedHtml.contains("data:image/png;base64")).to(equal(true))
+            expect(normalizedHtml.contains("\(HtmlNormalizer.offlineResourceScheme)://image/")).to(equal(true))
         }
 
-        it("should NOT transform invalid Image URL into Base64") {
+        it("should transform invalid Image URL into offline resource URL") {
             let rawHtml = "<html>" +
                     "<body>" +
                     "<img src='https://nonexisting.sk/image_that_not_exists.jpg'>" +
@@ -410,8 +436,8 @@ final class HtmlNormalizerSpec: QuickSpec {
                     "<div data-link='https://example.com/2'>Action 2</div>" +
                     "</body></html>"
             let result = HtmlNormalizer(rawHtml).normalize()
-            expect(result.html).to(beNil())
-            expect(result.valid).to(beFalse())
+            expect(result.html?.contains("\(HtmlNormalizer.offlineResourceScheme)://image/")).to(equal(true))
+            expect(result.valid).to(beTrue())
         }
 
         it("should parse multiple css rules") {
@@ -461,7 +487,7 @@ final class HtmlNormalizerSpec: QuickSpec {
             expect(htmlOutput.contains(imageBgUrl)).to(beFalse())
         }
 
-        it("should transform Image URL from CSS into Base64") {
+        it("should transform Image URL from CSS into offline resource URL") {
             let cache = InAppMessagesCache()
             cache.saveImageData(
                 at: "https://upload.wikimedia.org/wikipedia/commons/9/9a/Gull_portrait_ca_usa.jpg",
@@ -484,7 +510,7 @@ final class HtmlNormalizerSpec: QuickSpec {
                 return
             }
             expect(normalizedHtml.contains("upload.wikimedia.org")).to(equal(false))
-            expect(normalizedHtml.contains("data:image/png;base64")).to(equal(true))
+            expect(normalizedHtml.contains("\(HtmlNormalizer.offlineResourceScheme)://image/")).to(equal(true))
         }
 
         it("should parse single lined css rules") {
@@ -772,6 +798,250 @@ final class HtmlNormalizerSpec: QuickSpec {
             expect(htmlOutput.contains(imageBgUrl)).to(beFalse())
         }
 
+        it("generates cache keys scoped by app id and resource type") {
+            let resourceUrl = "https://cdn.example.com/assets/resource"
+
+            expect(FileUtils.getFileName(
+                fileUrl: resourceUrl,
+                resourceType: "image",
+                applicationID: "app-1"
+            )).to(equal(FileUtils.getFileName(
+                fileUrl: resourceUrl,
+                resourceType: "image",
+                applicationID: "app-1"
+            )))
+            expect(FileUtils.getFileName(
+                fileUrl: resourceUrl,
+                resourceType: "image",
+                applicationID: "app-1"
+            )).toNot(equal(FileUtils.getFileName(
+                fileUrl: resourceUrl,
+                resourceType: "image",
+                applicationID: "app-2"
+            )))
+            expect(FileUtils.getFileName(
+                fileUrl: resourceUrl,
+                resourceType: "image",
+                applicationID: "app-1"
+            )).toNot(equal(FileUtils.getFileName(
+                fileUrl: resourceUrl,
+                resourceType: "font",
+                applicationID: "app-1"
+            )))
+        }
+
+        it("collects only render resources that need offline cache entries") {
+            let imageUrl = "https://cdn.example.com/image.png"
+            let backgroundUrl = "https://cdn.example.com/background.png"
+            let inlineBackgroundUrl = "https://cdn.example.com/inline-background.png"
+            let fontUrl = "https://cdn.example.com/font.woff2"
+            let importUrl = "https://fonts.example.com/css?family=Roboto"
+            let rawHtml = """
+                <html>
+                <head>
+                    <style>
+                    @import url("\(importUrl)");
+                    @font-face { src: url("\(fontUrl)") format("woff2"); }
+                    .hero { background-image: url("\(backgroundUrl)"); }
+                    .data { background-image: url("data:image/png;base64,aW1hZ2U="); }
+                    </style>
+                </head>
+                <body>
+                    <img src="\(imageUrl)">
+                    <img src="data:image/png;base64,aW1hZ2U=">
+                    <img src="\(HtmlNormalizer.offlineResourceScheme)://image/cached">
+                    <div style="background: url('\(inlineBackgroundUrl)') center center no-repeat"></div>
+                </body>
+                </html>
+                """
+
+            let resources = HtmlNormalizer(rawHtml).collectRenderResources()
+
+            expect(resources.imageUrls).to(equal(Set([
+                imageUrl,
+                backgroundUrl,
+                inlineBackgroundUrl
+            ])))
+            expect(resources.fontUrls).to(equal(Set([
+                importUrl,
+                fontUrl
+            ])))
+        }
+
+        it("preloads missing render resources and saves them to cache") {
+            let imageUrl = "https://cdn.example.com/preload-image.png"
+            let fontUrl = "https://cdn.example.com/preload-font.woff2"
+            let imageCache = MockInAppMessagesCache()
+            let fontCache = MockFileCache()
+            let imageData = Data([1, 2, 3])
+            let fontData = Data([4, 5, 6])
+            MockingjayProtocol.addStub(
+                matcher: { $0.url?.absoluteString == imageUrl },
+                builder: { _ in
+                    let response = HTTPURLResponse(
+                        url: URL(string: imageUrl)!,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(imageData))
+                }
+            )
+            MockingjayProtocol.addStub(
+                matcher: { $0.url?.absoluteString == fontUrl },
+                builder: { _ in
+                    let response = HTTPURLResponse(
+                        url: URL(string: fontUrl)!,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(fontData))
+                }
+            )
+            defer { MockingjayProtocol.removeAllStubs() }
+
+            var result: Bool?
+            waitUntil(timeout: .seconds(5)) { done in
+                DispatchQueue.global(qos: .utility).async {
+                    result = HtmlRenderResourcePreloader(
+                        imageCache: imageCache,
+                        fontCache: fontCache
+                    ).preload(resources: RenderResources(
+                        imageUrls: [imageUrl],
+                        fontUrls: [fontUrl]
+                    ))
+                    done()
+                }
+            }
+
+            expect(result).to(beTrue())
+            expect(imageCache.getImageData(at: imageUrl)).to(equal(imageData))
+            expect(fontCache.getFileData(at: fontUrl)).to(equal(fontData))
+        }
+
+        it("does not download resources already present in cache") {
+            let imageUrl = "https://cdn.example.com/cached-image.png"
+            let fontUrl = "https://cdn.example.com/cached-font.woff2"
+            let imageCache = MockInAppMessagesCache()
+            let fontCache = MockFileCache()
+            imageCache.saveImageData(at: imageUrl, data: Data([1]))
+            fontCache.saveFileData(at: fontUrl, data: Data([2]))
+            let networkInvocationCount = Atomic(wrappedValue: 0)
+            MockingjayProtocol.addStub(
+                matcher: { request in
+                    request.url?.absoluteString == imageUrl || request.url?.absoluteString == fontUrl
+                },
+                builder: { request in
+                    networkInvocationCount.changeValue { $0 += 1 }
+                    let response = HTTPURLResponse(
+                        url: request.url!,
+                        statusCode: 500,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(Data()))
+                }
+            )
+            defer { MockingjayProtocol.removeAllStubs() }
+
+            var result: Bool?
+            waitUntil(timeout: .seconds(5)) { done in
+                DispatchQueue.global(qos: .utility).async {
+                    result = HtmlRenderResourcePreloader(
+                        imageCache: imageCache,
+                        fontCache: fontCache
+                    ).preload(resources: RenderResources(
+                        imageUrls: [imageUrl],
+                        fontUrls: [fontUrl]
+                    ))
+                    done()
+                }
+            }
+
+            expect(result).to(beTrue())
+            expect(networkInvocationCount.wrappedValue).to(equal(0))
+        }
+
+        it("fails preload when any required render resource cannot be loaded") {
+            let imageUrl = "https://cdn.example.com/good-image.png"
+            let fontUrl = "https://cdn.example.com/missing-font.woff2"
+            let imageCache = MockInAppMessagesCache()
+            let fontCache = MockFileCache()
+            MockingjayProtocol.addStub(
+                matcher: { $0.url?.absoluteString == imageUrl },
+                builder: { _ in
+                    let response = HTTPURLResponse(
+                        url: URL(string: imageUrl)!,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(Data([1])))
+                }
+            )
+            MockingjayProtocol.addStub(
+                matcher: { $0.url?.absoluteString == fontUrl },
+                builder: { _ in
+                    let response = HTTPURLResponse(
+                        url: URL(string: fontUrl)!,
+                        statusCode: 404,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(Data()))
+                }
+            )
+            defer { MockingjayProtocol.removeAllStubs() }
+
+            var result: Bool?
+            waitUntil(timeout: .seconds(5)) { done in
+                DispatchQueue.global(qos: .utility).async {
+                    result = HtmlRenderResourcePreloader(
+                        imageCache: imageCache,
+                        fontCache: fontCache
+                    ).preload(resources: RenderResources(
+                        imageUrls: [imageUrl],
+                        fontUrls: [fontUrl]
+                    ))
+                    done()
+                }
+            }
+
+            expect(result).to(beFalse())
+            expect(imageCache.getImageData(at: imageUrl)).toNot(beNil())
+            expect(fontCache.getFileData(at: fontUrl)).to(beNil())
+        }
+
+        it("does not preload render resources from the main thread") {
+            let result = HtmlRenderResourcePreloader(
+                imageCache: MockInAppMessagesCache(),
+                fontCache: MockFileCache()
+            ).prepareNormalizedHtml(
+                html: "<html><body><img src='https://cdn.example.com/main-thread.png'></body></html>",
+                config: HtmlNormalizerConfig(makeResourcesOffline: true, ensureCloseButton: false)
+            )
+
+            expect(result).to(beNil())
+        }
+
+        it("normalizes on the main thread when all render resources are already cached") {
+            let imageUrl = "https://cdn.example.com/main-thread-cached.png"
+            let imageCache = MockInAppMessagesCache()
+            imageCache.saveImageData(at: imageUrl, data: Data([1, 2, 3]))
+            let result = HtmlRenderResourcePreloader(
+                imageCache: imageCache,
+                fontCache: MockFileCache()
+            ).prepareNormalizedHtml(
+                html: "<html><body><img src='\(imageUrl)'></body></html>",
+                config: HtmlNormalizerConfig(makeResourcesOffline: true, ensureCloseButton: false)
+            )
+
+            expect(result?.valid).to(beTrue())
+            expect(result?.html).toNot(beNil())
+            expect(result?.html?.contains(HtmlNormalizer.offlineResourceScheme)).to(beTrue())
+        }
+
         it("check url") {
             var urls: [String] = [
                 "pltapp://category/categories<{defaultcategory2_shopby233}/categories<{defaultcategory2_shopby233_backinstock221}?adjust_tracker=74p1fnr&adjust_campaign=PROMOTIONAL&adjust_adgroup=2023-06-19-ALL-FR&adjust_creative=CATEGORY",
@@ -787,5 +1057,106 @@ final class HtmlNormalizerSpec: QuickSpec {
                 expect(firstURL).to(equal(lastURL))
             }
         }
+
+        // MARK: - OfflineResourceSchemeHandler encode/decode roundtrip
+
+        it("offline resource URL encode/decode roundtrip preserves image URL") {
+            let sourceUrl = "https://cdn.example.com/images/banner.png"
+            guard let encoded = HtmlNormalizer.encodeOfflineResourceUrl(sourceUrl: sourceUrl, type: "image") else {
+                fail("Expected encoded URL")
+                return
+            }
+            expect(encoded).to(beginWith("exponea-cache://image/"))
+
+            guard let decoded = HtmlNormalizer.decodeOfflineResourceUrl(encoded) else {
+                fail("Expected decoded resource")
+                return
+            }
+            expect(decoded.sourceUrl).to(equal(sourceUrl))
+            expect(decoded.type).to(equal("image"))
+        }
+
+        it("offline resource URL encode/decode roundtrip preserves font URL") {
+            let sourceUrl = "https://fonts.example.com/roboto.woff2"
+            guard let encoded = HtmlNormalizer.encodeOfflineResourceUrl(sourceUrl: sourceUrl, type: "font") else {
+                fail("Expected encoded URL")
+                return
+            }
+            expect(encoded).to(beginWith("exponea-cache://font/"))
+
+            guard let decoded = HtmlNormalizer.decodeOfflineResourceUrl(encoded) else {
+                fail("Expected decoded resource")
+                return
+            }
+            expect(decoded.sourceUrl).to(equal(sourceUrl))
+            expect(decoded.type).to(equal("font"))
+        }
+
+        it("offline resource URL encode/decode handles URLs with special characters") {
+            let sourceUrl = "https://cdn.example.com/path?query=value&foo=bar%20baz"
+            guard let encoded = HtmlNormalizer.encodeOfflineResourceUrl(sourceUrl: sourceUrl, type: "image") else {
+                fail("Expected encoded URL")
+                return
+            }
+
+            guard let decoded = HtmlNormalizer.decodeOfflineResourceUrl(encoded) else {
+                fail("Expected decoded resource")
+                return
+            }
+            expect(decoded.sourceUrl).to(equal(sourceUrl))
+        }
+
+        it("offline resource URL decode rejects invalid scheme") {
+            let decoded = HtmlNormalizer.decodeOfflineResourceUrl("https://image/abc")
+            expect(decoded).to(beNil())
+        }
+
+        it("offline resource URL decode rejects unknown resource type") {
+            let encoded = HtmlNormalizer.encodeOfflineResourceUrl(sourceUrl: "https://a.com/x", type: "video")
+            expect(encoded).to(beNil())
+        }
+
+        it("offline resource encode/decode roundtrip via normalize produces valid cache URLs") {
+            let imageUrl = "https://cdn.example.com/roundtrip-test-\(UUID().uuidString).png"
+            let html = "<html><body><img src='\(imageUrl)'></body></html>"
+            let normalizer = HtmlNormalizer(html)
+            let resources = normalizer.collectRenderResources()
+
+            expect(resources.imageUrls).to(contain(imageUrl))
+
+            let result = normalizer.normalize(HtmlNormalizerConfig(
+                makeResourcesOffline: true, ensureCloseButton: false
+            ))
+            guard let normalizedHtml = result.html else {
+                fail("Expected normalized HTML")
+                return
+            }
+            expect(normalizedHtml).to(contain("exponea-cache://image/"))
+            expect(normalizedHtml).toNot(contain(imageUrl))
+        }
+    }
+}
+
+private final class MockFileCache: FileCacheType {
+    @Atomic private var files: [String: Data] = [:]
+
+    func deleteFiles(except: [String]) {
+        _files.changeValue { $0 = $0.filter { except.contains($0.key) } }
+    }
+
+    func hasFileData(at fileUrl: String) -> Bool {
+        files[fileUrl] != nil
+    }
+
+    func saveFileData(at fileUrl: String, data: Data) {
+        _files.changeValue { $0[fileUrl] = data }
+    }
+
+    func getFileData(at fileUrl: String) -> Data? {
+        files[fileUrl]
+    }
+
+    func clear() {
+        _files.changeValue { $0 = [:] }
     }
 }

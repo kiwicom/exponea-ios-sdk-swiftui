@@ -13,6 +13,7 @@ final class FileCache: FileCacheType {
     static let shared = FileCache()
 
     static let inAppMessagesFolder = "exponeasdk_files_cache"
+    private static let fileResourceType = "font"
 
     private let fileManager: FileManager = FileManager()
 
@@ -32,7 +33,9 @@ final class FileCache: FileCacheType {
     }
 
     func deleteFiles(except: [String]) {
-        let exceptFileNames = except.map { FileUtils.getFileName(fileUrl: $0) }
+        let exceptFileNames = except.map {
+            FileUtils.getFileName(fileUrl: $0, resourceType: Self.fileResourceType)
+        }
         guard let directory = getCacheDirectoryURL() else {
             return
         }
@@ -54,7 +57,9 @@ final class FileCache: FileCacheType {
             Exponea.logger.log(.warning, message: "Unable to get file cache directory")
             return false
         }
-        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: fileUrl))
+        let fileUrl = directory.appendingPathComponent(
+            FileUtils.getFileName(fileUrl: fileUrl, resourceType: Self.fileResourceType)
+        )
         let exists = fileManager.fileExists(atPath: fileUrl.path)
         if !exists {
             Exponea.logger.log(.verbose, message: "File \(fileUrl) not found in cache.")
@@ -66,7 +71,9 @@ final class FileCache: FileCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return
         }
-        let filePath = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: fileUrl))
+        let filePath = directory.appendingPathComponent(
+            FileUtils.getFileName(fileUrl: fileUrl, resourceType: Self.fileResourceType)
+        )
         try? data.write(to: filePath, options: .atomic)
     }
 
@@ -74,7 +81,9 @@ final class FileCache: FileCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return nil
         }
-        let filePath = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: fileUrl))
+        let filePath = directory.appendingPathComponent(
+            FileUtils.getFileName(fileUrl: fileUrl, resourceType: Self.fileResourceType)
+        )
         return try? Data(contentsOf: filePath)
     }
 

@@ -392,7 +392,7 @@ public extension RequestFactory {
                 if let onNotModified = onNotModified {
                     onNotModified()
                 } else {
-                    // Without onNotModified, empty 304 data fails JSON decode downstream.
+                    // Callers must supply onNotModified; otherwise empty 304 data fails JSON decode.
                     resultAction(.success(data ?? Data()))
                 }
             }

@@ -112,11 +112,14 @@ final class InAppMessageWebView: UIView, InAppMessageView {
         addSubview(webView)
 
         DispatchQueue.global(qos: .background).async {
-            self.normalizedPayload = HtmlNormalizer(self.payload).normalize()
+            self.normalizedPayload = HtmlRenderResourcePreloader().prepareNormalizedHtml(
+                html: self.payload,
+                config: HtmlNormalizerConfig(makeResourcesOffline: true, ensureCloseButton: true)
+            )
             onMain {
-                if self.normalizedPayload!.valid {
+                if self.normalizedPayload?.valid == true, let normalizedHtml = self.normalizedPayload?.html {
                     self.actionManager?.htmlPayload = self.normalizedPayload
-                    self.webView.loadHTMLString(self.normalizedPayload!.html!, baseURL: nil)
+                    self.webView.loadHTMLString(normalizedHtml, baseURL: nil)
                 } else {
                     self.dismiss(isUserInteraction: false, cancelButton: nil)
                 }
@@ -133,7 +136,7 @@ final class InAppMessageWebView: UIView, InAppMessageView {
             preferences.isElementFullscreenEnabled = false
         }
         #endif
-        let configuration = WKWebViewConfiguration()
+        let configuration = HtmlNormalizer.createWebViewConfiguration()
         configuration.preferences = preferences
         configuration.allowsAirPlayForMediaPlayback = false
         configuration.allowsInlineMediaPlayback = false

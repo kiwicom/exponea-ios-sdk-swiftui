@@ -18,7 +18,7 @@ final class UserDefaultsETagStore: InAppContentBlocksETagStore {
 
     func store(etag: String, forKey key: String) {
         guard !key.isEmpty else {
-            Exponea.logger.log(.verbose, message: "ICB ETag store: skipped — empty key")
+            Exponea.logger.log(.verbose, message: "ICB ETag store: skipped empty key")
             return
         }
         defaults.set(etag, forKey: Self.keyPrefix + key)

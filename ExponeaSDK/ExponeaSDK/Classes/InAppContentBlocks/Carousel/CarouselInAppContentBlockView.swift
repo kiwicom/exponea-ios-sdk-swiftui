@@ -84,7 +84,9 @@ open class CarouselInAppContentBlockView: UIView {
     private var didNotifyNoMessage = false
     private var hasStartedCarousel = false
     private var reloadToken = UUID()
+    private var pendingInitialApplyWorkItem: DispatchWorkItem?
     private let carouselStartDelay: TimeInterval = 0.5
+    private let carouselInitialApplyDelay: TimeInterval = 0.1
 
     @Atomic private var messages: [StaticReturnData] = []
     @Atomic private var data: [StaticReturnData] = []
@@ -179,6 +181,8 @@ open class CarouselInAppContentBlockView: UIView {
         didNotifyNoMessage = false
         hasStartedCarousel = false
         pendingScrollMessageId = nil
+        pendingInitialApplyWorkItem?.cancel()
+        pendingInitialApplyWorkItem = nil
         reloadToken = UUID()
         guard !IntegrationManager.shared.isStopped else {
             Exponea.logger.log(.error, message: "In-app reload failed: SDK is stopping")
@@ -190,12 +194,23 @@ open class CarouselInAppContentBlockView: UIView {
             initialCompletion: { [weak self] in
                 onMain {
                     guard let self, self.reloadToken == token else { return }
-                    self.applyCarouselData(isTriggered: isTriggered, phase: .initial)
+                    let workItem = DispatchWorkItem { [weak self] in
+                        guard let self, self.reloadToken == token else { return }
+                        self.pendingInitialApplyWorkItem = nil
+                        self.applyCarouselData(isTriggered: true, phase: .initial)
+                    }
+                    self.pendingInitialApplyWorkItem?.cancel()
+                    self.pendingInitialApplyWorkItem = workItem
+                    DispatchQueue.main.asyncAfter(deadline: .now() + self.carouselInitialApplyDelay, execute: workItem)
                 }
             },
             completion: { [weak self] in
                 onMain {
                     guard let self, self.reloadToken == token else { return }
+                    if let pendingInitialApplyWorkItem = self.pendingInitialApplyWorkItem {
+                        pendingInitialApplyWorkItem.cancel()
+                        self.pendingInitialApplyWorkItem = nil
+                    }
                     self.applyCarouselData(isTriggered: true, phase: .full)
                 }
             }
@@ -404,6 +419,8 @@ open class CarouselInAppContentBlockView: UIView {
     public func release() {
         removeFromSuperview()
         stopTimer()
+        pendingInitialApplyWorkItem?.cancel()
+        pendingInitialApplyWorkItem = nil
         // The foreground/background observers are Combine `publisher(for:).sink`
         // subscriptions stored in `cancellables`, not selector-based observers.
         // Dropping the cancellables is what actually unsubscribes them. This also

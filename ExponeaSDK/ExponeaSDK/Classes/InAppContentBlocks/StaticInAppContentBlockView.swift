@@ -22,17 +22,23 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
 
     private lazy var webview: WKWebView = {
         let userScript: WKUserScript = .init(source: inAppContentBlocksManager.disableZoomSource, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        let newWebview = WKWebView(frame: .init(x: 0, y: 0, width: UIScreen.main.bounds.size.width, height: 0))
-        newWebview.scrollView.showsVerticalScrollIndicator = false
-        newWebview.scrollView.bounces = false
-        newWebview.backgroundColor = .clear
-        newWebview.isOpaque = false
-        newWebview.translatesAutoresizingMaskIntoConstraints = false
-        let configuration = newWebview.configuration
+        let configuration = HtmlNormalizer.createWebViewConfiguration()
         configuration.userContentController.addUserScript(userScript)
         if let contentRuleList = inAppContentBlocksManager.contentRuleList {
             configuration.userContentController.add(contentRuleList)
         }
+        let newWebview = WKWebView(
+            frame: .init(x: 0, y: 0, width: UIScreen.main.bounds.size.width, height: 0),
+            configuration: configuration
+        )
+        newWebview.scrollView.showsVerticalScrollIndicator = false
+        newWebview.scrollView.bounces = false
+        newWebview.scrollView.contentInsetAdjustmentBehavior = .never
+        newWebview.scrollView.contentInset = .zero
+        newWebview.scrollView.verticalScrollIndicatorInsets = .zero
+        newWebview.backgroundColor = .clear
+        newWebview.isOpaque = false
+        newWebview.translatesAutoresizingMaskIntoConstraints = false
         return newWebview
     }()
 
@@ -48,7 +54,7 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
 
     private let placeholder: String
     private lazy var inAppContentBlocksManager = InAppContentBlocksManager.manager
-    public lazy var calculator: WKWebViewHeightCalculator = .init()
+    public var calculator: WKWebViewHeightCalculator
     private var html: String = ""
     private var height: NSLayoutConstraint?
     private var contentReadyFlag: Bool?
@@ -58,6 +64,7 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
     public init(placeholder: String, deferredLoad: Bool = false, heightCompletion: TypeBlock<Int>? = nil) {
         self.placeholder = placeholder
         self.heightCompletion = heightCompletion
+        self.calculator = InAppContentBlocksManager.manager.preparedStaticHeightCalculator()
         super.init(frame: .zero)
 
         webview.navigationDelegate = self
@@ -68,7 +75,7 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
                 self.reportMessageShownIfNeeded()
                 return
             }
-            let usableHeight = height.height - calculator.defaultPadding
+            let usableHeight = height.height
             if self.webview.superview != nil {
                 onMain {
                     self.height?.constant = usableHeight
@@ -97,8 +104,8 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
         }
     }
 
-    /// Triggers deferred loading with conditional revalidation when an ETag is stored.
-    /// Use `reload()` only for an explicit force refresh.
+    /// Starts deferred loading with conditional revalidation when a stored ETag exists.
+    /// Use `reload()` for an explicit force refresh.
     public func load() {
         getContent(force: false)
     }
@@ -137,14 +144,23 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
             ) { [weak self] result in
                 guard let self else { return }
                 self.webview.tag = result.tag
-                self.loadContent(html: result.html, message: result.message)
+                self.loadContent(
+                    html: result.html,
+                    message: result.message
+                )
             })
         } else {
-            loadContent(html: data.html, message: data.message)
+            loadContent(
+                html: data.html,
+                message: data.message
+            )
         }
     }
 
-    private func loadContent(html: String, message: InAppContentBlockResponse?) {
+    private func loadContent(
+        html: String,
+        message: InAppContentBlockResponse?
+    ) {
         guard !html.isEmpty else {
             if skipNativeRendering {
                 onMain {
@@ -276,6 +292,9 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
             Exponea.logger.log(.warning, message: "InAppCB: Unknown action URL: \(String(describing: actionUrl))")
             return false
         }
+        if isOfflineResourceNav(actionUrl) {
+            return false
+        }
         if isBlankNav(actionUrl) {
             // on first load
             // nothing to do, not need to continue loading
@@ -323,5 +342,9 @@ public final class StaticInAppContentBlockView: UIView, WKNavigationDelegate {
 
     private func isBlankNav(_ url: URL?) -> Bool {
         url?.absoluteString == "about:blank"
+    }
+
+    private func isOfflineResourceNav(_ url: URL?) -> Bool {
+        url?.scheme?.lowercased() == HtmlNormalizer.offlineResourceScheme
     }
 }

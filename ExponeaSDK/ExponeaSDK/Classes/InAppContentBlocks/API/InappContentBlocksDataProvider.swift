@@ -21,7 +21,7 @@ public protocol InAppContentBlocksDataProviderType {
     )
 }
 
-/// Internal ETag/304 overload; not part of the public API.
+/// Internal overload for conditional revalidation; not part of the public API.
 protocol InAppContentBlocksETagDataProviding {
     func loadPersonalizedInAppContentBlocks<Data: Codable>(
         data: Data.Type,
@@ -34,7 +34,7 @@ protocol InAppContentBlocksETagDataProviding {
     )
 }
 
-/// Default implementation delegates to the non-ETag fetch.
+/// Default implementation delegates to the standard fetch without conditional headers.
 extension InAppContentBlocksETagDataProviding where Self: InAppContentBlocksDataProviderType {
     func loadPersonalizedInAppContentBlocks<Data: Codable>(
         data: Data.Type,

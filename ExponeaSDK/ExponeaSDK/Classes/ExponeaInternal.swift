@@ -436,8 +436,11 @@ public class ExponeaInternal: ExponeaType {
                 
                 configuration.saveToUserDefaults()
 
-                self.inAppContentBlocksManager = InAppContentBlocksManager.manager
-                self.inAppContentBlocksManager?.initBlocker()
+                let inAppContentBlocksManager = InAppContentBlocksManager.manager
+                self.inAppContentBlocksManager = inAppContentBlocksManager
+                inAppContentBlocksManager.initBlocker {
+                    inAppContentBlocksManager.prewarmReusableContentBlockResourcesForStartup()
+                }
                 self.inAppContentBlocksManager?.loadInAppContentBlockMessages { [weak self] in
                     self?.inAppContentBlocksManager?.prefetchPlaceholdersWithIds(ids: configuration.inAppContentBlocksPlaceholders ?? [])
                 }

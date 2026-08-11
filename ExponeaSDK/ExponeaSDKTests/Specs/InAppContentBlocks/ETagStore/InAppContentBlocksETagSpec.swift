@@ -181,7 +181,7 @@ final class InAppContentBlocksETagSpec: QuickSpec {
                             hasTrackingConsent: true,
                             variantName: nil,
                             contentType: nil,
-                            content: nil,
+                            content: .init(html: "<html><body>etag-static</body></html>"),
                             htmlPayload: nil,
                             ttlSeen: nil
                         )
@@ -233,6 +233,88 @@ final class InAppContentBlocksETagSpec: QuickSpec {
 
                 expect(secondCompletionCalled).to(beTrue())
                 expect(fetchCount).to(equal(2))
+            }
+
+            it("evicts the stored ETag and performs a full 200 re-fetch when 304 arrives with non-renderable personalized cache") {
+                let placeholderMsg = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                    id: "etag-msg-3-invalid",
+                    placeholders: ["etag-ph-3-invalid"],
+                    personalized: PersonalizedInAppContentBlockResponse.getSample(
+                        status: .filterNotMatched,
+                        ttlSeen: Date().addingTimeInterval(-120)
+                    )
+                )
+                manager.addMessage(placeholderMsg)
+
+                let customerIds = (try? DatabaseManager().currentCustomer.ids) ?? [:]
+                let projectToken = Exponea.shared.configuration?.mainProject.integrationId ?? ""
+                let cacheKey = UserDefaultsETagStore.cacheKey(
+                    projectToken: projectToken,
+                    customerIds: customerIds,
+                    blockIds: ["etag-msg-3-invalid"]
+                )
+                self.testEtagStore.store(etag: "\"stale-static-etag\"", forKey: cacheKey)
+
+                let freshBody = (try? JSONEncoder().encode(
+                    PersonalizedInAppContentBlockResponseData(
+                        data: [
+                            PersonalizedInAppContentBlockResponse(
+                                id: "etag-msg-3-invalid",
+                                status: .ok,
+                                ttlSeconds: 3600,
+                                variantId: nil,
+                                hasTrackingConsent: true,
+                                variantName: nil,
+                                contentType: nil,
+                                content: .init(html: "<html><body>fresh-static</body></html>"),
+                                htmlPayload: nil,
+                                ttlSeen: nil
+                            )
+                        ]
+                    )
+                )) ?? Data()
+
+                var fetchCount = 0
+                MockingjayProtocol.addStub(
+                    matcher: { $0.url?.path.contains("inappcontentblocks") == true },
+                    builder: { request in
+                        fetchCount += 1
+                        if request.value(forHTTPHeaderField: "If-None-Match") != nil {
+                            let response = HTTPURLResponse(
+                                url: URL(string: "https://api.exponea.com/personalize")!,
+                                statusCode: 304,
+                                httpVersion: nil,
+                                headerFields: nil
+                            )!
+                            return .success(response, .content(Data()))
+                        }
+                        let response = HTTPURLResponse(
+                            url: URL(string: "https://api.exponea.com/personalize")!,
+                            statusCode: 200,
+                            httpVersion: nil,
+                            headerFields: ["ETag": "\"fresh-static-etag\""]
+                        )!
+                        return .success(response, .content(freshBody))
+                    }
+                )
+
+                var completionCalled = false
+                waitUntil(timeout: .seconds(10)) { done in
+                    let queueData = StaticQueueData(
+                        tag: 11,
+                        placeholderId: "etag-ph-3-invalid",
+                        makeResourcesOffline: false,
+                        completion: { _ in
+                            completionCalled = true
+                            done()
+                        }
+                    )
+                    manager.refreshStaticViewContent(staticQueueData: queueData)
+                }
+
+                expect(fetchCount).to(equal(2))
+                expect(completionCalled).to(beTrue())
+                expect(self.testEtagStore.retrieve(forKey: cacheKey)).to(equal("\"fresh-static-etag\""))
             }
         }
 
@@ -641,6 +723,69 @@ final class InAppContentBlocksETagSpec: QuickSpec {
                                 copy.personalizedMessage = nil
                                 return copy
                             }
+                            let response = HTTPURLResponse(
+                                url: URL(string: "https://api.exponea.com/personalize")!,
+                                statusCode: 304,
+                                httpVersion: nil,
+                                headerFields: nil
+                            )!
+                            return .success(response, .content(Data()))
+                        }
+                        let response = HTTPURLResponse(
+                            url: URL(string: "https://api.exponea.com/personalize")!,
+                            statusCode: 200,
+                            httpVersion: nil,
+                            headerFields: ["ETag": "\"fresh-load-content-etag\""]
+                        )!
+                        return .success(response, .content(listPersonalizedBody()))
+                    }
+                )
+
+                waitUntil(timeout: .seconds(10)) { done in
+                    manager.refreshCallback = { _ in done() }
+                    _ = manager.prepareInAppContentBlockView(placeholderId: listPlaceholder, indexPath: listIndexPath)
+                }
+
+                expect(fetchCount).to(equal(2))
+                expect(self.testEtagStore.retrieve(forKey: cacheKey)).to(equal("\"fresh-load-content-etag\""))
+            }
+
+            it("evicts the stored ETag and performs a full 200 re-fetch when loadContent receives 304 with non-renderable personalized cache") {
+                let expiredPersonalized = PersonalizedInAppContentBlockResponse(
+                    id: listMsgId,
+                    status: .filterNotMatched,
+                    ttlSeconds: 60,
+                    variantId: nil,
+                    hasTrackingConsent: true,
+                    variantName: nil,
+                    contentType: nil,
+                    content: .init(html: "<html><body>stale</body></html>"),
+                    htmlPayload: nil,
+                    ttlSeen: Date().addingTimeInterval(-120)
+                )
+                manager.addMessage(
+                    SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                        id: listMsgId,
+                        placeholders: [listPlaceholder],
+                        personalized: expiredPersonalized
+                    )
+                )
+
+                let customerIds = (try? DatabaseManager().currentCustomer.ids) ?? [:]
+                let projectToken = Exponea.shared.configuration?.mainProject.integrationId ?? ""
+                let cacheKey = UserDefaultsETagStore.cacheKey(
+                    projectToken: projectToken,
+                    customerIds: customerIds,
+                    blockIds: [listMsgId]
+                )
+                self.testEtagStore.store(etag: "\"stale-load-content-etag\"", forKey: cacheKey)
+
+                var fetchCount = 0
+                MockingjayProtocol.addStub(
+                    matcher: { $0.url?.path.contains("inappcontentblocks") == true },
+                    builder: { request in
+                        fetchCount += 1
+                        if request.value(forHTTPHeaderField: "If-None-Match") != nil {
                             let response = HTTPURLResponse(
                                 url: URL(string: "https://api.exponea.com/personalize")!,
                                 statusCode: 304,
