@@ -13,6 +13,31 @@ content:
 >
 > Refer to the [SDK version update guide for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-version-update) for details on updating to the next major version.
 
+## Release Notes for 4.3.0
+#### August 12, 2026
+* Added:
+  * Adds conditional revalidation (`ETag`) for in-app content blocks, so unchanged content isn't re-downloaded after the cache expires.
+  * Adds `StaticInAppContentBlockView.load()` to refresh a placeholder only when needed, while `reload()` still forces a full refresh.
+  * Documents `Exponea.shared.customerCookie` and adds a troubleshooting note for the close button position change in rich-style in-app messages.
+* Changed:
+  * Moves the rich in-app message close button to a consistent top-right position across all layouts.
+  * Defaults the close button background to semi-transparent white instead of fully transparent when no color is set.
+  * Falls back to a black system close icon with a 40×40 pt tap target when no custom icon is set.
+  * Deprecates `trackPushToken(_ token: String?)` in favor of a new non-optional `trackPushToken(_ token: String)`.
+  * Improves how in-app messages and content blocks render HTML and offline images, reducing processing time and memory use.
+  * Prevents cache collisions between apps and resource types by including the app ID in cached file names.
+  * Smooths out a brief flicker when a content block carousel first loads.
+  * Updates product naming in the documentation, and provides clearer troubleshooting examples.
+* Fixed:
+  * Fixes animated GIFs and WebP images not animating in push notifications.
+  * Fixes the `flushData` and `anonymize` completion callbacks not always triggering on the main thread.
+  * Fixes a memory leak and a main-thread network call in rich in-app message image loading.
+  * Fixes duplicate `notification_state` events when using the `everyLaunch` tracking frequency.
+  * Fixes a missed `notification_state` baseline update after the first push token registration, which could cause a duplicate event.
+  * Fixes a rare case where an outdated web page load could overwrite the height of a newer one in content blocks.
+  * Fixes a main-thread network call used as an App Inbox image fallback.
+
+
 ## Release Notes for 4.2.0
 #### June 04, 2026
 * Added:
