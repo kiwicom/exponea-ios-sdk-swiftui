@@ -37,6 +37,7 @@ public struct SlideInAppImageComponent: View {
     }
 
     private func getHeightFromSize(imageSize: CGSize) -> CGFloat {
+        guard imageSize.height > 0, imageSize.width > 0 else { return width }
         let screenWidth = width
         let aspectRatio: CGFloat = imageSize.width / imageSize.height
         return abs(screenWidth / aspectRatio)
@@ -45,13 +46,13 @@ public struct SlideInAppImageComponent: View {
     public var body: some View {
         if config.isVisible && config.url != nil {
             VStack(spacing: 0) {
-                ExponeaAsyncImage(url: config.url) { image in
+                ExponeaAsyncImage(url: config.url) { image, imageSize in
                     switch config.size {
                     case .auto:
                         image
                             .resizable()
                             .scaledToFill()
-                            .frame(maxWidth: width, maxHeight: getHeightFromSize(imageSize: config.imageSize), alignment: .center)
+                            .frame(maxWidth: width, maxHeight: getHeightFromSize(imageSize: imageSize), alignment: .center)
                             .clipShape(RoundedRectangle(cornerRadius: config.cornerRadius ?? 0))
                     case let .lock(apectRatio, type):
                         switch type {
@@ -76,10 +77,14 @@ public struct SlideInAppImageComponent: View {
                                 .frame(height: getHeightFromAspectRation(aspectRation: apectRatio))
                                 .clipShape(RoundedRectangle(cornerRadius: config.cornerRadius ?? 0))
                         case .none:
+                            // imageSize is already populated here since `content` only runs once uiImage is decoded;
+                            // the `width` fallback is defensive only (e.g. if Loader wiring changes).
+                            let frameWidth = imageSize.width > 0 ? imageSize.width : width
+                            let frameHeight = imageSize.height > 0 ? imageSize.height : width
                             image
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: config.imageSize.width, height: config.imageSize.height)
+                                .frame(width: frameWidth, height: frameHeight)
                                 .position(x: width / 2, y: getHeightFromAspectRation(aspectRation: apectRatio) / 2)
                                 .frame(width: width, height: getHeightFromAspectRation(aspectRation: apectRatio))
                                 .clipped()

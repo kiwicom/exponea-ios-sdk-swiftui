@@ -209,6 +209,17 @@ public protocol ExponeaType: AnyObject {
     func flushData()
 
     /// This method can be used to manually flush all available data to Exponea.
+    /// Once the SDK is configured and not concurrently being stopped, the completion is always
+    /// invoked on the main thread on the happy data-upload path and on the public-API
+    /// short-circuit paths (SDK stopped, prior internal exception, insufficient authorization).
+    /// The existing flushing-pipeline short-circuits (no internet, already in progress, empty
+    /// queue) continue to deliver their typed `FlushResult` cases. On the public-API
+    /// short-circuits no flush is performed and `FlushResult.error(_:)` carries the underlying
+    /// `ExponeaError` so callers (including wrapper SDKs) can diagnose the cause.
+    /// Calls placed before `configure(...)` finishes are queued; the callback fires when
+    /// configuration completes if the deferred call succeeds. Deferred failures (insufficient
+    /// authorization, prior internal exception, NSException during deferred execution) are
+    /// logged via `Exponea.logger` and may not surface in the callback.
     func flushData(completion: ((FlushResult) -> Void)?)
 
     // MARK: - Push -
@@ -221,7 +232,22 @@ public protocol ExponeaType: AnyObject {
     /// Tracks the push notification token to Exponea API with string.
     ///
     /// - Parameter token: String containing the push notification token.
-    ///                    If nil, it will delete existing push token.
+    ///                    Under `.everyLaunch`, only one automatic `notification_state`
+    ///                    is allowed per app run. Calling this method uses that allowance,
+    ///                    so the SDK will skip its own automatic track on subsequent init
+    ///                    or foreground checks until the app is restarted.
+    func trackPushToken(_ token: String)
+
+    /// Tracks the push notification token to Exponea API with string.
+    ///
+    /// - Parameter token: String containing the push notification token.
+    ///                    If nil, no `notification_state` event is tracked and an error is logged;
+    ///                    the existing push token is **not** deleted.
+    ///                    Under `.everyLaunch`, only one automatic `notification_state`
+    ///                    is allowed per app run. A non-nil call uses that allowance, so the SDK
+    ///                    will skip its own automatic track on subsequent init or foreground checks
+    ///                    until the app is restarted; a nil call does not.
+    @available(*, deprecated, message: "Please use trackPushToken(_ token: String) instead.")
     func trackPushToken(_ token: String?)
 
     /// Handles push notification token registration - compared to trackPushToken respects requirePushAuthorization
@@ -384,7 +410,15 @@ public protocol ExponeaType: AnyObject {
 
     /// Anonymizes the user with a completion callback.
     /// In Stream mode, pending events are flushed with the current JWT before the identity is cleared.
-    /// The completion is called on the main thread once the anonymize (and optional flush) finishes.
+    /// Once the SDK is configured and not concurrently being stopped, the completion is always
+    /// invoked on the main thread on the happy path (after the anonymize and optional flush
+    /// finish) and on the public-API short-circuit paths (SDK stopped via `stopIntegration`,
+    /// prior internal exception). On the short-circuit paths no anonymize is performed and the
+    /// callback signals only that the call has been resolved.
+    /// Calls placed before `configure(...)` finishes are queued; the callback fires when
+    /// configuration completes if the deferred call succeeds. Deferred failures (prior internal
+    /// exception, NSException during deferred execution) are logged via `Exponea.logger` and may
+    /// not surface in the callback.
     func anonymize(completion: (() -> Void)?)
 
     func trackInAppMessageClick(message: InAppMessage, buttonText: String?, buttonLink: String?)

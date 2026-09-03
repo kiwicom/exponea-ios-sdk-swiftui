@@ -21,16 +21,49 @@ public protocol InAppContentBlocksDataProviderType {
     )
 }
 
-public final class InAppContentBlocksDataProvider {
+/// Internal overload for conditional revalidation; not part of the public API.
+protocol InAppContentBlocksETagDataProviding {
+    func loadPersonalizedInAppContentBlocks<Data: Codable>(
+        data: Data.Type,
+        customerIds: [String: String],
+        inAppContentBlocksIds: [String],
+        etag: String?,
+        onNotModified: (() -> Void)?,
+        onEtagHeader: ((String) -> Void)?,
+        completion: @escaping TypeBlock<ResponseData<Data>>
+    )
+}
 
-    // MARK: - Properties
-    private lazy var serverRepository = Exponea.shared.repository
-    public init() {}
+/// Default implementation delegates to the standard fetch without conditional headers.
+extension InAppContentBlocksETagDataProviding where Self: InAppContentBlocksDataProviderType {
+    func loadPersonalizedInAppContentBlocks<Data: Codable>(
+        data: Data.Type,
+        customerIds: [String: String],
+        inAppContentBlocksIds: [String],
+        etag: String?,
+        onNotModified: (() -> Void)?,
+        onEtagHeader: ((String) -> Void)?,
+        completion: @escaping TypeBlock<ResponseData<Data>>
+    ) {
+        loadPersonalizedInAppContentBlocks(
+            data: data,
+            customerIds: customerIds,
+            inAppContentBlocksIds: inAppContentBlocksIds,
+            completion: completion
+        )
+    }
 }
 
 public struct ResponseData<Data: Codable> {
     var data: Data?
     var error: Error?
+}
+
+public final class InAppContentBlocksDataProvider {
+
+    // MARK: - Properties
+    private lazy var serverRepository = Exponea.shared.repository
+    public init() {}
 }
 
 // MARK: - InAppContentBlocksDataProviderType
@@ -55,6 +88,29 @@ extension InAppContentBlocksDataProvider: InAppContentBlocksDataProviderType {
         inAppContentBlocksIds: [String],
         completion: @escaping TypeBlock<ResponseData<D>>
     ) {
+        loadPersonalizedInAppContentBlocks(
+            data: data,
+            customerIds: customerIds,
+            inAppContentBlocksIds: inAppContentBlocksIds,
+            etag: nil,
+            onNotModified: nil,
+            onEtagHeader: nil,
+            completion: completion
+        )
+    }
+}
+
+// MARK: - InAppContentBlocksETagDataProviding
+extension InAppContentBlocksDataProvider: InAppContentBlocksETagDataProviding {
+    func loadPersonalizedInAppContentBlocks<D: Codable>(
+        data: D.Type = D.self,
+        customerIds: [String: String],
+        inAppContentBlocksIds: [String],
+        etag: String?,
+        onNotModified: (() -> Void)?,
+        onEtagHeader: ((String) -> Void)?,
+        completion: @escaping TypeBlock<ResponseData<D>>
+    ) {
         guard !IntegrationManager.shared.isStopped else {
             Exponea.logger.log(.verbose, message: "In-app content blocks fetch failed: SDK is stopping")
             return
@@ -62,7 +118,10 @@ extension InAppContentBlocksDataProvider: InAppContentBlocksDataProviderType {
         guard let serverRepository = serverRepository else { return }
         serverRepository.personalizedInAppContentBlocks(
             customerIds: customerIds,
-            inAppContentBlocksIds: inAppContentBlocksIds
+            inAppContentBlocksIds: inAppContentBlocksIds,
+            etag: etag,
+            onNotModified: onNotModified,
+            onEtagHeader: onEtagHeader
         ) { response in
             guard !IntegrationManager.shared.isStopped else {
                 Exponea.logger.log(.verbose, message: "In-app content blocks fetch failed: SDK is stopping")

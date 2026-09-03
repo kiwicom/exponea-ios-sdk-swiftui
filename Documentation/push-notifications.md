@@ -9,17 +9,17 @@ content:
   excerpt: Enable push notifications in your app using the iOS SDK
 ---
 
-Engagement enables sending push notifications to your app users using [scenarios](https://documentation.bloomreach.com/engagement/docs/scenarios-1). The mobile application handles the push message using the SDK and renders the notification on the customer's device.
+{user.mkg} enables sending push notifications to your app users using [scenarios](https://documentation.bloomreach.com/engagement/docs/scenarios-1). The mobile application handles the push message using the SDK and renders the notification on the customer's device.
 
 Push notifications can also be silent, used only to update the app’s interface or trigger some background task.
 
 > 📘
 >
-> To learn how to create push notifications in the Engagement web app, refer to [Mobile push notifications](https://documentation.bloomreach.com/engagement/docs/mobile-push-notifications#creating-a-new-notification).
+> To learn how to create push notifications in the {user.mkg} web app, refer to [Mobile push notifications](https://documentation.bloomreach.com/engagement/docs/mobile-push-notifications#creating-a-new-notification).
 
 > 📘
 >
-> Also see [Mobile push notifications FAQ](https://support.bloomreach.com/hc/en-us/articles/18152713374877-Mobile-Push-Notifications-FAQ) at Bloomreach Support Help Center.
+> Also see [Mobile push notifications FAQ](https://support.bloomreach.com/hc/en-us/articles/18152713374877-Mobile-Push-Notifications-FAQ) at {user.br} Support Help Center.
 
 > ❗️ Deprecation of automatic push notifications
 >
@@ -27,10 +27,10 @@ Push notifications can also be silent, used only to update the app’s interface
 
 ## Prerequisites
 
-To be able to send push notifications from Engagement, you must:
+To be able to send push notifications from {user.mkg}, you must:
 
 - Obtain an Apple Push Notification service (APNs) authentication token signing key
-- Add and configure the Apple Push Notification Service integration in the Engagement web app
+- Add and configure the Apple Push Notification Service integration in the {user.mkg} web app
 
 > 📘
 >
@@ -60,7 +60,7 @@ Select your application target in Xcode, and on the `Signing & Capabilities` tab
 
 [Configure](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) the SDK with `pushNotificationTracking: .enabled(appGroup:)` to enable push notifications. Use the app group you created in the previous step.
 
-**Project/Engagement mode:**
+**Project/{user.mkg} mode:**
 
 ``` swift
 Exponea.shared.configure(
@@ -72,7 +72,7 @@ Exponea.shared.configure(
 )
 ```
 
-**Stream/Data hub mode:**
+**Stream/{user.dh} mode:**
 
 ``` swift
 Exponea.shared.configure(
@@ -95,7 +95,7 @@ Exponea.shared.setSdkAuthToken("YOUR_STREAM_JWT_TOKEN")
 
 > 👍
 >
-> The SDK provides a push setup self-check feature to help developers successfully set up push notifications. The self-check will try to track the push token, request the Engagement backend to send a silent push to the device, and check if the app is ready to open push notifications.
+> The SDK provides a push setup self-check feature to help developers successfully set up push notifications. The self-check will try to track the push token, request the {user.mkg} backend to send a silent push to the device, and check if the app is ready to open push notifications.
 >
 > To enable the setup check, set `Exponea.shared.checkPushSetup = true` **before** [initializing the SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize-the-sdk):
 
@@ -207,7 +207,7 @@ By default, the SDK only tracks the push notification token if the app is author
 > SDK versions 3.8.0 and higher use event-based token tracking to support multiple mobile applications per project. Learn more about [Token tracking via notification_state event](#token-tracking-via-notification_state-event).
 
 #### Checklist: 
- - [ ] Engagement should now be able to send push notifications to your device. For instructions, refer to the [Creating a new notification](https://documentation.bloomreach.com/engagement/docs/mobile-push-notifications#creating-a-new-notification) guide.
+ - [ ] {user.mkg} should now be able to send push notifications to your device. For instructions, refer to the [Creating a new notification](https://documentation.bloomreach.com/engagement/docs/mobile-push-notifications#creating-a-new-notification) guide.
 
 ## Customization
 
@@ -285,7 +285,7 @@ extension AppDelegate: PushNotificationManagerDelegate {
 
 Silent push notifications don't trigger any visible or audible notifications on the device but wake up the application to allow it to perform tasks in the background.
 
-To receive push notifications, the app must track the push token to the Engagement backend. The SDK does this automatically only if push notification tracking is enabled and properly implemented and the app is [authorized](#register-for-receiving-push-notifications) to receive alert push notifications.
+To receive push notifications, the app must track the push token to the {user.mkg} backend. The SDK does this automatically only if push notification tracking is enabled and properly implemented and the app is [authorized](#register-for-receiving-push-notifications) to receive alert push notifications.
 
 Silent push notifications don't require authorization. To track the push token even when the app isn't authorized, set the configuration variable `requirePushAuthorization` to `false`. This causes the SDK to register for push notifications and track the push token at application startup.
 
@@ -330,7 +330,7 @@ For each extension, follow the instructions in [Notification extensions for iOS 
 Using the `ExponeaNotificationContentService.didReceive()` method will enhance the notification body with an image and actions delivered within the UNNotification payload. The notification actions shown by `ExponeaNotificationContentService` are registered with configurations to open your application with the required information and handle campaign clicks automatically.
 
 #### Checklist:
- - [ ] Check that push notifications with images and buttons sent from Engagement are correctly displayed on your device. Push delivery tracking should work.
+ - [ ] Check that push notifications with images and buttons sent from {user.mkg} are correctly displayed on your device. Push delivery tracking should work.
  - [ ] If you don't see buttons in the expanded push notification, the content extension is **not** running. Double check `UNNotificationExtensionCategory` in `Info.plist` - notice the placement inside `NSExtensionAttributes`. Check that the `iOS Deployment Target` is the same for the extensions and the main app.
 
 ### Push notification alert sound
@@ -341,18 +341,18 @@ Using the `ExponeaNotificationContentService.didReceive()` method will enhance t
 
 Received push notifications handled by `ExponeaNotificationService.process()` can play a default or customized sound when the notification is displayed.
 
-To use the default sound for a notification, enter `default` as the value for `Media > Sound` in your push notification scenario in the Engagement web app.
-![Configure sound for a push notification in Engagement](https://raw.githubusercontent.com/exponea/exponea-ios-sdk/main/Documentation/images/push-sound-config.png)
+To use the default sound for a notification, enter `default` as the value for `Media > Sound` in your push notification scenario in the {user.mkg} web app.
+![Configure sound for a push notification](https://raw.githubusercontent.com/exponea/exponea-ios-sdk/main/Documentation/images/push-sound-config.png)
 
 To use a custom sound for a notification, you must create a sound file that [iOS supports](https://developer.apple.com/documentation/usernotifications/unnotificationsound#2943048). Include the sound file in your Xcode project and add it to the app's target.
 
-Once the custom sound is in place in your app, enter the sound file's file name as the value for `Media > Sound` in your push notification scenario in the Engagement web app. Ensure that you enter the exact file name (case sensitive) without an extension.
+Once the custom sound is in place in your app, enter the sound file's file name as the value for `Media > Sound` in your push notification scenario in the {user.mkg} web app. Ensure that you enter the exact file name (case sensitive) without an extension.
 
 ### Track delivered notifications
 
 To track the delivery of push notifications, implement a **Notification Service Extension** as [described for rich push notifications above](#rich-push-notifications).
 
-Calling `ExponeaNotificationService.process` in `didReceive` will track the notification delivery as a `campaign` event in Engagement.
+Calling `ExponeaNotificationService.process` in `didReceive` will track the notification delivery as a `campaign` event in {user.mkg}.
 
 > 📘 **Delivered event `state` semantics**
 >
@@ -418,7 +418,7 @@ allowing you to track multiple push tokens for the same customer across differen
 The SDK automatically tracks `notification_state` events in the following scenarios:
 
 * SDK initialization
-* App transitions from background to foreground
+* App transitions from background to foreground — the SDK re-evaluates whether tracking is needed; under `everyLaunch` this doesn't emit again unless an override applies
 * New token received from APNs
 * Manual token tracking using `Exponea.trackPushToken(...)` (this method allows you to force tracking/sending the current push token via notification_state event)
 * User anonymization via `Exponea.anonymize()`
@@ -437,6 +437,18 @@ UNAuthorizationStatusProvider.current.isAuthorized { granted ->
 
 The frequency of `notification_state` event tracking depends on the `tokenTrackFrequency` configuration property. [See SDK configuration](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration).
 
+> 📘 Note
+>
+> When `tokenTrackFrequency` is set to `everyLaunch`, the SDK tracks the push token once per app launch (process start). All other SDK operations during that launch reuse this tracking, so each launch produces a single `notification_state` event.
+>
+> Some operations bypass this limit and always trigger tracking mid-process:
+> - OS push authorization status flips (granted ↔ denied) since the last tracked `notification_state`.
+> - Manual tracking through `trackPushToken()`.
+> - Receiving a new token from APNs when the token string changes.
+> - Calling `anonymize()` or `stopIntegration()` (these recreate the push-tracking session, so the next track is a fresh per-process launch rather than a mid-process override).
+>
+>  The SDK detects app version or `application_id` changes at startup. The version or ID affect only the `onTokenChange`/`daily` staleness checks, and aren't a mid-process override for `everyLaunch`. A new process always tracks once regardless of any version or application ID changes.
+
 ### notification_state event properties
 
 | Property                | Description                              | Example values                          |
@@ -448,7 +460,7 @@ The frequency of `notification_state` event tracking depends on the `tokenTrackF
 | `application_id`          | Application identifier from SDK configuration | Custom ID or `default-application` (default) |
 | `device_id`               | Unique device identifier                 | UUID string                             |
 | `sdk`                     | SDK identifier (constant string tracked by the iOS SDK) | `Exponea iOS SDK`                       |
-| `sdk_version`             | Version of the Bloomreach iOS SDK        | `4.1.0`                                 |
+| `sdk_version`             | Version of the {user.br} iOS SDK        | `4.1.0`                                 |
 | `os_name`                 | Operating-system name                    | `iOS`                                   |
 | `os_version`              | Operating-system version                 | `17.4`                                  |
 | `device_model`            | Device model name resolved from the hardware identifier. Devices released after the SDK version in use report the raw hardware identifier (for example, `iPhone20,1`) instead of the model name, retaining device-specific signal until the SDK is updated. | `iPhone 15 Pro`, `iPad Air (5th generation)` |
@@ -470,17 +482,17 @@ The combination of `valid` and `description` properties indicates the token's cu
 
 ### Configuring Application ID
 
-Each mobile app integrated with the SDK requires an `application_id` that matches the Application ID configured in Bloomreach Engagement. 
+Each mobile app integrated with the SDK requires an `application_id` that matches the Application ID configured in {user.mkg}. 
 
 For configuration instructions, see [Configure Application ID](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#configure-application-id).
 
 > 📘 Note
 >
-> The push setup self-check (`Exponea.shared.checkPushSetup = true`) also carries the configured `application_id` in its request to the Bloomreach backend. In multi-mobile-app projects, this lets the backend route the test silent push to the correct app/bundle even when several apps in the same Bloomreach workspace are running self-check concurrently. If `application_id` is left unset, the default `default-application` value is used.
+> The push setup self-check (`Exponea.shared.checkPushSetup = true`) also carries the configured `application_id` in its request to the {user.br} backend. In multi-mobile-app projects, this lets the backend route the test silent push to the correct app/bundle even when several apps in the same {user.br} workspace are running self-check concurrently. If `application_id` is left unset, the default `default-application` value is used.
 
 #### Event creation requirements
 
-The SDK automatically generates `notification_state` events. Before upgrading to SDK 3.8.0 or higher, ensure your Bloomreach Engagement project meets these requirements:
+The SDK automatically generates `notification_state` events. Before upgrading to SDK 3.8.0 or higher, ensure your {user.mkg} project meets these requirements:
 
 - Event creation is enabled for your project
 - If your project uses custom event schemas or restricts event creation, add `notification_state` to the list of allowed events
@@ -490,7 +502,7 @@ The SDK automatically generates `notification_state` events. Before upgrading to
 > If your project blocks creation of new event types, push token registration will fail silently. No tokens will appear in customer profiles or the event stream after SDK initialization, and push notifications will not be delivered.
 ### Verifying token tracking
 
-You can verify that tokens are being tracked correctly in the Bloomreach Engagement web application:
+You can verify that tokens are being tracked correctly in the {user.mkg} web application:
 
 1. Navigate to Data & Assets > Customers
 2. Locate the customer profile
@@ -503,14 +515,14 @@ For SDK versions below 3.8.0, check the customer profile properties `apple_push_
 
 ### Multiple push notification sources
 
-The SDK only handles push notifications sent from the Engagement platform. If you use platforms other than Engagement to send push notifications, you must implement some of the notification handling logic yourself. 
+The SDK only handles push notifications sent from the {user.mkg} platform. If you use platforms other than {user.mkg} to send push notifications, you must implement some of the notification handling logic yourself. 
 
 #### Conditional processing
 
-[Implement application delegate methods](#implement-application-delegate-methods) above describes the delegate methods required for Engagement push notification handling to work. You can use the `Exponea.isExponeaNotification(userInfo:)` method in the delegate implementations to check if an incoming notification is coming from Engagement and, if not, process the notification using an implementation for a different notification source.
+[Implement application delegate methods](#implement-application-delegate-methods) above describes the delegate methods required for {user.mkg} push notification handling to work. You can use the `Exponea.isExponeaNotification(userInfo:)` method in the delegate implementations to check if an incoming notification is coming from {user.mkg} and, if not, process the notification using an implementation for a different notification source.
 
 #### Manual tracking
-You can completely disable notification tracking and use the methods `Exponea.shared.trackPushToken` and `Exponea.shared.trackPushOpened` to track push notification events manually. `trackPushOpened` expects the [Engagement payload format](#payload-example). You can always track a `campaign` event manually for any payload format.
+You can completely disable notification tracking and use the methods `Exponea.shared.trackPushToken` and `Exponea.shared.trackPushOpened` to track push notification events manually. `trackPushOpened` expects the {user.mkg} [payload format](#payload-example). You can always track a `campaign` event manually for any payload format.
 
 > ❗️
 >
@@ -518,11 +530,11 @@ You can completely disable notification tracking and use the methods `Exponea.sh
 
 ### Custom notification actions in iOS 11 and lower
 
-To support the action buttons on iOS 11 and lower that can be configured in the Engagement web app, you must implement custom notification categories that are used to hook up the button actions and titles. The SDK provides a convenient factory method to simplify the creation of such a category.
+To support the action buttons on iOS 11 and lower that can be configured in the {user.mkg} web app, you must implement custom notification categories that are used to hook up the button actions and titles. The SDK provides a convenient factory method to simplify the creation of such a category.
 
 > ❗️
 >
-> The category identifier you specify here must be identical to the one you specify in the Engagement backend.
+> The category identifier you specify here must be identical to the one you specify in the {user.mkg} backend.
 
 ```swift
 // Set legacy exponea categories

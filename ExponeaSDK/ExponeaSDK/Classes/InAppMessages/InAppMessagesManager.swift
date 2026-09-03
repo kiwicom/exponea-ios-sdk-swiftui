@@ -816,7 +816,7 @@ final class InAppMessagesManager: InAppMessagesManagerType, @unchecked Sendable 
         )
         let messagesWithImage = messages.filter { preloadImage(for: $0) }
         let highestPriority = messagesWithImage.map { $0.priority }.compactMap { $0 }.max() ?? 0
-        messages = messages.filter { $0.priority ?? 0 >= highestPriority }
+        messages = messagesWithImage.filter { $0.priority ?? 0 >= highestPriority }
         Exponea.logger.log(
             .verbose,
             message: "[InApp] Got \(messages.count) messages with highest priority. \(messages.map { $0.name })")

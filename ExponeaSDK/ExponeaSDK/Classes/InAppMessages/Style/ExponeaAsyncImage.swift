@@ -15,23 +15,27 @@ import SwiftUI
 struct ExponeaAsyncImage<Content>: View where Content: View {
 
     final class Loader: ObservableObject {
-        @Published var data: Data? = nil
+        @Published var uiImage: UIImage?
+        var imageSize: CGSize { uiImage?.size ?? .zero }
         private var cancellables = Set<AnyCancellable>()
-        init(_ url: URL?) {
+        init(_ url: URL?, scale: CGFloat = 1) {
             guard let url = url else { return }
             URLSession.shared.dataTaskPublisher(for: url)
                 .map(\.data)
-                .map { $0 as Data? }
-                .replaceError(with: nil)
+                .catch { _ in Empty<Data, Never>() }
+                .compactMap { data -> UIImage? in
+                    UIImage(data: data, scale: scale)
+                }
                 .receive(on: RunLoop.main)
-                .assign(to: \.data, on: self)
+                .sink { [weak self] image in
+                    self?.uiImage = image
+                }
                 .store(in: &cancellables)
         }
     }
 
     @ObservedObject private var imageLoader: Loader
-    private let conditionalContent: ((SwiftUI.Image?) -> Content)?
-    private let scale: CGFloat
+    private let conditionalContent: ((SwiftUI.Image?, CGSize) -> Content)?
 
     /// Loads and displays an image from the given URL.
     ///
@@ -45,8 +49,7 @@ struct ExponeaAsyncImage<Content>: View where Content: View {
     ///   - url: The URL for the image to be shown.
     ///   - scale: The scale to use for the image.
     init(url: URL?, scale: CGFloat = 1) where Content == SwiftUI.Image {
-        self.imageLoader = Loader(url)
-        self.scale = scale
+        self.imageLoader = Loader(url, scale: scale)
         self.conditionalContent = nil
     }
 
@@ -70,12 +73,11 @@ struct ExponeaAsyncImage<Content>: View where Content: View {
     ///   - scale: The scale to use for the image.
     ///   - content: The view to show when the image is loaded.
     ///   - placeholder: The view to show while the image is still loading.
-    init<I, P>(url: URL?, scale: CGFloat = 1, @ViewBuilder content: @escaping (SwiftUI.Image) -> I, @ViewBuilder placeholder: @escaping () -> P) where Content == _ConditionalContent<I, P>, I : View, P : View {
-        self.imageLoader = Loader(url)
-        self.scale = scale
-        self.conditionalContent = { image in
+    init<I, P>(url: URL?, scale: CGFloat = 1, @ViewBuilder content: @escaping (SwiftUI.Image, CGSize) -> I, @ViewBuilder placeholder: @escaping () -> P) where Content == _ConditionalContent<I, P>, I : View, P : View {
+        self.imageLoader = Loader(url, scale: scale)
+        self.conditionalContent = { image, imageSize in
             if let image = image {
-                return ViewBuilder.buildEither(first: content(image))
+                return ViewBuilder.buildEither(first: content(image, imageSize))
             } else {
                 return ViewBuilder.buildEither(second: placeholder())
             }
@@ -83,16 +85,12 @@ struct ExponeaAsyncImage<Content>: View where Content: View {
     }
 
     private var image: SwiftUI.Image? {
-        imageLoader.data
-            .flatMap {
-                UIImage(data: $0, scale: scale)
-            }
-            .flatMap(SwiftUI.Image.init)
+        imageLoader.uiImage.map(SwiftUI.Image.init)
     }
 
     var body: some View {
         if let conditionalContent = conditionalContent {
-            conditionalContent(image)
+            conditionalContent(image, imageLoader.imageSize)
         } else if let image = image {
             image
         }

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import XCTest
 import Quick
 import Nimble
 import WebKit
@@ -41,6 +42,50 @@ class StaticInAppContentBlockViewSpec: QuickSpec {
             expect(actionHasBeenHandled).to(beFalse())
             expect(errorCalled).to(beFalse())
         }
+    }
+}
+
+final class StaticInAppContentBlockViewTests: XCTestCase {
+    private let configuration = try! Configuration(
+        projectToken: "token",
+        authorization: Authorization.none,
+        baseUrl: "baseUrl"
+    )
+
+    override func setUp() {
+        super.setUp()
+        Exponea.shared = ExponeaInternal()
+        IntegrationManager.shared.isStopped = false
+        Exponea.shared.configure(with: configuration)
+    }
+
+    func testUsesFullCalculatorHeightForRenderedWebView() {
+        let expectation = expectation(description: "height completion")
+        var reportedHeight: Int?
+        let animationsEnabled = UIView.areAnimationsEnabled
+        UIView.setAnimationsEnabled(false)
+        defer {
+            UIView.setAnimationsEnabled(animationsEnabled)
+        }
+
+        let view = StaticInAppContentBlockView(
+            placeholder: "ph_1",
+            deferredLoad: true,
+            heightCompletion: { height in
+                reportedHeight = height
+                if height == 120 {
+                    expectation.fulfill()
+                }
+            }
+        )
+
+        view.calculator.heightUpdate?(.init(height: 120, placeholderId: "ph_1"))
+        wait(for: [expectation], timeout: 2)
+
+        XCTAssertEqual(reportedHeight, 120)
+        let displayWebView = view.subviews.first as? WKWebView
+        XCTAssertEqual(displayWebView?.scrollView.contentInsetAdjustmentBehavior, .never)
+        XCTAssertEqual(displayWebView?.scrollView.contentInset, .zero)
     }
 }
 

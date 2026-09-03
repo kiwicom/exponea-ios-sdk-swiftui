@@ -8,7 +8,6 @@
 
 import SwiftUI
 import UIKit
-import Combine
 
 public struct InAppCloseButtonConfig: Identifiable, Codable {
     public let id = UUID()

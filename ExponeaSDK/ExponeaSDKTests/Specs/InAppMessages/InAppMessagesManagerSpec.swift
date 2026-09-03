@@ -383,6 +383,31 @@ class InAppMessagesManagerSpec: QuickSpec {
                     ]
                 )
             }
+
+            it("should exclude messages whose image preload fails from priority filter") {
+                // Regression test for bug where messages.filter was used instead of
+                // messagesWithImage.filter, causing failed-preload messages to be included
+                // when their priority equalled or exceeded the highest successfully-preloaded priority.
+                let lowPriorityMessage = SampleInAppMessage.getSampleInAppMessage(
+                    id: "low-priority-cached",
+                    priority: 3
+                )
+                let cachedImageUrl = lowPriorityMessage.oldPayload!.imageUrl!
+                // Uses a URL that fails URL parsing so preload fails without a network request.
+                let highPriorityMessage = SampleInAppMessage.getSampleInAppMessage(
+                    id: "high-priority-preload-fails",
+                    imageUrl: " ",
+                    priority: 5
+                )
+                cache.saveInAppMessages(inAppMessages: [highPriorityMessage, lowPriorityMessage])
+                // Only the low-priority message has its image in the cache.
+                cache.saveImageData(at: cachedImageUrl, data: "mock data".data(using: .utf8)!)
+                // The high-priority message must not appear in the result, even though its
+                // priority (5) exceeds the highest successfully-preloaded priority (3).
+                expect(
+                    manager.loadMessagesToShow(for: [.eventType("session_start")])
+                ).to(equal([lowPriorityMessage]))
+            }
         }
 
         it("should show dialog") {

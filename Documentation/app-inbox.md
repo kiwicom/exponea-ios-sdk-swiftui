@@ -15,11 +15,11 @@ You can configure the inbox to receive messages from multiple projects by settin
 The SDK can only retrieve App Inbox messages when the current app user has a customer profile with a [hard ID](https://documentation.bloomreach.com/engagement/docs/customer-identification#hard-id). 
 Without this identification, the feature won't work.
 
-Refer to the [App Inbox](https://documentation.bloomreach.com/engagement/docs/app-inbox) documentation for information on creating and sending App Inbox messages in the Engagement web app.
+Refer to the [App Inbox](https://documentation.bloomreach.com/engagement/docs/app-inbox) documentation for information on creating and sending App Inbox messages in the {user.mkg} web app.
 
 > 👍
 >
-> App Inbox is a separate module that can be enabled on request in your Engagement account by your Bloomreach CSM.
+> App Inbox is a separate module that can be enabled on request in your {user.mkg} account by your {user.br} CSM.
 
 ## Integrate the App Inbox
 
@@ -96,7 +96,7 @@ The SDK fetches and displays the App Inbox automatically as follows:
 
 > ❗️
 >
-> The behavior of `trackAppInboxOpened` and `trackAppInboxClick` may be affected by the tracking consent feature, which in enabled mode considers the requirement of explicit consent for tracking. Refer to [Tracking consent](https://dash.readme.com/project/bloomreachengagement/v2/docs/ios-sdk-tracking-consent) for details.
+> The behavior of `trackAppInboxOpened` and `trackAppInboxClick` may be affected by the tracking consent feature, which in enabled mode considers the requirement of explicit consent for tracking. Refer to [Tracking consent](https://documentation.bloomreach.com/engagement/docs/ios-sdk-tracking-consent) for details.
 
 ## Customize App Inbox
 
@@ -250,7 +250,7 @@ The App Inbox is assigned to an existing customer account (identified by a hard 
 
 To prevent large data transfers on each fetch, the SDK stores the App Inbox locally and loads incrementally. The first fetch will transfer the entire App Inbox, but subsequent fetches will only transfer new messages.
 
-The App Inbox assigned to the current customer can be fetched with `fetchAppInbox` or `fetchAppInboxMessages`. Both use the appropriate authorization (Stream JWT for Data Hub, Customer Token for Engagement when `advancedAuthEnabled` is true):
+The App Inbox assigned to the current customer can be fetched with `fetchAppInbox` or `fetchAppInboxMessages`. Both use the appropriate authorization (Stream JWT for {user.dh}, Customer Token for {user.mkg} when `advancedAuthEnabled` is true):
 
 ```swift
 Exponea.shared.fetchAppInbox { result in

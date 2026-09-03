@@ -60,6 +60,7 @@ public final class WKWebViewHeightCalculator: WKWebView, WKNavigationDelegate, W
     private var isReadyForMessages: Bool = false
     private var messageHandler: WeakScriptMessageHandler?
     var id: String = ""
+    private var activeNavigation: WKNavigation?
     // Cached so we can recover from `webViewWebContentProcessDidTerminate(_:)`.
     // The calculator never enters a view hierarchy, so iOS does not auto-recover
     // its WebContent process after termination (e.g. while the app is backgrounded
@@ -71,7 +72,7 @@ public final class WKWebViewHeightCalculator: WKWebView, WKNavigationDelegate, W
     public init() {
         let userContentController = WKUserContentController()
         userContentController.addUserScript(Self.heightScript)
-        let configuration = WKWebViewConfiguration()
+        let configuration = HtmlNormalizer.createWebViewConfiguration()
         configuration.userContentController = userContentController
         super.init(frame: .init(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 0), configuration: configuration)
         let handler = WeakScriptMessageHandler(delegate: self)
@@ -92,6 +93,9 @@ public final class WKWebViewHeightCalculator: WKWebView, WKNavigationDelegate, W
         _ webView: WKWebView,
         didFinish navigation: WKNavigation!
     ) {
+        guard navigation === activeNavigation else {
+            return
+        }
         guard !IntegrationManager.shared.isStopped else {
             Exponea.logger.log(.error, message: "Method has not been invoked, SDK is stopping")
             self.publicHeightUpdate?(.init(height: 0, placeholderId: ""))
@@ -113,7 +117,7 @@ public final class WKWebViewHeightCalculator: WKWebView, WKNavigationDelegate, W
         // the receiver as the delegate's webView), but routing the recovery load
         // through the parameter mirrors the cell's recovery path and lets specs
         // substitute a load-recording double in place of the real WebContent IPC.
-        webView.loadHTMLString(html, baseURL: nil)
+        activeNavigation = webView.loadHTMLString(html, baseURL: nil)
     }
 
     private func requestHeight(from webView: WKWebView, retriesRemaining: Int) {
@@ -176,6 +180,7 @@ public extension WKWebViewHeightCalculator {
     func loadHtml(placedholderId: String, html: String) {
         onMain {
             guard !html.isEmpty else {
+                self.activeNavigation = nil
                 self.heightUpdate?(.init(height: 0, placeholderId: placedholderId))
                 self.publicHeightUpdate?(.init(height: 0, placeholderId: self.id))
                 return
@@ -184,7 +189,7 @@ public extension WKWebViewHeightCalculator {
             self.lastReportedHeight = nil
             self.isReadyForMessages = false
             self.lastLoadedHtml = html
-            self.loadHTMLString(html, baseURL: nil)
+            self.activeNavigation = self.loadHTMLString(html, baseURL: nil)
         }
     }
 }

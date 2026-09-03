@@ -10,6 +10,7 @@ public struct StaticQueueData {
     public let tag: Int
     public let placeholderId: String
     internal var makeResourcesOffline: Bool = true
+    internal var skipEtag: Bool = false
     public var completion: TypeBlock<StaticReturnData>?
 
     public init(
@@ -20,6 +21,7 @@ public struct StaticQueueData {
         self.tag = tag
         self.placeholderId = placeholderId
         self.makeResourcesOffline = true
+        self.skipEtag = false
         self.completion = completion
     }
 
@@ -27,11 +29,13 @@ public struct StaticQueueData {
         tag: Int,
         placeholderId: String,
         makeResourcesOffline: Bool,
+        skipEtag: Bool = false,
         completion: TypeBlock<StaticReturnData>? = nil
     ) {
         self.tag = tag
         self.placeholderId = placeholderId
         self.makeResourcesOffline = makeResourcesOffline
+        self.skipEtag = skipEtag
         self.completion = completion
     }
 }

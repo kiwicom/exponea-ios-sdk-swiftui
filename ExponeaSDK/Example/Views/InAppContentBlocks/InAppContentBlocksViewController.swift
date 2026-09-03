@@ -101,7 +101,7 @@ class InAppContentBlocksViewController: UIViewController, UITableViewDelegate, U
     private let refreshControl = UIRefreshControl()
 
     lazy var placeholder = StaticInAppContentBlockView(placeholder: "example_top", deferredLoad: true)
-    lazy var placeholderExample = StaticInAppContentBlockView(placeholder: "ph_x_example_iOS")
+    lazy var placeholderExample = StaticInAppContentBlockView(placeholder: "ph_x_example_iOS", deferredLoad: true)
 
     @objc func endEditing() {
         view.endEditing(true)
@@ -152,11 +152,9 @@ class InAppContentBlocksViewController: UIViewController, UITableViewDelegate, U
         placeholder.behaviourCallback = ExampleInAppContentBlockCallback(originalBehaviour: origBehaviour, ownerView: placeholder
         )
         placeholder.translatesAutoresizingMaskIntoConstraints = false
-        placeholder.topAnchor.constraint(equalTo: view.topAnchor, constant: 80).isActive = true
+        placeholder.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20).isActive = true
         placeholder.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10).isActive = true
         placeholder.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10).isActive = true
-        // `placeholder` has deferred load, so we trigger it
-        placeholder.reload()
 
         view.addSubview(placeholderExample)
         placeholderExample.translatesAutoresizingMaskIntoConstraints = false
@@ -185,6 +183,13 @@ class InAppContentBlocksViewController: UIViewController, UITableViewDelegate, U
         Exponea.shared.getSegments(force: true, category: .discovery()) { data in
             
         }
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        placeholder.load()
+        placeholderExample.load()
+        tableView.reloadData()
     }
 
     @objc func refresh() {

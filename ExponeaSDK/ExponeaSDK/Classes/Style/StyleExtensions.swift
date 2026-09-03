@@ -25,6 +25,7 @@ extension UIColor {
         case 8: // #rrggbbaa (32-bit)
             (red, green, blue, alpha) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
         default:
+            ExponeaSDK.Exponea.logger.log(.warning, message: "Unable to parse HEX color \(hexString)")
             return nil
         }
         self.init(

@@ -41,4 +41,10 @@ final class MockPushNotificationManager: PushNotificationManagerType {
         fatalError("not implemented")
     }
 
+    var markEveryLaunchSessionTrackedCallCount = 0
+
+    func markEveryLaunchSessionTracked() {
+        markEveryLaunchSessionTrackedCallCount += 1
+    }
+
 }

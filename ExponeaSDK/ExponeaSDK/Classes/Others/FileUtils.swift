@@ -37,8 +37,16 @@ struct FileUtils {
         return fileData
     }
 
-    public static func getFileName(fileUrl: String) -> String {
-        guard let urlAsData = fileUrl.data(using: .utf8) else {
+    public static func getFileName(
+        fileUrl: String,
+        resourceType: String = "resource",
+        applicationID: String? = nil
+    ) -> String {
+        let applicationID = applicationID
+            ?? Exponea.shared.configuration?.applicationID
+            ?? Constants.General.applicationID
+        let cacheKey = "\(applicationID)|\(resourceType)|\(fileUrl)"
+        guard let urlAsData = cacheKey.data(using: .utf8) else {
             return fileUrl
         }
         return SHA512.hash(data: urlAsData)

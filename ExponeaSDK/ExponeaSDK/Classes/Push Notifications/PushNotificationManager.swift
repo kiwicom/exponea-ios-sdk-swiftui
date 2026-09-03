@@ -57,6 +57,8 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
     /// by `bool(forKey:)`'s missing-key collapse. Hydrated from `UserDefaults` in
     /// `init` and refreshed inside `trackCurrentPushToken`'s success path.
     private var lastPermissionFlag: Bool?
+    /// Ensures `.everyLaunch` emits a single `notification_state` per process session.
+    private var hasTrackedThisSession = false
     /// Serial queue for notification state and frequency checks to avoid races from auth callbacks.
     private let stateQueue = DispatchQueue(label: "com.exponea.pushNotificationManager.state")
 
@@ -375,10 +377,14 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
                            current != token {
                             self.trackCurrentPushToken(isAuthorized: authorized, isCancelled: true)
                             self.setPushTokenType(token: token, authorized: authorized)
-                            self.trackCurrentPushToken(isAuthorized: authorized, isCancelled: false)
+                            self.trackCurrentPushToken(isAuthorized: authorized, isCancelled: false, onSuccess: { [weak self] in
+                                self?.commitNotificationStateBaseline()
+                            })
                         } else if self.currentPushToken?.pushToken == nil {
                             self.setPushTokenType(token: token, authorized: authorized)
-                            self.trackCurrentPushToken(isAuthorized: authorized, isCancelled: false)
+                            self.trackCurrentPushToken(isAuthorized: authorized, isCancelled: false, onSuccess: { [weak self] in
+                                self?.commitNotificationStateBaseline()
+                            })
                         } else {
                             self.setPushTokenType(token: token, authorized: authorized)
                             self.checkForPushTokenFrequency(isAuthorized: authorized)
@@ -561,6 +567,9 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
                 // so the next launch will still observe a delta and retry.
                 lastPermissionFlag = isAuthorized
                 userDefaults?.set(isAuthorized, forKey: Constants.General.notificationStateLastPermissionFlag)
+                if !isCancelled {
+                    hasTrackedThisSession = true
+                }
                 onSuccess?()
             }
         } catch {
@@ -580,8 +589,18 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
         }
         if let applicationID = currentApplicationID {
             userDefaults?.set(applicationID, forKey: Constants.General.notificationStateApplicationID)
-            Exponea.logger.log(.verbose, message: "The notification state tracked - the appplication ID has changed")
+            Exponea.logger.log(.verbose, message: "The notification state tracked - the application ID has changed")
         }
+    }
+
+    /// Commits the tracking baseline after a successful token-registration track:
+    /// advances `lastTokenTrackDate` and marks the first-track flag. Without this the next
+    /// `applicationDidBecomeActive` re-check would observe `isFirstNotificationStateTracking == true`,
+    /// force `effectiveLastToken = nil`, and re-emit a duplicate `notification_state` for the
+    /// token just registered. Mirrors the baseline already committed by the frequency path.
+    private func commitNotificationStateBaseline() {
+        lastTokenTrackDate = Date()
+        markNotificationStateTracked()
     }
 
     private func checkForPushTokenFrequency(isAuthorized authorized: Bool) {
@@ -616,7 +635,7 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
         // the backend's 90-day validity window.
         switch tokenTrackFrequency {
         case .everyLaunch:
-            // Track push token; mark state only after successful track so failed sends retry.
+            guard !hasTrackedThisSession else { return }
             lastTokenTrackDate = .init()
             trackCurrentPushToken(isAuthorized: authorized, onSuccess: { [weak self] in
                 self?.markNotificationStateTracked()
@@ -719,6 +738,12 @@ final class PushNotificationManager: NSObject, PushNotificationManagerType {
 }
 
 extension PushNotificationManager {
+    func markEveryLaunchSessionTracked() {
+        stateQueue.sync {
+            hasTrackedThisSession = true
+        }
+    }
+
     func applicationDidBecomeActiveUnsafe() {
         // Refresh the delivery authorization snapshot on every foreground
         // so the synchronous `state` resolution in

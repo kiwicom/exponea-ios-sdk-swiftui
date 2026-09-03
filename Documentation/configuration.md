@@ -13,19 +13,19 @@ This page provides an overview of all configuration parameters for the SDK and s
 
 ## Configuration parameters
 
-* `projectToken` **(required for Project/Engagement mode)**
-   * Your project token. You can find this in the Engagement web app under `Project settings` > `Access management` > `API`.
-   * Not used when configuring with Stream integration (Data hub).
+* `projectToken` **(required for Project/{user.mkg} mode)**
+   * Your project token. You can find this in the {user.mkg} web app under `Project settings` > `Access management` > `API`.
+   * Not used when configuring with Stream integration ({user.dh}).
 
-* `streamId` **(required for Stream/Data hub mode)**
-   * Your stream ID when using Data hub integration.
+* `streamId` **(required for Stream/{user.dh} mode)**
+   * Your stream ID when using {user.dh} integration.
    * Use `Exponea.StreamSettings(streamId:baseUrl:)` instead of `ProjectSettings` when configuring for Stream mode.
    
 * `applicationID`
-  * This `applicationID` defines a unique identifier for the mobile app within the Engagement project. Change this value only if your Engagement project contains and supports multiple mobile apps.
+  * This `applicationID` defines a unique identifier for the mobile app within the {user.mkg} project. Change this value only if your {user.mkg} project contains and supports multiple mobile apps.
   * This identifier distinguishes between different apps in the same project.
-  * Your `applicationID` value must be the same as the one defined in your Engagement project settings.
-  * If your Engagement project supports only one app, skip the `applicationID` configuration. The SDK will use the default value automatically.
+  * Your `applicationID` value must be the same as the one defined in your {user.mkg} project settings.
+  * If your {user.mkg} project supports only one app, skip the `applicationID` configuration. The SDK will use the default value automatically.
   * Must be in a specific format, see rules:
     * Starts with one or more lowercase letters or digits
     * Additional words are separated by single hyphens or dots
@@ -34,18 +34,18 @@ This page provides an overview of all configuration parameters for the SDK and s
     * Maximum length is 50 characters
   * Default value: `default-application`
   
-* `authorization` **(required for Project/Engagement mode)**
+* `authorization` **(required for Project/{user.mkg} mode)**
    * Options are `.none` or `.token(token)`.
-   * The token must be an Engagement **public** key. See [Mobile SDKs API Access Management](https://documentation.bloomreach.com/engagement/docs/mobile-sdks-api-access-management) for details.
+   * The token must be an {user.mkg} **public** key. See [Mobile SDKs API Access Management](https://documentation.bloomreach.com/engagement/docs/mobile-sdks-api-access-management) for details.
    * Not used in Stream mode. Stream integration uses JWT via `setSdkAuthToken` instead. See [Stream JWT authorization](https://documentation.bloomreach.com/engagement/docs/ios-sdk-authorization#stream-jwt-authorization-data-hub).
-   * For more information, please refer to the [Bloomreach Engagement API documentation](https://documentation.bloomreach.com/engagement/reference/authentication).
+   * For more information, please refer to the {user.mkg} [API documentation](https://documentation.bloomreach.com/engagement/reference/authentication).
 
 * `baseUrl`
-  * Your API base URL which can be found in the Engagement web app under `Project settings` > `Access management` > `API`.
+  * Your API base URL which can be found in the {user.mkg} web app under `Project settings` > `Access management` > `API`.
   * Default value `https://api.exponea.com`.
   * If you have custom base URL, you must set this property.
 
-* `projectMapping` **(Project/Engagement mode only)**
+* `projectMapping` **(Project/{user.mkg} mode only)**
   * If you need to track events into more than one project, you can define project information for "event types" which should be tracked multiple times.
   * Not available in Stream mode.
 
@@ -89,13 +89,19 @@ This page provides an overview of all configuration parameters for the SDK and s
   * Default value: `true`
 
 * `tokenTrackFrequency`
-  * Indicates the frequency with which the APNs token should be tracked to Engagement.
+  * Indicates the frequency with which the APNs token should be tracked to {user.mkg}.
   * Default value: `onTokenChange`
   * Possible values:
     * `onTokenChange` — tracks the push token whenever it differs from the previously tracked one. The SDK also automatically tracks a new `notification_state` event every 30 days, even when the token hasn't changed, to keep customers within the validity window.
-    * `everyLaunch` — tracks the push token every time the app becomes active. This includes both the initial cold launch and every subsequent background-to-foreground transition while the process is alive, because the SDK re-evaluates `verifyPushStatusAndTrackPushToken` on each `UIApplication.didBecomeActiveNotification`. Use this only when you explicitly want a fresh `notification_state` per session resume; otherwise prefer `onTokenChange`.
+    * `everyLaunch` — tracks the push token once per app launch (process start). All other SDK operations during that process reuse this tracking, so each cold launch produces a single frequency-based `notification_state` event. Background-to-foreground transitions within the same process don't re-track unless an override applies (permission change, token change, or manual `trackPushToken()`).
     * `daily` - tracks the push token at most once per local calendar day. The day boundary follows the device's current calendar/timezone, so a track at 23:59 followed by an app open at 00:05 the next day correctly tracks a fresh `notification_state` event.
   * Regardless of the configured frequency, the SDK always tracks a fresh `notification_state` event when the OS push authorization status flips (granted ↔ denied) so the resulting `valid` flag stays in sync with the user's actual permission state.
+  * Some operations bypass the `everyLaunch` per-process limit and always trigger tracking mid-process:
+    * OS push authorization status flips (granted ↔ denied) since the last tracked `notification_state`.
+    * Manual tracking through `trackPushToken()`.
+    * Receiving a new token from APNs when the token string changes.
+    * Calling `anonymize()` or `stopIntegration()` (these recreate the push-tracking session, so the next track is a fresh per-process launch rather than a mid-process override).
+  *  The SDK detects app version or `application_id` changes at startup. The version or ID affect only the `onTokenChange`/`daily` staleness checks, and aren't a mid-process override for `everyLaunch`. A new process always tracks once regardless of any version or application ID changes.
 
 * `regenerateDeviceIdOnAnonymize`
   * When `true`, calling `Exponea.shared.anonymize()` clears the SDK's persisted telemetry `device_id` (a UUID stored in `UserDefaults`) in addition to creating a new customer profile. The next event tracked after anonymization carries a freshly-generated `device_id`, so the new profile can't be linked back to the previous customer's events through the device identifier.
@@ -108,14 +114,14 @@ This page provides an overview of all configuration parameters for the SDK and s
   * Default value: `5`
 
 * `advancedAuthEnabled`
-  * If set to `true`, the SDK uses [customer token](https://documentation.bloomreach.com/engagement/docs/customer-token) authorization for communication with the Engagement APIs listed in [Customer Token Authorization](https://documentation.bloomreach.com/engagement/docs/ios-sdk-authorization#customer-token-authorization).
+  * If set to `true`, the SDK uses [customer token](https://documentation.bloomreach.com/engagement/docs/customer-token) authorization for communication with the {user.mkg} APIs listed in [Customer Token Authorization](https://documentation.bloomreach.com/engagement/docs/ios-sdk-authorization#customer-token-authorization).
   * Refer the [Authorization for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-authorization) documentation for details.
   * Not used in Stream mode; Stream uses JWT via `setSdkAuthToken` instead.
   * Default value: `false`
 
-### Stream integration (Data Hub)
+### Stream integration ({user.dh})
 
-When integrating with Data Hub, use `Exponea.StreamSettings` instead of `ProjectSettings`:
+When integrating with {user.dh}, use `Exponea.StreamSettings` instead of `ProjectSettings`:
 
 ```swift
 Exponea.shared.configure(
@@ -132,7 +138,7 @@ After configuration, provide the Stream JWT token via `Exponea.shared.setSdkAuth
 
 ### Parameter availability by integration mode
 
-| Parameter | Project/Engagement | Stream/Data hub |
+| Parameter | Project/{user.mkg} | Stream/{user.dh} |
 | --- | --- | --- |
 | `projectToken` | Required | Not used |
 | `streamId` | Not used | Required |
@@ -161,7 +167,7 @@ After configuration, provide the Stream JWT token via `Exponea.shared.setSdkAuth
 
 ### Configure the SDK programmatically
 
-Configuration is split into several objects that are passed into the `Exponea.shared.configure()` function. The first parameter accepts either `ProjectSettings` (for Engagement) or `StreamSettings` (for Data Hub) via the `IntegrationType` protocol:
+Configuration is split into several objects that are passed into the `Exponea.shared.configure()` function. The first parameter accepts either `ProjectSettings` (for {user.mkg}) or `StreamSettings` (for {user.dh}) via the `IntegrationType` protocol:
 
 ``` swift
 func configure(
@@ -175,8 +181,8 @@ func configure(
 ```
 
 * `integrationConfig` **(required)** — one of:
-  * `ProjectSettings` — for Project/Engagement integration. Contains `projectToken` (required), `authorization` (required), `baseUrl` (optional), and `projectMapping` (optional).
-  * `StreamSettings` — for Stream/Data hub integration. Contains `streamId` (required) and `baseUrl` (optional, defaults to `https://api.exponea.com`). Does not include `authorization` or `projectMapping`; authentication is handled separately via `setSdkAuthToken`.
+  * `ProjectSettings` — for Project/{user.mkg} integration. Contains `projectToken` (required), `authorization` (required), `baseUrl` (optional), and `projectMapping` (optional).
+  * `StreamSettings` — for Stream/{user.dh} integration. Contains `streamId` (required) and `baseUrl` (optional, defaults to `https://api.exponea.com`). Does not include `authorization` or `projectMapping`; authentication is handled separately via `setSdkAuthToken`.
 
 * `pushNotificationTracking` **(required)**
   * Either `.disabled` or `.enabled(appGroup, delegate, requirePushAuthorization, tokenTrackFrequency)`. Only `appGroup` is required for the SDK to function correctly.
@@ -193,7 +199,7 @@ func configure(
   * Allows you to set up `flushingMode` and `maxRetries`. By default, event flush happens as soon as you track an event (`.immediate`). You can change this behavior to one of `.manual`, `.automatic`, `periodic(period)`.
   * See [Data flushing for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-data-flushing) for details.
 
-#### Project/Engagement examples
+#### Project/{user.mkg} examples
 
 Most common use case:
 
@@ -257,7 +263,7 @@ Exponea.shared.configure(
 >
 > `regenerateDeviceIdOnAnonymize` and similar advanced flags aren't available as parameters on `Exponea.shared.configure(_:)`. To enable them, construct a `Configuration` object directly and pass it to `Exponea.shared.configure(with:)`. See [Using a Configuration object](#using-a-configuration-object) below for details.
 
-#### Stream/Data hub examples
+#### Stream/{user.dh} examples
 
 Simple Stream configuration:
 
@@ -335,7 +341,7 @@ Exponea.shared.setSdkAuthToken("YOUR_STREAM_JWT_TOKEN")
 
 `regenerateDeviceIdOnAnonymize` and similar advanced flags aren't available as parameters on `Exponea.shared.configure(_:)`. To enable them, construct a `Configuration` object directly and pass it to `Exponea.shared.configure(with:)`.
 
-Project/Engagement:
+Project/{user.mkg}:
 
 ``` swift
 let configuration = try Configuration(
@@ -353,7 +359,7 @@ Exponea.shared.configure(with: configuration)
 // when using the Configuration-object path.
 ```
 
-Stream/Data hub:
+Stream/{user.dh}:
 
 ``` swift
 let configuration = try Configuration(
@@ -452,7 +458,7 @@ Exponea.shared.configure(plistName: "ExampleConfig.plist")
 
 #### Stream plist example
 
-For Stream/Data hub integration, use `streamId` instead of `projectToken` and `authorization`:
+For Stream/{user.dh} integration, use `streamId` instead of `projectToken` and `authorization`:
 
 *StreamConfig.plist*
 

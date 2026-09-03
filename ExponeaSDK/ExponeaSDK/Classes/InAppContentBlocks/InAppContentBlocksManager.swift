@@ -38,6 +38,14 @@ final class InAppContentBlocksManager: NSObject {
             "action": {
                 "type": "block"
             }
+        },
+        {
+            "trigger": {
+                "url-filter": "^exponea-cache://.*"
+            },
+            "action": {
+                "type": "ignore-previous-rules"
+            }
         }]
     """
     var contentRuleList: WKContentRuleList?
@@ -54,6 +62,7 @@ final class InAppContentBlocksManager: NSObject {
     private let maxImageValidationConcurrency = 4
     private let maxCarouselValidationConcurrency = 2
     private let imageValidationTimeout: TimeInterval = 10
+    private let renderResourcePreloader = HtmlRenderResourcePreloader()
     // Per-placeholder validation tokens. Multiple `CarouselInAppContentBlockView`s may load in parallel,
     // so cancellation must be scoped per placeholder to avoid concurrent carousels invalidating each other.
     @Atomic var carouselValidationTokens: [String: UUID] = [:]
@@ -69,6 +78,7 @@ final class InAppContentBlocksManager: NSObject {
     private var staticQueue: [StaticQueueData] = []
     @Atomic private var carouselQueue: [String] = []
     @Atomic var imageValidationStates: [String: ImageValidationState] = [:]
+    @Atomic private var heightCalculationMessageByPlaceholder: [String: String] = [:]
 
     private var newUsedInAppContentBlocks: UsedInAppContentBlocks? {
         willSet {
@@ -87,13 +97,174 @@ final class InAppContentBlocksManager: NSObject {
     }
     @Atomic private var usedInAppContentBlocks: [String: [UsedInAppContentBlocks]] = [:]
     private let sessionStart = Date()
-    private let provider: InAppContentBlocksDataProviderType
+    private let provider: InAppContentBlocksDataProviderType & InAppContentBlocksETagDataProviding
+    private let etagStore: InAppContentBlocksETagStore
+    @Atomic private var coalescedRefreshKeys: Set<String> = []
+    private var didWarmHeightCalculator = false
+    private let maxPreparedContentBlockWebViews = 2
+    private var preparedContentBlockWebViews: [WKWebView] = []
+    private var issuedContentBlockWebViews: [WeakWKWebView] = []
+    private var isContentBlockWebViewWarmupScheduled = false
+    private let maxPreparedStaticHeightCalculators = 1
+    private var preparedStaticHeightCalculators: [WKWebViewHeightCalculator] = []
+    private var warmingStaticHeightCalculator: WKWebViewHeightCalculator?
+    private var isStaticHeightCalculatorWarmupScheduled = false
+
+    private func warmHeightCalculator() {
+        onMain { [weak self] in
+            guard let self, !self.didWarmHeightCalculator else { return }
+            self.didWarmHeightCalculator = true
+            guard self.calculator.heightUpdate == nil else {
+                return
+            }
+            self.calculator.heightUpdate = { [weak self] _ in
+                guard let self else { return }
+                self.calculator.heightUpdate = nil
+            }
+            self.calculator.loadHtml(
+                placedholderId: "heightCalculatorWarmup",
+                html: "<html><body style=\"margin:0\"></body></html>"
+            )
+        }
+    }
+
+    private func prepareNormalizedHtmlPayload(
+        html: String,
+        makeResourcesOffline: Bool,
+        ensureCloseButton: Bool = false
+    ) -> NormalizedResult? {
+        renderResourcePreloader.prepareNormalizedHtml(html: html, config: HtmlNormalizerConfig(
+            makeResourcesOffline: makeResourcesOffline,
+            ensureCloseButton: ensureCloseButton
+        ))
+    }
+
+    private func preparePersonalizedResponseForRender(
+        _ response: PersonalizedInAppContentBlockResponse,
+        makeResourcesOffline: Bool
+    ) -> PersonalizedInAppContentBlockResponse {
+        var newInAppContentBlocks = response
+        guard response.status == .ok,
+              let html = response.content?.html,
+              !html.isEmpty else {
+            return newInAppContentBlocks
+        }
+        guard let normalizedPayload = prepareNormalizedHtmlPayload(
+            html: html,
+            makeResourcesOffline: makeResourcesOffline,
+            ensureCloseButton: false
+        ) else {
+            newInAppContentBlocks.htmlPayload = nil
+            newInAppContentBlocks.isCorruptedImage = true
+            return newInAppContentBlocks
+        }
+        newInAppContentBlocks.htmlPayload = normalizedPayload
+        newInAppContentBlocks.isCorruptedImage = false
+        return newInAppContentBlocks
+    }
+
+    private func notifyRefreshCallback(
+        indexPath: IndexPath,
+        source: String,
+        placeholder: String?
+    ) {
+        if shouldCoalesceRefreshCallback(source: source) {
+            let coalescingKey = makeRefreshCoalescingKey(indexPath: indexPath, placeholder: placeholder)
+            var inserted = false
+            _coalescedRefreshKeys.changeValue { keys in
+                if !keys.contains(coalescingKey) {
+                    keys.insert(coalescingKey)
+                    inserted = true
+                }
+            }
+            if !inserted {
+                return
+            }
+        }
+        refreshCallback?(indexPath)
+    }
+
+    private func shouldCoalesceRefreshCallback(source: String) -> Bool {
+        source.hasPrefix("loadContentForPlaceholder") || source.hasPrefix("calculateStaticData")
+    }
+
+    private func makeRefreshCoalescingKey(indexPath: IndexPath, placeholder: String?) -> String {
+        "\(placeholder ?? "n/a")|\(indexPath.section):\(indexPath.row)"
+    }
+
+    private func clearRefreshCoalescingIfIdle() {
+        let isIdle = !isLoadUpdating && !isUpdating && loadQueue.isEmpty && queue.isEmpty
+        guard isIdle else { return }
+        _coalescedRefreshKeys.changeValue { keys in
+            keys.removeAll()
+        }
+    }
+
+    private func clearHeightCalculationSelectionIfIdle() {
+        let isIdle = !isUpdating && queue.isEmpty
+        guard isIdle else { return }
+        _heightCalculationMessageByPlaceholder.changeValue { selections in
+            selections.removeAll()
+        }
+    }
+
+    private func queueDedupKey(for data: QueueData) -> String {
+        "\(data.newValue.placeholder)|\(data.newValue.indexPath.section):\(data.newValue.indexPath.row)|\(data.newValue.messageId)"
+    }
+
+    private func queueCellDedupKey(for data: QueueData) -> String {
+        "\(data.newValue.placeholder)|\(data.newValue.indexPath.section):\(data.newValue.indexPath.row)"
+    }
+
+    private func loadQueueDedupKey(for data: QueueLoadData) -> String {
+        "\(data.placeholder)|\(data.indexPath.section):\(data.indexPath.row)"
+    }
+
+    enum QueueDedupResult {
+        case duplicate
+        case replacedPendingCell
+        case enqueued
+    }
+
+    @discardableResult
+    func dedupEnqueue(message: InAppContentBlockResponse, newValue: UsedInAppContentBlocks) -> QueueDedupResult {
+        let queuedItem = QueueData(inAppContentBlocks: message, newValue: newValue)
+        let dedupKey = queueDedupKey(for: queuedItem)
+        let cellDedupKey = queueCellDedupKey(for: queuedItem)
+        var result: QueueDedupResult = .duplicate
+        _queue.changeValue { queue in
+            if queue.contains(where: { self.queueDedupKey(for: $0) == dedupKey }) {
+                result = .duplicate
+            } else if let existingCellIndex = queue.firstIndex(where: { self.queueCellDedupKey(for: $0) == cellDedupKey }) {
+                queue[existingCellIndex] = queuedItem
+                result = .replacedPendingCell
+            } else {
+                queue.append(queuedItem)
+                result = .enqueued
+            }
+        }
+        return result
+    }
 
     // MARK: - Init
     override init() {
         self.provider = InAppContentBlocksDataProvider()
+        self.etagStore = UserDefaultsETagStore()
         super.init()
-        
+        commonInit()
+    }
+
+    init(
+        provider: InAppContentBlocksDataProviderType & InAppContentBlocksETagDataProviding,
+        etagStore: InAppContentBlocksETagStore
+    ) {
+        self.provider = provider
+        self.etagStore = etagStore
+        super.init()
+        commonInit()
+    }
+
+    private func commonInit() {
         _usedInAppContentBlocks.changeValue(with: { $0.removeAll() })
 
         IntegrationManager.shared.onIntegrationStoppedCallbacks.append { [weak self] in
@@ -111,12 +282,13 @@ final class InAppContentBlocksManager: NSObject {
             self.usedInAppContentBlocks.removeAll()
             self._imageValidationStates.changeValue(with: { $0.removeAll() })
             self._carouselValidationTokens.changeValue(with: { $0.removeAll() })
-            // Drop every in-flight dedup record — the still-outstanding provider callbacks
-            // will no-op at the token-match guard, which keeps their waiters unfulfilled.
-            // That is consistent with pre-fix behavior where the provider short-circuits
-            // on `IntegrationManager.shared.isStopped` before invoking the caller's
-            // completion.
+            self._coalescedRefreshKeys.changeValue(with: { $0.removeAll() })
+            self._heightCalculationMessageByPlaceholder.changeValue(with: { $0.removeAll() })
+            self.clearPreparedContentBlockWebViews()
+            // Drop in-flight carousel dedup records; outstanding callbacks no-op at the token guard.
             self._carouselInFlightFetches.changeValue(with: { $0.removeAll() })
+            // Clear ETags so the next session does not send stale If-None-Match headers.
+            self.etagStore.clearAll()
         }
     }
 
@@ -124,44 +296,39 @@ final class InAppContentBlocksManager: NSObject {
         _inAppContentBlockMessages.changeValue { $0.append(message) }
     }
 
+    internal func onEventOccurred(of type: EventType, for event: [DataType]) {
+        guard type == .identifyCustomer else { return }
+        Exponea.logger.log(.verbose, message: "CustomerIDs are updated, clearing In-app Content Blocks ETags")
+        etagStore.clearAll()
+    }
+
     func initBlocker() {
+        initBlocker(completion: nil)
+    }
+
+    func initBlocker(completion: EmptyBlock?) {
         onMain {
             WKContentRuleListStore.default().compileContentRuleList(
                 forIdentifier: "ContentBlockingRules",
                 encodedContentRuleList: self.blockRules
             ) { contentRuleList, error in
-                guard error == nil else { return }
-                self.contentRuleList = contentRuleList
+                if error == nil {
+                    self.contentRuleList = contentRuleList
+                }
+                completion?()
             }
-        }
-    }
-
-    private var key: String = "key_WKWebView"
-    private var web: WKWebView {
-        get {
-            objc_getAssociatedObject(self, &key) as! WKWebView
-        }
-        set {
-            let userScript: WKUserScript = .init(source: disableZoomSource, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-            let newWebview = newValue
-            newValue.frame = .init(x: 0, y: 0, width: UIScreen.main.bounds.size.width, height: 0)
-            newWebview.scrollView.showsVerticalScrollIndicator = false
-            newWebview.scrollView.bounces = false
-            newWebview.backgroundColor = .clear
-            newWebview.isOpaque = false
-            let configuration = newWebview.configuration
-            configuration.userContentController.addUserScript(userScript)
-            if let contentRuleList {
-                configuration.userContentController.add(contentRuleList)
-            }
-            objc_setAssociatedObject(self, &key, newWebview, .OBJC_ASSOCIATION_RETAIN)
         }
     }
 
     private var calculatorKey: String = "key_calculator"
     var calculator: WKWebViewHeightCalculator {
         get {
-            objc_getAssociatedObject(self, &calculatorKey) as! WKWebViewHeightCalculator
+            if let calculator = objc_getAssociatedObject(self, &calculatorKey) as? WKWebViewHeightCalculator {
+                return calculator
+            }
+            let calculator = WKWebViewHeightCalculator()
+            objc_setAssociatedObject(self, &calculatorKey, calculator, .OBJC_ASSOCIATION_RETAIN)
+            return calculator
         }
         set {
             objc_setAssociatedObject(self, &calculatorKey, newValue, .OBJC_ASSOCIATION_RETAIN)
@@ -172,6 +339,59 @@ final class InAppContentBlocksManager: NSObject {
 struct WKWebViewData {
     let height: CGFloat
     let tag: Int
+}
+
+private final class WeakWKWebView {
+    weak var value: WKWebView?
+
+    init(_ value: WKWebView) {
+        self.value = value
+    }
+}
+
+extension InAppContentBlocksManager {
+    func prewarmReusableContentBlockResourcesForStartup() {
+        prewarmForStartup()
+    }
+
+    func preparedStaticHeightCalculator() -> WKWebViewHeightCalculator {
+        dequeueStaticHeightCalculator()
+    }
+
+    // MARK: - Test-support accessors
+
+    var preparedContentBlockWebViewCount: Int {
+        preparedContentBlockWebViews.count
+    }
+
+    func dequeueContentBlockWebViewForTest(tag: Int) -> WKWebView {
+        dequeueContentBlockWebView(tag: tag)
+    }
+
+    var queueCount: Int {
+        queue.count
+    }
+
+    @discardableResult
+    func enqueueForTest(message: InAppContentBlockResponse, newValue: UsedInAppContentBlocks) -> QueueDedupResult {
+        dedupEnqueue(message: message, newValue: newValue)
+    }
+
+    func notifyRefreshCallbackForTest(
+        indexPath: IndexPath,
+        source: String,
+        placeholder: String?
+    ) {
+        notifyRefreshCallback(indexPath: indexPath, source: source, placeholder: placeholder)
+    }
+
+    func clearRefreshCoalescingState() {
+        _coalescedRefreshKeys.changeValue { $0.removeAll() }
+    }
+
+    func clearQueueForTest() {
+        _queue.changeValue { $0.removeAll() }
+    }
 }
 
 internal enum ImageValidationState {
@@ -194,6 +414,216 @@ internal enum ImageValidationState {
 internal struct CarouselInFlightFetch {
     let validationToken: UUID
     var waiters: [(initial: EmptyBlock?, completion: EmptyBlock?)]
+}
+
+private extension InAppContentBlocksManager {
+    func dequeueContentBlockWebView(tag: Int) -> WKWebView {
+        let webView: WKWebView
+        if let prepared = preparedContentBlockWebViews.first(where: { $0.superview == nil }) {
+            preparedContentBlockWebViews.removeAll { $0 === prepared }
+            webView = prepared
+        } else if let detached = takeDetachedIssuedContentBlockWebView() {
+            webView = detached
+        } else {
+            webView = makeContentBlockWebView()
+        }
+        prepareContentBlockWebViewForUse(webView, tag: tag)
+        rememberIssuedContentBlockWebView(webView)
+        scheduleContentBlockWebViewWarmup()
+        return webView
+    }
+
+    func makeContentBlockWebView() -> WKWebView {
+        let userScript = WKUserScript(
+            source: disableZoomSource,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        let configuration = HtmlNormalizer.createWebViewConfiguration()
+        configuration.userContentController.addUserScript(userScript)
+        if let contentRuleList {
+            configuration.userContentController.add(contentRuleList)
+        }
+        let webView = WKWebView(
+            frame: .init(x: 0, y: 0, width: UIScreen.main.bounds.size.width, height: 0),
+            configuration: configuration
+        )
+        webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.bounces = false
+        webView.backgroundColor = .clear
+        webView.isOpaque = false
+        return webView
+    }
+
+    func prepareContentBlockWebViewForUse(_ webView: WKWebView, tag: Int) {
+        webView.stopLoading()
+        webView.navigationDelegate = self
+        webView.tag = tag
+        webView.frame = .init(x: 0, y: 0, width: UIScreen.main.bounds.size.width, height: 0)
+        webView.alpha = 1
+        webView.isHidden = false
+        webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.bounces = false
+        webView.backgroundColor = .clear
+        webView.isOpaque = false
+        webView.scrollView.setContentOffset(.zero, animated: false)
+        webView.constraints.forEach { $0.isActive = false }
+    }
+
+    func prepareContentBlockWebViewForIdle(_ webView: WKWebView) {
+        webView.stopLoading()
+        webView.navigationDelegate = nil
+        webView.tag = 0
+        webView.loadHTMLString("", baseURL: nil)
+        webView.constraints.forEach { $0.isActive = false }
+    }
+
+    func rememberIssuedContentBlockWebView(_ webView: WKWebView) {
+        issuedContentBlockWebViews.removeAll { ref in
+            guard let value = ref.value else { return true }
+            return value === webView
+        }
+        issuedContentBlockWebViews.append(WeakWKWebView(webView))
+    }
+
+    func takeDetachedIssuedContentBlockWebView() -> WKWebView? {
+        issuedContentBlockWebViews.removeAll { $0.value == nil }
+        guard let index = issuedContentBlockWebViews.firstIndex(where: { $0.value?.superview == nil }),
+              let webView = issuedContentBlockWebViews[index].value else {
+            return nil
+        }
+        issuedContentBlockWebViews.remove(at: index)
+        return webView
+    }
+
+    func scheduleContentBlockWebViewWarmup() {
+        onMain { [weak self] in
+            guard let self else { return }
+            guard !self.isContentBlockWebViewWarmupScheduled else { return }
+            self.isContentBlockWebViewWarmupScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.isContentBlockWebViewWarmupScheduled = false
+                self.prepareSpareContentBlockWebView()
+            }
+        }
+    }
+
+    func prewarmContentBlockWebViews() {
+        onMain { [weak self] in
+            self?.prepareSpareContentBlockWebView()
+        }
+    }
+
+    func prewarmForStartup() {
+        onMain { [weak self] in
+            guard let self else { return }
+            guard !IntegrationManager.shared.isStopped else {
+                return
+            }
+            self.prewarmStaticHeightCalculator()
+            self.prepareSpareContentBlockWebView()
+        }
+    }
+
+    func prepareSpareContentBlockWebView() {
+        preparedContentBlockWebViews.removeAll { $0.superview != nil }
+        while preparedContentBlockWebViews.count < maxPreparedContentBlockWebViews {
+            let webView: WKWebView
+            if let detached = takeDetachedIssuedContentBlockWebView() {
+                webView = detached
+            } else {
+                webView = makeContentBlockWebView()
+            }
+            prepareContentBlockWebViewForIdle(webView)
+            preparedContentBlockWebViews.append(webView)
+        }
+    }
+
+    func dequeueStaticHeightCalculator() -> WKWebViewHeightCalculator {
+        guard Thread.isMainThread else {
+            return WKWebViewHeightCalculator()
+        }
+        if !preparedStaticHeightCalculators.isEmpty {
+            let calculator = preparedStaticHeightCalculators.removeFirst()
+            calculator.stopLoading()
+            calculator.heightUpdate = nil
+            prewarmStaticHeightCalculator()
+            return calculator
+        }
+        prewarmStaticHeightCalculator()
+        return WKWebViewHeightCalculator()
+    }
+
+    func prewarmStaticHeightCalculator() {
+        guard Thread.isMainThread else {
+            onMain { [weak self] in
+                self?.prewarmStaticHeightCalculator()
+            }
+            return
+        }
+        guard !IntegrationManager.shared.isStopped else {
+            return
+        }
+        guard preparedStaticHeightCalculators.count < maxPreparedStaticHeightCalculators else {
+            return
+        }
+        guard !isStaticHeightCalculatorWarmupScheduled else {
+            return
+        }
+        isStaticHeightCalculatorWarmupScheduled = true
+        let calculator = WKWebViewHeightCalculator()
+        warmingStaticHeightCalculator = calculator
+        var didFinish = false
+
+        func finish(shouldKeepPrepared: Bool) {
+            guard !didFinish else { return }
+            didFinish = true
+            calculator.heightUpdate = nil
+            warmingStaticHeightCalculator = nil
+            isStaticHeightCalculatorWarmupScheduled = false
+            if shouldKeepPrepared, preparedStaticHeightCalculators.count < maxPreparedStaticHeightCalculators {
+                preparedStaticHeightCalculators.append(calculator)
+            }
+        }
+
+        calculator.heightUpdate = { _ in
+            finish(shouldKeepPrepared: true)
+        }
+        calculator.loadHtml(
+            placedholderId: "staticHeightCalculatorWarmup",
+            html: "<html><body style=\"margin:0;height:1px\"></body></html>"
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            finish(shouldKeepPrepared: false)
+        }
+    }
+
+    func clearPreparedContentBlockWebViews() {
+        onMain { [weak self] in
+            guard let self else { return }
+            for webView in self.preparedContentBlockWebViews {
+                webView.stopLoading()
+                webView.navigationDelegate = nil
+            }
+            for ref in self.issuedContentBlockWebViews {
+                ref.value?.stopLoading()
+                ref.value?.navigationDelegate = nil
+            }
+            self.preparedContentBlockWebViews.removeAll()
+            self.issuedContentBlockWebViews.removeAll()
+            self.isContentBlockWebViewWarmupScheduled = false
+            self.warmingStaticHeightCalculator?.stopLoading()
+            self.warmingStaticHeightCalculator?.heightUpdate = nil
+            self.warmingStaticHeightCalculator = nil
+            self.preparedStaticHeightCalculators.forEach { calculator in
+                calculator.stopLoading()
+                calculator.heightUpdate = nil
+            }
+            self.preparedStaticHeightCalculators.removeAll()
+            self.isStaticHeightCalculatorWarmupScheduled = false
+        }
+    }
 }
 
 // MARK: InAppContentBlocksManagerType
@@ -315,6 +745,7 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
         usedInAppContentBlocks.removeAll()
         inAppContentBlockMessages.removeAll()
         _imageValidationStates.changeValue(with: { $0.removeAll() })
+        etagStore.clearAll()
     }
 
     func webView(
@@ -322,6 +753,10 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
+        if navigationAction.request.url?.scheme?.lowercased() == HtmlNormalizer.offlineResourceScheme {
+            decisionHandler(.allow)
+            return
+        }
         let webviewtag = webView.tag
         var selectedUsed: UsedInAppContentBlocks?
         for message in inAppContentBlockMessages where message.tags?.contains(webviewtag) == true {
@@ -342,7 +777,11 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
                 placeholderId: selectedUsed.placeholder,
                 message: inAppContentBlockResponse
             )
-            self.refreshCallback?(selectedUsed.indexPath)
+            self.notifyRefreshCallback(
+                indexPath: selectedUsed.indexPath,
+                source: "webAction.close",
+                placeholder: selectedUsed.placeholder
+            )
         } onActionCallback: { action in
             let inAppCbAction = InAppContentBlockAction(
                 name: action.buttonText,
@@ -356,7 +795,11 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
                 message: inAppContentBlockResponse
             )
             self.invokeActionInternally(inAppCbAction)
-            self.refreshCallback?(selectedUsed.indexPath)
+            self.notifyRefreshCallback(
+                indexPath: selectedUsed.indexPath,
+                source: "webAction.action",
+                placeholder: selectedUsed.placeholder
+            )
         } onErrorCallback: { error in
             let errorMessage = "WebActionManager error \(error.localizedDescription)"
             Exponea.logger.log(.error, message: errorMessage)
@@ -376,7 +819,7 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
             decisionHandler(.allow)
         }
     }
-    
+
     private func invokeActionInternally(_ action: InAppContentBlockAction) {
         switch action.type {
         case .browser:
@@ -415,19 +858,18 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
         }
     }
 
-    private func parseData(placeholderId: String, data: ResponseData<PersonalizedInAppContentBlockResponseData>, tags: Set<Int>, completion: EmptyBlock?) {
+    private func parseData(
+        placeholderId: String,
+        data: ResponseData<PersonalizedInAppContentBlockResponseData>,
+        tags: Set<Int>,
+        completion: EmptyBlock?
+    ) {
         ensureBackground {
             let personalizedWithPayload: [PersonalizedInAppContentBlockResponse] = data.data?.data.compactMap { response in
-                var newInAppContentBlocks = response
-                let normalizeConf = HtmlNormalizerConfig(
-                    makeResourcesOffline: true,
-                    ensureCloseButton: false
+                self.preparePersonalizedResponseForRender(
+                    response,
+                    makeResourcesOffline: true
                 )
-                let normalizedPayload = HtmlNormalizer(newInAppContentBlocks.content?.html ?? "").normalize(normalizeConf)
-                newInAppContentBlocks.htmlPayload = normalizedPayload
-                let isCorruptedImage = !self.hasHtmlImages(html: response.content?.html ?? "")
-                newInAppContentBlocks.isCorruptedImage = isCorruptedImage
-                return newInAppContentBlocks
             } ?? []
             var updatedPlaceholders: [InAppContentBlockResponse] = self.inAppContentBlockMessages
             var updatedContentBlocksForTelemetry: [InAppContentBlockResponse] = []
@@ -475,26 +917,22 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
             return
         }
         Exponea.logger.log(.verbose, message: "In-app Content Blocks prefetch ids \(ids)")
+        let messageIds = prefetchPlaceholdersWithIds(input: inAppContentBlockMessages, ids: ids).map { $0.id }
+        // Prefetch only warms cache; conditional revalidation does not apply.
         provider.loadPersonalizedInAppContentBlocks(
             data: PersonalizedInAppContentBlockResponseData.self,
             customerIds: customerIds,
-            inAppContentBlocksIds: prefetchPlaceholdersWithIds(input: inAppContentBlockMessages, ids: ids).map { $0.id }
+            inAppContentBlocksIds: messageIds
         ) { [weak self] messages in
             guard let self else { return }
             ensureBackground {
                 let prefetchedMessagesDescriptions = (messages.data?.data ?? []).map { $0.describeDetailed() }
                 Exponea.logger.log(.verbose, message: "In-app Content Blocks downloaded prefetched messages \(prefetchedMessagesDescriptions)")
                 let personalizedWithPayload: [PersonalizedInAppContentBlockResponse]? = messages.data?.data.filter { $0.status == .ok }.compactMap { response in
-                    var newInAppContentBlocks = response
-                    let normalizeConf = HtmlNormalizerConfig(
-                        makeResourcesOffline: false,
-                        ensureCloseButton: false
+                    self.preparePersonalizedResponseForRender(
+                        response,
+                        makeResourcesOffline: false
                     )
-                    let normalizedPayload = HtmlNormalizer(newInAppContentBlocks.content?.html ?? "").normalize(normalizeConf)
-                    newInAppContentBlocks.htmlPayload = normalizedPayload
-                    let isCorruptedImage = !self.hasHtmlImages(html: response.content?.html ?? "")
-                    newInAppContentBlocks.isCorruptedImage = isCorruptedImage
-                    return newInAppContentBlocks
                 }
                 var updatedPlaceholders: [InAppContentBlockResponse] = self.inAppContentBlockMessages
                 var updatedContentBlocksForTelemetry: [InAppContentBlockResponse] = []
@@ -623,9 +1061,7 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
         let indexOfPlaceholder: Int = inAppContentBlockMessages.firstIndex(where: { $0.indexPath == message.indexPath }) ?? 0
         updateDisplayedState(for: message.id)
 
-        web = .init()
-        web.tag = tag
-        web.navigationDelegate = self
+        let web = dequeueContentBlockWebView(tag: tag)
 
         if let html = message.content?.html, !html.isEmpty {
             Exponea.logger.log(
@@ -633,19 +1069,23 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
                 message: "In-app Content Block prepareInAppContentBlockView for \(message.describe())"
             )
             if inAppContentBlockMessages[indexOfPlaceholder].normalizedResult == nil {
-                let normalizeConf = HtmlNormalizerConfig(
+                Exponea.logger.log(.verbose, message: "In-app Content Block prepareInAppContentBlockView normalizeConf makeResourcesOffline=true ensureCloseButton=false")
+                guard let normalizedPayload = prepareNormalizedHtmlPayload(
+                    html: html,
                     makeResourcesOffline: true,
                     ensureCloseButton: false
-                )
-                Exponea.logger.log(.verbose, message: "In-app Content Block prepareInAppContentBlockView normalizeConf \(normalizeConf)")
-                let normalizedPayload = HtmlNormalizer(html).normalize(normalizeConf)
+                ) else {
+                    return returnEmptyView(tag: tag)
+                }
                 Exponea.logger.log(
                     .verbose,
                     message: "In-app Content Block prepareInAppContentBlockView normalizedPayload is valid: \(normalizedPayload.valid)"
                 )
                 inAppContentBlockMessages[indexOfPlaceholder].normalizedResult = normalizedPayload
             }
-            let finalHTML = inAppContentBlockMessages[indexOfPlaceholder].normalizedResult?.html ?? html
+            guard let finalHTML = inAppContentBlockMessages[indexOfPlaceholder].normalizedResult?.html else {
+                return returnEmptyView(tag: tag)
+            }
             if inAppContentBlockMessages[indexOfPlaceholder].personalizedMessage?.ttlSeen == nil {
                 _inAppContentBlockMessages.changeValue(with: { $0[indexOfPlaceholder].personalizedMessage?.ttlSeen = Date() })
             }
@@ -748,73 +1188,85 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
             return .init(html: "", tag: 0, message: nil)
         }
 
-        // Found message
         let candidates = placehodlersToUse.filter { $0.personalizedMessage?.status == .ok }
-        guard var message = filterPersonalizedMessages(input: candidates) else {
-            Exponea.logger.log(.verbose, message: "In-app Content Blocks prepareInAppContentBlocksStaticView message not found.")
-            return .init(html: "", tag: 0, message: nil)
-        }
-        Exponea.logger.log(
-            .verbose,
-            message: "In-app Content Blocks prepareInAppContentBlocksStaticView message \(message.describe())."
-        )
-
-        // Add random for 100% unique
-        let tag = createUniqueTag(placeholder: message)
-        Exponea.logger.log(.verbose, message: "In-app Content Blocks prepareInAppContentBlocksStaticView tag \(tag).")
-
-        // Update display status
-        updateDisplayedState(for: message.id)
-        message.tags?.insert(tag)
-
-        // Lazy HTML normalization — normalize on demand, cache result for default (makeResourcesOffline: true) only.
-        // When makeResourcesOffline is false (skipNativeRendering), always re-normalize without writing to the
-        // shared cache so that the cached payload is never contaminated with a non-offline-resource version.
-        if var personalized = message.personalizedMessage {
-            let needsNormalization = personalized.htmlPayload?.html?.isEmpty ?? true
-            if needsNormalization || !makeResourcesOffline {
-                let normalizeConf = HtmlNormalizerConfig(
-                    makeResourcesOffline: makeResourcesOffline,
-                    ensureCloseButton: false
-                )
-                let normalizedPayload = HtmlNormalizer(personalized.content?.html ?? "").normalize(normalizeConf)
-                personalized.htmlPayload = normalizedPayload
-                message.personalizedMessage = personalized
+        var skippedMessageIds: Set<String> = []
+        while true {
+            let selectableCandidates = candidates.filter { !skippedMessageIds.contains($0.id) }
+            guard var message = filterPersonalizedMessages(input: selectableCandidates) else {
+                Exponea.logger.log(.verbose, message: "In-app Content Blocks prepareInAppContentBlocksStaticView message not found.")
+                return .init(html: "", tag: 0, message: nil)
             }
-        }
-
-        if let personalized = message.personalizedMessage, let payloadData = personalized.htmlPayload?.html?.data(using: .utf8), !payloadData.isEmpty {
             Exponea.logger.log(
                 .verbose,
-                message: "In-app Content Blocks prepareInAppContentBlocksStaticView personalized \(personalized.describeDetailed())."
+                message: "In-app Content Blocks prepareInAppContentBlocksStaticView message \(message.describe())."
             )
-            if let html = personalized.htmlPayload?.html, !html.isEmpty {
-                _inAppContentBlockMessages.changeValue { messages in
-                    guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return }
-                    // Preserve existing ttlSeen across the full-message overwrite: the local `message`
-                    // may not carry ttlSeen, so we capture it before overwriting and restore it if needed.
-                    let existingTtlSeen = messages[index].personalizedMessage?.ttlSeen
-                    messages[index] = message
-                    if messages[index].personalizedMessage?.ttlSeen == nil {
-                        messages[index].personalizedMessage?.ttlSeen = existingTtlSeen ?? Date()
+
+            let tag = createUniqueTag(placeholder: message)
+            Exponea.logger.log(.verbose, message: "In-app Content Blocks prepareInAppContentBlocksStaticView tag \(tag).")
+
+            if var personalized = message.personalizedMessage {
+                let needsNormalization = personalized.htmlPayload?.html?.isEmpty ?? true
+                if needsNormalization || !makeResourcesOffline {
+                    if let normalizedPayload = prepareNormalizedHtmlPayload(
+                        html: personalized.content?.html ?? "",
+                        makeResourcesOffline: makeResourcesOffline,
+                        ensureCloseButton: false
+                    ) {
+                        personalized.htmlPayload = normalizedPayload
+                        personalized.isCorruptedImage = false
+                    } else {
+                        personalized.htmlPayload = nil
+                        personalized.isCorruptedImage = true
                     }
+                    message.personalizedMessage = personalized
                 }
-                return .init(html: html, tag: tag, message: message)
             }
-        } else {
-            Exponea.logger.log(
-                .verbose,
-                message: "In-app Content Blocks prepareInAppContentBlocksStaticView static \(message.describe())."
-            )
-            if let html = message.content?.html, !html.isEmpty {
+
+            if let personalized = message.personalizedMessage,
+               let payloadData = personalized.htmlPayload?.html?.data(using: .utf8),
+               !payloadData.isEmpty {
+                Exponea.logger.log(
+                    .verbose,
+                    message: "In-app Content Blocks prepareInAppContentBlocksStaticView personalized \(personalized.describeDetailed())."
+                )
+                if let html = personalized.htmlPayload?.html, !html.isEmpty {
+                    updateDisplayedState(for: message.id)
+                    message.tags?.insert(tag)
+                    _inAppContentBlockMessages.changeValue { messages in
+                        guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return }
+                        let existingTtlSeen = messages[index].personalizedMessage?.ttlSeen
+                        messages[index] = message
+                        if messages[index].personalizedMessage?.ttlSeen == nil {
+                            messages[index].personalizedMessage?.ttlSeen = existingTtlSeen ?? Date()
+                        }
+                    }
+                    return .init(html: html, tag: tag, message: message)
+                }
+            } else if let personalized = message.personalizedMessage {
                 _inAppContentBlockMessages.changeValue { messages in
                     guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return }
-                    messages[index] = message
+                    messages[index].personalizedMessage = personalized
                 }
-                return .init(html: html, tag: tag, message: message)
+                skippedMessageIds.insert(message.id)
+                continue
+            } else {
+                Exponea.logger.log(
+                    .verbose,
+                    message: "In-app Content Blocks prepareInAppContentBlocksStaticView static \(message.describe())."
+                )
+                if let html = message.content?.html, !html.isEmpty {
+                    updateDisplayedState(for: message.id)
+                    message.tags?.insert(tag)
+                    _inAppContentBlockMessages.changeValue { messages in
+                        guard let index = messages.firstIndex(where: { $0.id == message.id }) else { return }
+                        messages[index] = message
+                    }
+                    return .init(html: html, tag: tag, message: message)
+                }
+                skippedMessageIds.insert(message.id)
+                continue
             }
         }
-        return .init(html: "", tag: 0, message: nil)
     }
 
     func loadInAppContentBlockMessages(completion: EmptyBlock?) {
@@ -826,7 +1278,16 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
                 let filteredMessages: [InAppContentBlockResponse] = messages.map { message in
                     if let content = message.content?.html {
                         var msg = message
-                        msg.isCorruptedImage = self?.hasHtmlImages(html: content) == false
+                        if let normalizedPayload = self?.prepareNormalizedHtmlPayload(
+                            html: content,
+                            makeResourcesOffline: true,
+                            ensureCloseButton: false
+                        ) {
+                            msg.normalizedResult = normalizedPayload
+                            msg.isCorruptedImage = false
+                        } else {
+                            msg.isCorruptedImage = true
+                        }
                         return msg
                     }
                     return message
@@ -849,36 +1310,20 @@ extension InAppContentBlocksManager: InAppContentBlocksManagerType, WKNavigation
 }
 
 private extension InAppContentBlocksManager {
-    func loadPersonalizedInAppContentBlocks(for placeholderId: String, tags: Set<Int>, skipLoad: Bool = false, completion: EmptyBlock?) {
+    /// Dispatches to the main queue for WKWebView height calculation; fetch is handled by `loadContent`.
+    func loadPersonalizedInAppContentBlocks(
+        for placeholderId: String,
+        tags: Set<Int>,
+        completion: EmptyBlock?
+    ) {
         Exponea.logger.log(.verbose, message: "In-app Content Blocks loadPersonalizedInAppContentBlocks starts")
-        guard !placeholderId.isEmpty, let ids = try? DatabaseManager().currentCustomer.ids else {
+        guard !placeholderId.isEmpty, (try? DatabaseManager().currentCustomer.ids) != nil else {
             Exponea.logger.log(.verbose, message: "In-app Content Blocks loadPersonalizedInAppContentBlocks failed placeholderId.isEmpty: \(placeholderId.isEmpty) and ids: \(String(describing: try? DatabaseManager().currentCustomer.ids))")
             return
         }
         DispatchQueue.global().async {
-            if skipLoad {
-                onMain {
-                    completion?()
-                }
-            } else {
-                self.provider.loadPersonalizedInAppContentBlocks(
-                    data: PersonalizedInAppContentBlockResponseData.self,
-                    customerIds: ids,
-                    inAppContentBlocksIds: [placeholderId]
-                ) { [weak self] data in
-                    guard let self else { return }
-                    let responseDescribed = """
-                        {
-                            data: \(String(describing: data.data?.data.map { $0.describeDetailed() })),
-                            error: \(String(describing: data.error))
-                        }
-                        """
-                    Exponea.logger.log(
-                        .verbose,
-                        message: "In-app Content Blocks loadPersonalizedInAppContentBlocks loaded: \(responseDescribed)"
-                    )
-                    self.parseData(placeholderId: placeholderId, data: data, tags: tags, completion: completion)
-                }
+            onMain {
+                completion?()
             }
         }
     }
@@ -937,10 +1382,119 @@ private extension InAppContentBlocksManager {
         return Int.random(in: 0..<99999999)
     }
 
+    private func hasRenderablePayload(_ message: InAppContentBlockResponse) -> Bool {
+        if let html = message.content?.html, !html.isEmpty {
+            return true
+        }
+        guard message.personalizedMessage?.status == .ok,
+              message.personalizedMessage?.isCorruptedImage == false else {
+            return false
+        }
+        if let html = message.personalizedMessage?.htmlPayload?.html, !html.isEmpty {
+            return true
+        }
+        if let html = message.personalizedMessage?.content?.html, !html.isEmpty {
+            return true
+        }
+        return false
+    }
+
+    private func renderableMessagesForHeightCalculation(
+        from messages: [InAppContentBlockResponse],
+        placeholder: String
+    ) -> [InAppContentBlockResponse] {
+        let renderableMessages = messages.filter { hasRenderablePayload($0) }
+        if let messageId = heightCalculationMessageByPlaceholder[placeholder],
+           let selectedMessage = renderableMessages.first(where: { $0.id == messageId }) {
+            return [selectedMessage]
+        }
+        guard let selectedMessage = filterPersonalizedMessages(input: renderableMessages) else {
+            return []
+        }
+        _heightCalculationMessageByPlaceholder.changeValue { store in
+            store[placeholder] = selectedMessage.id
+        }
+        return [selectedMessage]
+    }
+
+    private func clearHeightCalculationSelection(placeholder: String, messageId: String) {
+        _heightCalculationMessageByPlaceholder.changeValue { selections in
+            if selections[placeholder] == messageId {
+                selections.removeValue(forKey: placeholder)
+            }
+        }
+    }
+
+    private func prepareMessageForHeightCalculation(
+        _ message: InAppContentBlockResponse,
+        placeholder: String,
+        indexPath: IndexPath
+    ) -> InAppContentBlockResponse? {
+        if let html = message.content?.html, !html.isEmpty {
+            return message
+        }
+        guard var personalized = message.personalizedMessage,
+              personalized.status == .ok,
+              personalized.isCorruptedImage == false else {
+            return nil
+        }
+        if let html = personalized.htmlPayload?.html, !html.isEmpty {
+            return message
+        }
+        guard personalized.content?.html.isEmpty == false else {
+            return nil
+        }
+        personalized = preparePersonalizedResponseForRender(
+            personalized,
+            makeResourcesOffline: true
+        )
+        if personalized.ttlSeen == nil {
+            personalized.ttlSeen = Date()
+        }
+        var preparedMessage: InAppContentBlockResponse?
+        _inAppContentBlockMessages.changeValue { messages in
+            guard let idx = messages.firstIndex(where: { $0.id == message.id }) else { return }
+            messages[idx].personalizedMessage = personalized
+            messages[idx].indexPath = indexPath
+            preparedMessage = messages[idx]
+        }
+        guard personalized.isCorruptedImage == false,
+              let html = personalized.htmlPayload?.html,
+              !html.isEmpty else {
+            return nil
+        }
+        return preparedMessage
+    }
+
+    private func preparedRenderableMessagesForHeightCalculation(
+        from messages: [InAppContentBlockResponse],
+        placeholder: String,
+        indexPath: IndexPath
+    ) -> [InAppContentBlockResponse] {
+        var skippedMessageIds: Set<String> = []
+        while true {
+            let selectableMessages = messages.filter { !skippedMessageIds.contains($0.id) }
+            guard let selectedMessage = renderableMessagesForHeightCalculation(
+                from: selectableMessages,
+                placeholder: placeholder
+            ).first else {
+                return []
+            }
+            guard let preparedMessage = prepareMessageForHeightCalculation(
+                selectedMessage,
+                placeholder: placeholder,
+                indexPath: indexPath
+            ) else {
+                skippedMessageIds.insert(selectedMessage.id)
+                clearHeightCalculationSelection(placeholder: placeholder, messageId: selectedMessage.id)
+                continue
+            }
+            return [preparedMessage]
+        }
+    }
+
     func returnEmptyView(tag: Int) -> UIView {
-        let view = WKWebView(frame: .zero)
-        view.tag = tag
-        return view
+        dequeueContentBlockWebView(tag: tag)
     }
 
     func returnEmptyStaticView(tag: Int) -> UIView {
@@ -955,6 +1509,8 @@ private extension InAppContentBlocksManager {
             return
         }
         if !isLoadUpdating {
+            // Clear stale coalescing keys when a new load cycle starts.
+            clearRefreshCoalescingIfIdle()
             isLoadUpdating = true
             let placehodlersToUse = inAppContentBlockMessages.filter { $0.placeholders.contains(placeholder) }
             var placeholdersNeedToGetContent = placehodlersToUse.filter { $0.indexPath == nil || $0.personalizedMessage == nil && $0.content?.html == nil }
@@ -975,7 +1531,15 @@ private extension InAppContentBlocksManager {
                 """
             )
             guard !placeholdersNeedToGetContent.isEmpty else {
-                for placeholderInLoop in placehodlersToUse {
+                let renderablePlaceholdersToUse = self.preparedRenderableMessagesForHeightCalculation(
+                    from: placehodlersToUse,
+                    placeholder: placeholder,
+                    indexPath: indexPath
+                )
+                if !renderablePlaceholdersToUse.isEmpty {
+                    prewarmContentBlockWebViews()
+                }
+                for placeholderInLoop in renderablePlaceholdersToUse {
                     let tag = createUniqueTag(placeholder: placeholderInLoop)
                     let usedInAppContentBlocksHeight = usedInAppContentBlocks[placeholder]?.first(where: { $0.messageId == placeholderInLoop.id && $0.indexPath == indexPath })?.height ?? 0
                     self.newUsedInAppContentBlocks = .init(tag: tag, indexPath: indexPath, messageId: placeholderInLoop.id, placeholder: placeholder, height: !expired.isEmpty ? 0 : usedInAppContentBlocksHeight, placeholderData: placeholderInLoop)
@@ -987,29 +1551,76 @@ private extension InAppContentBlocksManager {
                 }
                 return
             }
+            warmHeightCalculator()
+            // Conditional revalidation applies only when refreshing the full expired set.
+            let isRevalidation = !expired.isEmpty
+                && Set(placeholdersNeedToGetContent.map { $0.id }) == Set(expired.map { $0.id })
+            let blockIds = placeholdersNeedToGetContent.map { $0.id }.sorted()
+            let projectToken = Exponea.shared.configuration?.mainProject.integrationId ?? ""
+            let cacheKey = type(of: self.etagStore).cacheKey(projectToken: projectToken, customerIds: ids, blockIds: blockIds)
+            let storedEtag = isRevalidation ? self.etagStore.retrieve(forKey: cacheKey) : nil
+
+            let onNotModified: (() -> Void)? = isRevalidation ? { [weak self] in
+                guard let self else { return }
+                Exponea.logger.log(.verbose, message: "ICB loadContent: 304 cache hit for placeholder \(placeholder)")
+                let placehodlersToUse = self.inAppContentBlockMessages.filter { $0.placeholders.contains(placeholder) }
+                let renderablePlaceholdersToUse = self.preparedRenderableMessagesForHeightCalculation(
+                    from: placehodlersToUse,
+                    placeholder: placeholder,
+                    indexPath: indexPath
+                )
+                if !renderablePlaceholdersToUse.isEmpty {
+                    self._inAppContentBlockMessages.changeValue { messages in
+                        for i in messages.indices {
+                            guard messages[i].placeholders.contains(placeholder),
+                                  messages[i].personalizedMessage != nil else { continue }
+                            messages[i].personalizedMessage?.ttlSeen = Date()
+                        }
+                    }
+                    self.prewarmContentBlockWebViews()
+                    for placeholderInLoop in renderablePlaceholdersToUse {
+                        let tag = self.createUniqueTag(placeholder: placeholderInLoop)
+                        let usedHeight = self.usedInAppContentBlocks[placeholder]?.first(where: { $0.messageId == placeholderInLoop.id && $0.indexPath == indexPath })?.height ?? 0
+                        self.newUsedInAppContentBlocks = .init(tag: tag, indexPath: indexPath, messageId: placeholderInLoop.id, placeholder: placeholder, height: usedHeight, placeholderData: placeholderInLoop)
+                    }
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self else { return }
+                        self.isLoadUpdating = false
+                        self.notifyRefreshCallback(
+                            indexPath: indexPath,
+                            source: "loadContentForPlaceholder.304",
+                            placeholder: placeholder
+                        )
+                        guard !self.loadQueue.isEmpty else { return }
+                        let go = self.loadQueue.removeFirst()
+                        self.loadContent(indexPath: go.indexPath, placeholder: go.placeholder, expired: go.expired)
+                    }
+                } else {
+                    self.etagStore.remove(forKey: cacheKey)
+                    Exponea.logger.log(.verbose, message: "ICB loadContent: no renderable cache on 304, evicting ETag and re-fetching")
+                    self.isLoadUpdating = false
+                    self.loadContent(indexPath: indexPath, placeholder: placeholder, expired: [])
+                }
+            } : nil
+
             self.provider.loadPersonalizedInAppContentBlocks(
                 data: PersonalizedInAppContentBlockResponseData.self,
                 customerIds: ids,
-                inAppContentBlocksIds: placeholdersNeedToGetContent.map { $0.id }
+                inAppContentBlocksIds: blockIds,
+                etag: storedEtag,
+                onNotModified: onNotModified,
+                onEtagHeader: { [weak self] etag in
+                    self?.etagStore.store(etag: etag, forKey: cacheKey)
+                    Exponea.logger.log(.verbose, message: "ICB loadContent: received ETag from server, storing for key=\(cacheKey.prefix(16))…")
+                }
             ) { [weak self] data in
                 guard let self else { return }
                 ensureBackground {
-                    let personalizedWithPayload: [PersonalizedInAppContentBlockResponse] = data.data?.data.compactMap { response in
-                        var newInAppContentBlocks = response
-                        let normalizeConf = HtmlNormalizerConfig(
-                            makeResourcesOffline: true,
-                            ensureCloseButton: false
-                        )
-                        let normalizedPayload = HtmlNormalizer(newInAppContentBlocks.content?.html ?? "").normalize(normalizeConf)
-                        newInAppContentBlocks.htmlPayload = normalizedPayload
-                        let isCorruptedImage = !self.hasHtmlImages(html: response.content?.html ?? "")
-                        newInAppContentBlocks.isCorruptedImage = isCorruptedImage
-                        return newInAppContentBlocks
-                    } ?? []
+                    let personalizedResponses = data.data?.data ?? []
                     var logDescriptions: [String] = []
                     self._inAppContentBlockMessages.changeValue { messages in
                         for (index, inAppContentBlocks) in messages.enumerated() {
-                            if var personalized = personalizedWithPayload.first(where: { $0.id == inAppContentBlocks.id }) {
+                            if var personalized = personalizedResponses.first(where: { $0.id == inAppContentBlocks.id }) {
                                 let tag = self.createUniqueTag(placeholder: inAppContentBlocks)
                                 personalized.ttlSeen = Date()
                                 messages[index].personalizedMessage = personalized
@@ -1024,7 +1635,15 @@ private extension InAppContentBlocksManager {
                         message: "In-app Content Blocks updatedPlaceholders \(logDescriptions)"
                     )
                     let updatedPlacehodlersToUse = self.inAppContentBlockMessages.filter { $0.placeholders.contains(placeholder) }
-                    for placeholderInLoop in updatedPlacehodlersToUse {
+                    let renderablePlaceholdersToUse = self.preparedRenderableMessagesForHeightCalculation(
+                        from: updatedPlacehodlersToUse,
+                        placeholder: placeholder,
+                        indexPath: indexPath
+                    )
+                    if !renderablePlaceholdersToUse.isEmpty {
+                        self.prewarmContentBlockWebViews()
+                    }
+                    for placeholderInLoop in renderablePlaceholdersToUse {
                         let tag = self.createUniqueTag(placeholder: placeholderInLoop)
                         let usedInAppContentBlocksHeight = self.usedInAppContentBlocks[placeholder]?.first(where: { $0.messageId == placeholderInLoop.id })?.height ?? 0
                         self.newUsedInAppContentBlocks = .init(tag: tag, indexPath: indexPath, messageId: placeholderInLoop.id, placeholder: placeholder, height: !expired.isEmpty ? 0 : usedInAppContentBlocksHeight, placeholderData: placeholderInLoop)
@@ -1043,15 +1662,27 @@ private extension InAppContentBlocksManager {
                 }
             }
         } else {
-            Exponea.logger.log(.verbose, message:
-                """
-                In-app Content Blocks added to queue
-                indexPath: \(indexPath)
-                placeholder: \(placeholder)
-                expired: \(expired.map { $0.describe() })
-                """
-            )
-            _loadQueue.changeValue(with: { $0.append(.init(placeholder: placeholder, indexPath: indexPath, expired: expired)) })
+            let queuedItem = QueueLoadData(placeholder: placeholder, indexPath: indexPath, expired: expired)
+            let dedupKey = loadQueueDedupKey(for: queuedItem)
+            var shouldEnqueue = false
+            _loadQueue.changeValue { queue in
+                if queue.contains(where: { loadQueueDedupKey(for: $0) == dedupKey }) {
+                    shouldEnqueue = false
+                } else {
+                    queue.append(queuedItem)
+                    shouldEnqueue = true
+                }
+            }
+            if shouldEnqueue {
+                Exponea.logger.log(.verbose, message:
+                    """
+                    In-app Content Blocks added to queue
+                    indexPath: \(indexPath)
+                    placeholder: \(placeholder)
+                    expired: \(expired.map { $0.describe() })
+                    """
+                )
+            }
         }
     }
 
@@ -1083,7 +1714,12 @@ private extension InAppContentBlocksManager {
             }
             self.continueWithQueue()
             self.calculator.heightUpdate = nil
-            self.refreshCallback?(savedNewValue.indexPath)
+            self.prewarmContentBlockWebViews()
+            self.notifyRefreshCallback(
+                indexPath: savedNewValue.indexPath,
+                source: "calculateStaticData.empty",
+                placeholder: savedNewValue.placeholder
+            )
         } else {
             Exponea.logger.log(.verbose, message: "In-app Content Blocks usedInAppContentBlocks \(usedInAppContentBlocks.mapValues { $0.map { $0.describeDetailed() } })")
             if let indexOfSavedInAppContentBlocks: Int = self.usedInAppContentBlocks[placeholderValueFromUsedLine]?.firstIndex(where: { $0.messageId == savedNewValue.messageId && $0.height == 0 }) {
@@ -1091,7 +1727,7 @@ private extension InAppContentBlocksManager {
                     if savedInAppContentBlocks.height == 0 {
                         savedInAppContentBlocks.height = height.height
                     }
-                    self._usedInAppContentBlocks.changeValue(with: { $0[placeholderValueFromUsedLine]?.insert(savedInAppContentBlocks, at: indexOfSavedInAppContentBlocks) })
+                    self._usedInAppContentBlocks.changeValue(with: { $0[placeholderValueFromUsedLine]?[indexOfSavedInAppContentBlocks] = savedInAppContentBlocks })
                 }
             } else {
                 let newSavedInAppContentBlocks: UsedInAppContentBlocks = .init(tag: savedNewValue.tag, indexPath: indexPath, messageId: savedNewValue.messageId, placeholder: savedNewValue.placeholder, height: height.height)
@@ -1101,7 +1737,12 @@ private extension InAppContentBlocksManager {
             }
             self.continueWithQueue()
             self.calculator.heightUpdate = nil
-            self.refreshCallback?(savedNewValue.indexPath)
+            self.prewarmContentBlockWebViews()
+            self.notifyRefreshCallback(
+                indexPath: savedNewValue.indexPath,
+                source: "calculateStaticData.update",
+                placeholder: savedNewValue.placeholder
+            )
         }
     }
 }
@@ -1160,19 +1801,85 @@ extension InAppContentBlocksManager {
             return
         }
         let allPlaceholderIds = Set(validRequests.map { $0.placeholderId })
-        let mergedIds = Array(Set(
+        let mergedIds = Set(
             inAppContentBlockMessages
                 .filter { !Set($0.placeholders).isDisjoint(with: allPlaceholderIds) }
                 .map { $0.id }
-        ))
+        ).sorted()
+        // Batch-level ETag; skipEtag on any queued request bypasses conditional fetch for the whole batch.
+        let batchSkipEtag = validRequests.contains { $0.skipEtag }
         Exponea.logger.log(
             .verbose,
             message: "In-app Content Blocks batched refresh for \(allPlaceholderIds.count) placeholder(s), \(mergedIds.count) message ID(s)"
         )
+        let projectToken = Exponea.shared.configuration?.mainProject.integrationId ?? ""
+        let batchCacheKey = type(of: etagStore).cacheKey(projectToken: projectToken, customerIds: customerIds, blockIds: mergedIds)
+        Exponea.logger.log(
+            .verbose,
+            message: "ICB processStaticBatch: projectToken=\(projectToken.isEmpty ? "<empty>" : projectToken.prefix(8).description + "…") cacheKey=\(batchCacheKey.prefix(16))… skipEtag=\(batchSkipEtag)"
+        )
+        let batchStoredEtag = batchSkipEtag ? nil : etagStore.retrieve(forKey: batchCacheKey)
+        let batchOnNotModified: (() -> Void)? = batchSkipEtag ? nil : { [weak self, batchCacheKey] in
+            guard let self else { return }
+            Exponea.logger.log(
+                .verbose,
+                message: "ICB processStaticBatch: 304 cache hit for placeholder(s) \(allPlaceholderIds.joined(separator: ", "))"
+            )
+            let batchMessages = self.inAppContentBlockMessages.filter {
+                !Set($0.placeholders).isDisjoint(with: allPlaceholderIds)
+            }
+            let hasRenderableCache = batchMessages.contains { self.hasRenderablePayload($0) }
+            if hasRenderableCache {
+                // Reset TTL anchor so cached content is not treated as expired.
+                self._inAppContentBlockMessages.changeValue { messages in
+                    for i in messages.indices {
+                        guard !Set(messages[i].placeholders).isDisjoint(with: allPlaceholderIds),
+                              self.hasRenderablePayload(messages[i]) else { continue }
+                        messages[i].personalizedMessage?.ttlSeen = Date()
+                    }
+                }
+                var preparedResults: [StaticReturnData] = []
+                for request in validRequests {
+                    preparedResults.append(
+                        self.prepareInAppContentBlocksStaticView(
+                            placeholderId: request.placeholderId,
+                            makeResourcesOffline: request.makeResourcesOffline
+                        )
+                    )
+                }
+                let hasPreparedContent = preparedResults.contains { !$0.html.isEmpty }
+                if hasPreparedContent {
+                    for (index, request) in validRequests.enumerated() {
+                        let result = preparedResults[index]
+                        onMain { request.completion?(result) }
+                    }
+                    self.continueWithStaticQueue()
+                } else {
+                    self.etagStore.remove(forKey: batchCacheKey)
+                    Exponea.logger.log(.verbose, message: "ICB processStaticBatch: no renderable cache on 304, evicting ETag and re-fetching")
+                    var forcedRequests = validRequests
+                    for i in forcedRequests.indices { forcedRequests[i].skipEtag = true }
+                    forcedRequests.forEach { self.staticQueue.insert($0, at: 0) }
+                    self.processStaticBatch()
+                }
+            } else {
+                self.etagStore.remove(forKey: batchCacheKey)
+                var forcedRequests = validRequests
+                for i in forcedRequests.indices { forcedRequests[i].skipEtag = true }
+                forcedRequests.forEach { self.staticQueue.insert($0, at: 0) }
+                self.processStaticBatch()
+            }
+        }
         provider.loadPersonalizedInAppContentBlocks(
             data: PersonalizedInAppContentBlockResponseData.self,
             customerIds: customerIds,
-            inAppContentBlocksIds: mergedIds
+            inAppContentBlocksIds: mergedIds,
+            etag: batchStoredEtag,
+            onNotModified: batchOnNotModified,
+            onEtagHeader: { [weak self] etag in
+                Exponea.logger.log(.verbose, message: "ICB processStaticBatch: received ETag from server, storing for key=\(batchCacheKey.prefix(16))…")
+                self?.etagStore.store(etag: etag, forKey: batchCacheKey)
+            }
         ) { [weak self] data in
             guard let self else { return }
             ensureBackground {
@@ -1207,13 +1914,11 @@ extension InAppContentBlocksManager {
                     .verbose,
                     message: "In-app Content Blocks batched refreshStaticViewContent data: \(descriptions)"
                 )
-                // Static CBs skip image validation (unlike carousel) — WKWebView handles broken images
-                // with fallback rendering, so corrupted-image filtering is unnecessary here.
-                let personalizedWithPayload: [PersonalizedInAppContentBlockResponse] = data.data?.data ?? []
+                let personalizedResponses = data.data?.data ?? []
                 var updatedContentBlocksForTelemetry: [InAppContentBlockResponse] = []
                 self._inAppContentBlockMessages.changeValue { messages in
                     for (index, inAppContentBlocks) in messages.enumerated() {
-                        if var personalized = personalizedWithPayload.first(where: { $0.id == inAppContentBlocks.id }) {
+                        if var personalized = personalizedResponses.first(where: { $0.id == inAppContentBlocks.id }) {
                             personalized.ttlSeen = Date()
                             messages[index].personalizedMessage = personalized
                             updatedContentBlocksForTelemetry.append(messages[index])
@@ -1326,7 +2031,9 @@ extension InAppContentBlocksManager {
                 alreadyInFlight = true
             }
         }
-        if alreadyInFlight { return }
+        if alreadyInFlight {
+            return
+        }
 
         let validationToken = UUID()
         _carouselValidationTokens.changeValue { tokens in
@@ -1340,6 +2047,7 @@ extension InAppContentBlocksManager {
         }
 
         let idsForDownload = inAppContentBlockMessages.filter { $0.placeholders.contains(placeholder) }.map { $0.id }
+        // Fresh fetch required for carousel rotation and image validation.
         provider.loadPersonalizedInAppContentBlocks(
             data: PersonalizedInAppContentBlockResponseData.self,
             customerIds: ids,
@@ -1361,16 +2069,7 @@ extension InAppContentBlocksManager {
             ensureBackground {
                 let refreshStaticViewContentDescriptions = (data.data?.data ?? []).map { $0.describeDetailed() }
                 Exponea.logger.log(.verbose, message: "In-app Content Blocks refreshStaticViewContent data: \(refreshStaticViewContentDescriptions)")
-                let personalizedWithPayload: [PersonalizedInAppContentBlockResponse] = data.data?.data.compactMap { response in
-                    var newInAppContentBlocks = response
-                    let normalizeConf = HtmlNormalizerConfig(
-                        makeResourcesOffline: true,
-                        ensureCloseButton: false
-                    )
-                    let normalizedPayload = HtmlNormalizer(newInAppContentBlocks.content?.html ?? "").normalize(normalizeConf)
-                    newInAppContentBlocks.htmlPayload = normalizedPayload
-                    return newInAppContentBlocks
-                } ?? []
+                let personalizedWithPayload: [PersonalizedInAppContentBlockResponse] = data.data?.data ?? []
                 self._inAppContentBlockMessages.changeValue { messages in
                     for (index, inAppContentBlocks) in messages.enumerated() {
                         if var personalized = personalizedWithPayload.first(where: { $0.id == inAppContentBlocks.id }) {
@@ -1460,14 +2159,19 @@ extension InAppContentBlocksManager {
                 if shouldCancel() {
                     return
                 }
-                let isCorrupted = !self.hasHtmlImages(
-                    html: response.content?.html ?? "",
-                    maxConcurrentDownloads: self.maxImageValidationConcurrency,
-                    shouldCancel: shouldCancel
+                let preparedResponse = self.preparePersonalizedResponseForRender(
+                    response,
+                    makeResourcesOffline: true
                 )
+                let isCorrupted = preparedResponse.isCorruptedImage
                 if shouldCancel() {
                     return
                 }
+                self.updatePersonalizedResponseIfCurrent(
+                    response: preparedResponse,
+                    placeholder: placeholder,
+                    validationToken: validationToken
+                )
                 self.updateImageValidationState(
                     messageId: response.id,
                     placeholder: placeholder,
@@ -1503,9 +2207,7 @@ extension InAppContentBlocksManager {
         }
     }
 
-    /// Token-scoped final state write. Only applies the state transition when `validationToken`
-    /// is still the active token for `placeholder`. Protects against TOCTOU between a stale
-    /// worker's final write and a fresh run's in-flight `.pending`.
+    /// Applies the state transition only when `validationToken` is still active for `placeholder`.
     internal func updateImageValidationState(
         messageId: String,
         placeholder: String,
@@ -1527,10 +2229,25 @@ extension InAppContentBlocksManager {
         }
     }
 
+    internal func updatePersonalizedResponseIfCurrent(
+        response: PersonalizedInAppContentBlockResponse,
+        placeholder: String,
+        validationToken: UUID
+    ) {
+        _inAppContentBlockMessages.changeValue { messages in
+            guard self.carouselValidationTokens[placeholder] == validationToken else { return }
+            guard let index = messages.firstIndex(where: { $0.id == response.id }) else { return }
+            var personalized = response
+            personalized.ttlSeen = messages[index].personalizedMessage?.ttlSeen ?? Date()
+            messages[index].personalizedMessage = personalized
+        }
+    }
+
     func refreshMessage(message: InAppContentBlockResponse, completion: TypeBlock<InAppContentBlockResponse>?) {
         guard let ids = try? DatabaseManager().currentCustomer.ids else {
             return
         }
+        // Force refresh bypasses conditional revalidation.
         provider.loadPersonalizedInAppContentBlocks(
             data: PersonalizedInAppContentBlockResponseData.self,
             customerIds: ids,
@@ -1541,16 +2258,10 @@ extension InAppContentBlocksManager {
                 let personalizedWithPayload: [PersonalizedInAppContentBlockResponse] = data.data?.data
                     .filter { $0.id == message.id }
                     .compactMap { response in
-                        var newInAppContentBlocks = response
-                        let normalizeConf = HtmlNormalizerConfig(
-                            makeResourcesOffline: true,
-                            ensureCloseButton: false
+                        self.preparePersonalizedResponseForRender(
+                            response,
+                            makeResourcesOffline: true
                         )
-                        let normalizedPayload = HtmlNormalizer(newInAppContentBlocks.content?.html ?? "").normalize(normalizeConf)
-                        newInAppContentBlocks.htmlPayload = normalizedPayload
-                        let isCorruptedImage = !self.hasHtmlImages(html: response.content?.html ?? "")
-                        newInAppContentBlocks.isCorruptedImage = isCorruptedImage
-                        return newInAppContentBlocks
                     } ?? []
                 if let personal = personalizedWithPayload.first {
                     self._imageValidationStates.changeValue(with: { $0[personal.id] = personal.isCorruptedImage ? .corrupted : .valid })
@@ -1586,6 +2297,7 @@ extension InAppContentBlocksManager {
                 return
             }
             let idsForDownload = inAppContentBlockMessages.filter { $0.placeholders.contains(placeholder) }.map { $0.id }
+            // Fresh fetch required for carousel rotation and image validation.
             provider.loadPersonalizedInAppContentBlocks(
                 data: PersonalizedInAppContentBlockResponseData.self,
                 customerIds: ids,
@@ -1596,16 +2308,10 @@ extension InAppContentBlocksManager {
                     let refreshStaticViewContentDescriptions = (data.data?.data ?? []).map { $0.describeDetailed() }
                     Exponea.logger.log(.verbose, message: "In-app Content Blocks refreshStaticViewContent data: \(refreshStaticViewContentDescriptions)")
                     let personalizedWithPayload: [PersonalizedInAppContentBlockResponse] = data.data?.data.compactMap { response in
-                        var newInAppContentBlocks = response
-                        let normalizeConf = HtmlNormalizerConfig(
-                            makeResourcesOffline: true,
-                            ensureCloseButton: false
+                        self.preparePersonalizedResponseForRender(
+                            response,
+                            makeResourcesOffline: true
                         )
-                        let normalizedPayload = HtmlNormalizer(newInAppContentBlocks.content?.html ?? "").normalize(normalizeConf)
-                        newInAppContentBlocks.htmlPayload = normalizedPayload
-                        let isCorruptedImage = !self.hasHtmlImages(html: response.content?.html ?? "")
-                        newInAppContentBlocks.isCorruptedImage = isCorruptedImage
-                        return newInAppContentBlocks
                     } ?? []
                     self._imageValidationStates.changeValue { state in
                         personalizedWithPayload.forEach { personalized in
@@ -1683,6 +2389,8 @@ extension InAppContentBlocksManager {
             if let html = personalized.htmlPayload?.html, !html.isEmpty {
                 return .init(html: html, tag: tag, message: message)
             }
+        } else if message.personalizedMessage != nil {
+            return nil
         } else {
             Exponea.logger.log(
                 .verbose,
@@ -1704,17 +2412,30 @@ private extension InAppContentBlocksManager {
             let go = queue.removeFirst()
             Exponea.logger.log(.verbose, message: "In-app Content Blocks continueWithQueue data: \(go.describeDetailed())")
             loadContentForPlacehoder(newValue: go.newValue, message: go.inAppContentBlocks)
+        } else {
+            clearHeightCalculationSelectionIfIdle()
         }
     }
 
     func loadContentForPlacehoder(newValue: UsedInAppContentBlocks, message: InAppContentBlockResponse) {
+        if let cachedHeight = cachedHeight(for: newValue.placeholder, messageId: newValue.messageId) {
+            updateDisplayedState(for: message.id)
+            upsertUsedInAppContentBlockHeight(cachedHeight, newValue: newValue, message: message)
+            prewarmContentBlockWebViews()
+            notifyRefreshCallback(
+                indexPath: newValue.indexPath,
+                source: "loadContentForPlaceholder.cachedHeight",
+                placeholder: newValue.placeholder
+            )
+            clearHeightCalculationSelectionIfIdle()
+            return
+        }
         if !isUpdating {
             isUpdating = true
             let savedNewValue = newValue
             let savedPlaceholder = message
-            loadPersonalizedInAppContentBlocks(for: savedNewValue.messageId, tags: [savedNewValue.tag], skipLoad: true) { [weak self] in
+            loadPersonalizedInAppContentBlocks(for: savedNewValue.messageId, tags: [savedNewValue.tag]) { [weak self] in
                 guard let self else { return }
-                self.calculator = .init()
                 self.calculator.heightUpdate = { height in
                     let tag = self.createUniqueTag(placeholder: message)
                     Exponea.logger.log(.verbose, message: "In-app Content Blocks loadContentForPlacehoder calculator data \(height)")
@@ -1747,14 +2468,19 @@ private extension InAppContentBlocksManager {
                         }
                         self.continueWithQueue()
                         self.calculator.heightUpdate = nil
-                        self.refreshCallback?(savedNewValue.indexPath)
+                        self.prewarmContentBlockWebViews()
+                        self.notifyRefreshCallback(
+                            indexPath: savedNewValue.indexPath,
+                            source: "loadContentForPlaceholder.empty",
+                            placeholder: savedNewValue.placeholder
+                        )
                     } else {
                         if let indexOfSavedInAppContentBlocks: Int = self.usedInAppContentBlocks[placeholderValueFromUsedLine]?.firstIndex(where: { $0.indexPath == savedPlaceholder.indexPath && $0.height == 0 }) {
                             if var savedInAppContentBlocks = self.usedInAppContentBlocks[placeholderValueFromUsedLine]?[indexOfSavedInAppContentBlocks] {
                                 if savedInAppContentBlocks.height == 0 {
                                     savedInAppContentBlocks.height = height.height
                                 }
-                                self._usedInAppContentBlocks.changeValue(with: { $0[placeholderValueFromUsedLine]?.insert(savedInAppContentBlocks, at: indexOfSavedInAppContentBlocks) })
+                                self._usedInAppContentBlocks.changeValue(with: { $0[placeholderValueFromUsedLine]?[indexOfSavedInAppContentBlocks] = savedInAppContentBlocks })
                             }
                         } else {
                             let newSavedInAppContentBlocks: UsedInAppContentBlocks = .init(tag: savedNewValue.tag, indexPath: savedNewValue.indexPath, messageId: savedPlaceholder.id, placeholder: savedNewValue.placeholder, height: height.height, placeholderData: savedPlaceholder)
@@ -1766,24 +2492,68 @@ private extension InAppContentBlocksManager {
                         }
                         self.continueWithQueue()
                         self.calculator.heightUpdate = nil
-                        self.refreshCallback?(savedNewValue.indexPath)
+                        self.prewarmContentBlockWebViews()
+                        self.notifyRefreshCallback(
+                            indexPath: savedNewValue.indexPath,
+                            source: "loadContentForPlaceholder.update",
+                            placeholder: savedNewValue.placeholder
+                        )
                     }
                 }
                 guard let html = self.inAppContentBlockMessages.first(where: { $0.tags?.contains(newValue.tag) == true })?.personalizedMessage?.htmlPayload?.html, !html.isEmpty else {
-                    onMain { self.isUpdating = false }
+                    onMain {
+                        self.continueWithQueue()
+                    }
                     return
                 }
+                self.prewarmContentBlockWebViews()
                 self.calculator.loadHtml(placedholderId: message.id, html: html)
             }
         } else {
-            Exponea.logger.log(.verbose, message:
-                """
-                In-app Content Blocks added to queue
-                newValue: \(newValue.describeDetailed())
-                placeholder: \(message.describe())
-                """
-            )
-            _queue.changeValue(with: { $0.append(.init(inAppContentBlocks: message, newValue: newValue)) })
+            let result = dedupEnqueue(message: message, newValue: newValue)
+            if result == .enqueued {
+                Exponea.logger.log(.verbose, message:
+                    """
+                    In-app Content Blocks added to queue
+                    newValue: \(newValue.describeDetailed())
+                    placeholder: \(message.describe())
+                    """
+                )
+            }
+        }
+    }
+
+    func cachedHeight(for placeholder: String, messageId: String) -> CGFloat? {
+        usedInAppContentBlocks[placeholder]?.first {
+            $0.messageId == messageId && $0.height > 0
+        }?.height
+    }
+
+    func upsertUsedInAppContentBlockHeight(
+        _ height: CGFloat,
+        newValue: UsedInAppContentBlocks,
+        message: InAppContentBlockResponse
+    ) {
+        let placeholder = newValue.placeholder
+        _usedInAppContentBlocks.changeValue { store in
+            var usedBlocks = store[placeholder] ?? []
+            if let index = usedBlocks.firstIndex(where: {
+                $0.indexPath == newValue.indexPath && $0.messageId == message.id
+            }) {
+                usedBlocks[index].height = height
+                usedBlocks[index].tag = newValue.tag
+                usedBlocks[index].placeholderData = message
+            } else {
+                usedBlocks.append(.init(
+                    tag: newValue.tag,
+                    indexPath: newValue.indexPath,
+                    messageId: message.id,
+                    placeholder: placeholder,
+                    height: height,
+                    placeholderData: message
+                ))
+            }
+            store[placeholder] = usedBlocks
         }
     }
 }

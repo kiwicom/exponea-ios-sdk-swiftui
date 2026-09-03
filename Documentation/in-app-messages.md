@@ -7,21 +7,18 @@ parent:
   uri: ios-sdk-in-app-personalization
 content:
   excerpt: >-
-    Display native in-app messages based on definitions set up in Engagement
+    Display native in-app messages based on definitions set up in Marketing
     using the iOS SDK
 ---
 
-The SDK enables you to display native in-app messages in your app based on definitions set up in Engagement. 
+The SDK enables you to display native in-app messages in your app based on definitions set up in {user.mkg}. 
 
 In-app messages work out-of-the-box once the [Initial setup for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup) is complete in your app; no development work is required. However, you can customize the behavior to meet your specific requirements.
 
 > 📘
 >
-> Refer to the [In-app messages](https://documentation.bloomreach.com/engagement/docs/in-app-messages) user guide for instructions on how to create in-app messages in the Engagement web app.
-
-> 📘
->
-> Also see [In-app messages FAQ](https://support.bloomreach.com/hc/en-us/articles/18152718785437-In-App-Messages-FAQ) at Bloomreach Support Help Center.
+> Refer to the [In-app messages](https://documentation.bloomreach.com/engagement/docs/in-app-messages) user guide for instructions on how to create in-app messages in the {user.mkg} web app.
+> Also see [In-app messages FAQ](https://support.bloomreach.com/hc/en-us/articles/18152718785437-In-App-Messages-FAQ) at {user.br} Support Help Center.
 
 ## Tracking
 
@@ -51,10 +48,10 @@ First, create your own implementation of `InAppMessageActionDelegate`:
 
 ```swift
 class MyInAppDelegate: InAppMessageActionDelegate {
-    // If overrideDefaultBehavior is set to true, default in-app action will not be performed ( e.g. deep link )
+    // If overrideDefaultBehavior is set to true, default in-app action isn't performed ( e.g. deep link )
     let overrideDefaultBehavior: Bool = true
 
-    // If trackActions is set to false, click and close in-app events will not be tracked automatically
+    // If trackActions is set to false, click and close in-app events isn't tracked automatically
     let trackActions: Bool = false
 
     // This method will be called when an in-app message action is performed
@@ -69,7 +66,7 @@ class MyInAppDelegate: InAppMessageActionDelegate {
         // Here goes your code
         // Method called when in-app message has been closed.
         // On in-app close by click on CANCEL button:
-        //  - the `button` is not null
+        //  - the `button` isn't null
         //  - the `button` contains button text
         //  - the `interaction` is true
         // On in-app close with default interaction by user (close button, dismiss, etc...):
@@ -88,7 +85,7 @@ class MyInAppDelegate: InAppMessageActionDelegate {
     // Method called when any error occurs while showing in-app message.
     func inAppMessageError(message: ExponeaSDK.InAppMessage?, errorMessage: String) {
         // Here goes your code
-        // In-app message could be NULL if error is not related to in-app message.
+        // In-app message could be NULL if error isn't related to in-app message.
     }
 }
 
@@ -142,7 +139,7 @@ You can do this in the HTML builder by inserting the `data-actiontype` attribute
 </div>
 ```
 
-The SDK also supports the `data-actiontype` attribute in `<a>` elements for compatibility with the Visual builder:
+The SDK also supports the `data-actiontype` attribute in `<a>` elements for compatibility with the Visual Builder:
 
 ```html
 <div class="bee-block bee-block-4 bee-button">
@@ -150,7 +147,7 @@ The SDK also supports the `data-actiontype` attribute in `<a>` elements for comp
 </div>
 ```
 
-In the Visual builder, you can set the action type as follows:
+In the Visual Builder, you can set the action type as follows:
 
 1) In the preview, select the button you want to override the action type for
 2) In the editor on the right side, scroll down to the `Attributes` section
@@ -169,20 +166,20 @@ This section provides helpful pointers for troubleshooting in-app message issues
 
 ### In-app message not displayed
 
-When troubleshooting why an in-app message did not display on your device, always first make sure that the in-app message was preloaded to the device, then troubleshoot message display.
+When troubleshooting why an in-app message didn't display on your device, always first make sure that the in-app message was preloaded to the device, then troubleshoot message display.
 
 #### Troubleshoot in-app messages preloading issues
 
-- The SDK requests in-app messages from the Engagement platform any time one of the following occurs:
+- The SDK requests in-app messages from the {user.mkg} platform any time one of the following occurs:
   - `Exponea.identifyCustomer` is called
   - `Exponea.anonymize` is called
   - Any event (except push notification clicked or opened, or session ends) is tracked **and** the in-app messages cache is older then 30 minutes
-- The SDK should subsequently receive a response from the Engagement platform containing all available in-app messages targeted at the current customer. The SDK preload these messages in a local cache.
-- If you create or modify an in-app message in Engagement, typically any changes you made are reflected in the SDK after 30 minutes due to the in-app messages being cached. Call `Exponea.identifyCustomer` or `Exponea.anonymize` to trigger reloading so changes are reflected immediately.
-- Analyze the [log messages](#log-messages) (especially examples 2-5) to determine whether the SDK is requesting and receiving in-app messages and your message was preloaded.
-- If the SDK is requesting and receiving in-app messages but your message is not preloaded:
+- The SDK should subsequently receive a response from the {user.mkg} platform containing all available in-app messages targeted at the current customer. The SDK preload these messages in a local cache.
+- If you create or modify an in-app message in {user.mkg}, typically any changes you made are reflected in the SDK after 30 minutes due to the in-app messages being cached. Call `Exponea.identifyCustomer` or `Exponea.anonymize` to trigger reloading so changes are reflected immediately.
+- Analyze the [log messages](#log-messages) (especially examples 3-6) to determine whether the SDK is requesting and receiving in-app messages and your message was preloaded.
+- If the SDK is requesting and receiving in-app messages but your message isn't preloaded:
   - The local cache may be outdated. Wait for or trigger the next preload.
-  - The current customer may not match the audience targeted by the in-app message. Verify the message's audience in Engagement.
+  - The current customer may not match the audience targeted by the in-app message. Verify the message's audience in {user.mkg}.
 
 > ❗️
 >
@@ -190,18 +187,18 @@ When troubleshooting why an in-app message did not display on your device, alway
 
 #### Troubleshoot in-app message display issues
 
-If your app is successfully requesting and receiving in-app messages but they are not displayed, consider the following:
+If your app is successfully requesting and receiving in-app messages but they aren't displayed, consider the following:
 
-- In-app messages are triggered when an event is tracked based on conditions set up in Engagement. Once a message passes those filters, the SDK will try to present the message in the top-most `presentedViewController` (except for slide-in messages that use `UIWindow` directly).
+- In-app messages are triggered when an event is tracked based on conditions set up in {user.mkg}. Once a message passes those filters, the SDK will try to present the message in the top-most `presentedViewController` (except for slide-in messages that use `UIWindow` directly).
   It's possible that your application decides to present another `UIViewController` right at the same time, creating a race condition. In this case, the message might be displayed and immediately dismissed because its parent leaves the screen. Keep this in mind if the [logs](#log-messages) tell you your message was displayed but you don't see it.
 
-- In-app messages configured to show on `App load` are displayed when a `session_start` event is tracked. If you close and quickly reopen the app, it's possible that the session did not time out and the message won't be displayed. If you use manual session tracking, the message won't be displayed unless you track a `session_start` event yourself.
+- In-app messages configured to show on `App load` are displayed when a `session_start` event is tracked. If you close and quickly reopen the app, it's possible that the session didn't time out and the message won't be displayed. If you use manual session tracking, the message won't be displayed unless you track a `session_start` event yourself.
 
-- An in-app message can only be displayed if it is loaded, including its images. If the message is not yet fully loaded, the SDK registers a request-to-show for that message so it will be displayed once it is fully loaded. The request-to-show has a timeout of 3 seconds. This means that in case of unpredicted behavior, such as image loading taking too long, the message may not be displayed directly.
+- An in-app message can only be displayed if it is loaded, including its images. If the message isn't yet fully loaded, the SDK registers a request-to-show for that message so it will be displayed once it is fully loaded. The request-to-show has a timeout of 3 seconds. This means that in case of unpredicted behavior, such as image loading taking too long, the message may not be displayed directly.
 
-- If in-app message loading hits the timeout of 3 seconds, the message will be displayed the next time its trigger event is tracked. For example, if a `session_start` event triggers an in-app message but loading that message times out, it will not be displayed directly. However, once loaded, it will display the next time a `session_start` event is tracked.
+- If in-app message loading hits the timeout of 3 seconds, the message will be displayed the next time its trigger event is tracked. For example, if a `session_start` event triggers an in-app message but loading that message times out, it isn't displayed directly. However, once loaded, it will display the next time a `session_start` event is tracked.
 
-- Image downloads are limited to 10 seconds per image. If an in-app message contains a large image that cannot be downloaded within this time limit, the in-app message will not be displayed. For an HTML in-app message that contains multiple images, this restriction applies per image, but failure of any image download will prevent this HTML in-app message from being displayed.
+- Image downloads are limited to 10 seconds per image. If an in-app message contains a large image that can't be downloaded within this time limit, the in-app message isn't displayed. For an HTML in-app message that contains multiple images, this restriction applies per image, but failure of any image download will prevent this HTML in-app message from being displayed.
 
 ### In-app message shows incorrect image
 
@@ -211,9 +208,20 @@ If your app is successfully requesting and receiving in-app messages but they ar
 
 - If you have implemented a custom `InAppMessageActionDelegate`, actions are only tracked automatically if `trackActions` is set to `true`. If `trackActions` is set to `false`, you must manually track the action in the `inAppMessageAction` method. Refer to [Customize In-App Message Actions](#customize-in-app-message-actions) above for details.
 
+### Close button doesn't match the Visual Builder preview
+
+Earlier iOS SDK versions applied hardcoded padding to the title and body text in rich-style in-app messages (modal, fullscreen, and slide-in) to prevent the close button from overlapping content. This padding varied by layout, so it didn't always match the Visual Builder preview or how the message rendered on Android.
+
+- **Fix:** as of iOS SDK 4.3.0, the close button is positioned consistently at the top-right of the message container, offset only by its `Distance from top` and `Distance from right` settings. iOS rendering now matches the Visual Builder preview and Android.
+- **Action:** after updating to SDK 4.3.0, check existing rich-style campaigns for padding added to compensate for the old positioning, for example, extra top padding on the title or body. Remove or adjust that padding in the Visual Builder — most campaigns look correct without it.
+
+This fix applies only to rich-style in-app messages built with the native rich editor. It doesn't affect the legacy native editor or HTML-based in-app messages.
+
 ### Log messages
 
-> Note: All logs assigned to In-app handling process are prefixed with `[InApp]` shortcut to bring easier search-ability to you. Bear in mind that some supporting processes (such as Image caching) are logging without this prefix. 
+> Note
+> 
+> All logs assigned to In-app handling process are prefixed with `[InApp]` shortcut to bring easier search-ability to you. Bear in mind that some supporting processes (such as Image caching) are logging without this prefix. 
 
 While troubleshooting in-app message issues, you can follow the process of requesting, receiving, preloading, and displaying in-app messages through the information logged by the SDK at verbose log level. Look for messages similar to the ones below:
 
@@ -221,64 +229,55 @@ While troubleshooting in-app message issues, you can follow the process of reque
    Event {eventCategory}:{eventType} occurred, going to trigger In-app show process
    ```
    In-app process has been triggered by SDK usage of identifyCustomer() or event tracking.
-   ```
-   Register request for in-app message to be shown for $eventType (not for identifyCustomer). Identify customer event will always download in app messages from backend.
 2. ```
-   Skipping messages process for {event} because app is not in foreground state
+   Register request for in-app message to be shown for $eventType
    ```
-   The in-app message process was triggered while application UI is not visible to user therefore no in-app message could be shown anyway.
+   This request is registered for events other than `identifyCustomer` — an `identifyCustomer` event always downloads in-app messages from the backend.
 3. ```
+   Skipping messages process for {event} because app isn't in foreground state
+   ```
+   The in-app message process was triggered while application UI isn't visible to user therefore no in-app message could be shown anyway.
+4. ```
    Picking in-app message for eventType {eventType}. {X} messages available: [{message1 name}, {message2 name}, ...].
    ```
-   In-app messages must be preloaded before they can be displayed. If the preload hasn't started or is still in progress, the SDK will wait until the preload is complete and only perform the logic to select an in-app message afterward.
-   ```
-4. ```
-   This log contains `eventType` for which the messages going to be searched. Then count of `X` messages and the names of **all** messages received from the server is listed in
-   ```   
+   In-app messages must be preloaded before they can be displayed. If the preload hasn't started or is still in progress, the SDK will wait until the preload is complete and only perform the logic to select an in-app message afterward. This log contains the `eventType` for which messages are being searched, followed by the count of `X` messages and the names of **all** messages received from the server.
+5. ```
    Message '{message name}' failed event filter. Message filter: {"event_type":"session_start","filter":[]} Event type: payment properties: {price=2011.1, product_title=Item #1} timestamp: 1.59921557821E9
-   ```  
-   We show reasons why some messages are not picked. In this example, message failed event filter - the type was set for `session_start`, but `payment` was tracked.
    ```
-5. ``` 
+   We show reasons why some messages aren't picked. In this example, message failed event filter - the type was set for `session_start`, but `payment` was tracked.
+6. ```
    Got {X} messages with highest priority for eventType {eventType}. [{message1 name}, {message2 name}, ...]
    ```
    There may be a tie between a few messages with the same priority. All messages with same highest priority are listed.
-   ```
-6. ``` 
+7. ```
    Picking top message '{message name}' for eventType {eventType}
    ```
-   The single message is randomly picked from filtered messages with same highest priority for `eventType`
-   ```
-7. ```
+   The single message is randomly picked from filtered messages with same highest priority for `eventType`.
+8. ```
    Picking in-app message for eventTypes ["payment"]. 2 messages available: ["Payment in-app message", "App load in-app message"].
    ```
-   This log message includes a list of **all** in-app messages received from the server and preloaded in the local cache. If you don't see your message here, it's possible it wasn't available yet the last time the SDK request in-app messages. If you have confirmed the message was available when the last preload occurred, the current user may not match the audience targeted by the in-app message. Check the in-app message set up in Engagement. 
-8. ```
+   This log message includes a list of **all** in-app messages received from the server and preloaded in the local cache. If you don't see your message here, it's possible it wasn't available yet the last time the SDK requested in-app messages. If you have confirmed the message was available when the last preload occurred, the current user may not match the audience targeted by the in-app message. Check the in-app message set up in {user.mkg}.
+9. ```
    Got {X} messages available to show. [{message1 name}, {message2 name}, ...].
    ```
-   All `X` messages has been collected for registered 'show requests'. Process continues with selecting of message with highest priority.
-   ```
-9. ```
+   All `X` messages have been collected for registered 'show requests'. Process continues with selecting of message with highest priority.
+10. ```
     1 messages available after filtering. Picking highest priority message.
     ```
-    After applying all the filters, there is one in-app message left that satisfies the criteria to be displayed. If more than one messages is eligible, the SDK will select the one that has the highest priority configured in Engagement.
-    ```
-10. ```
+    After applying all the filters, there is one in-app message left that satisfies the criteria to be displayed. If more than one message is eligible, the SDK will select the one that has the highest priority configured in {user.mkg}.
+11. ```
     Picking top message '{message name}' to be shown.
     ```
-    The single message is randomly picked from all filtered messages. This message is going to be shown to user.
-    ```
-11. ```
-   Only logging in-app message for control group '${message.name}'
-   ```
-   A/B testing In-app message or message without payload is not shown to user but 'show' event is tracked for your analysis.
-   ```
+    The single message is randomly picked from all filtered messages. This message is going to be shown to the user.
 12. ```
-   Attempting to show in-app message '{message name}'
-   ```
-   In-app message that meant to be show to user (not A/B testing) is going to be shown
-   ```
+    Only logging in-app message for control group '${message.name}'
+    ```
+    A/B testing In-app message or message without payload isn't shown to user but 'show' event is tracked for your analysis.
 13. ```
-   Posting show to main thread with delay {X}ms.
-   ```
-   Message display request is posted to the main thread with delay of `X` milliseconds. Delay is configured by `Display delay` in In-app message settings. Message will be displayed in the last resumed Activity. 
+    Attempting to show in-app message '{message name}'
+    ```
+    In-app message that is meant to be shown to the user (not A/B testing) is going to be shown.
+14. ```
+    Posting show to main thread with delay {X}ms.
+    ```
+    Message display request is posted to the main thread with a delay of `X` milliseconds. Delay is configured by `Display delay` in the in-app message settings. The message will be displayed in the topmost presented view controller.

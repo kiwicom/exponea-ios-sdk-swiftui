@@ -9,7 +9,7 @@ content:
   excerpt: Track customers and events using the iOS SDK
 ---
 
-You can track events in Engagement to learn more about your app’s usage patterns and to segment your customers by their interactions.
+You can track events in {user.mkg} to learn more about your app’s usage patterns and to segment your customers by their interactions.
 
 By default, the SDK tracks certain events automatically, including:
 
@@ -22,7 +22,7 @@ Additionally, you can track any custom event relevant to your business.
 
 > 📘
 >
-> Also see [Mobile SDK tracking FAQ](https://support.bloomreach.com/hc/en-us/articles/18153058904733-Mobile-SDK-tracking-FAQ) at Bloomreach Support Help Center.
+> Also see [Mobile SDK tracking FAQ](https://support.bloomreach.com/hc/en-us/articles/18153058904733-Mobile-SDK-tracking-FAQ) at {user.br} Support Help Center.
 
 > ❗️ Protect the privacy of your customers
 
@@ -109,7 +109,7 @@ Without identification, events are tracked for an anonymous customer, only ident
 
 Use the `identifyCustomer()` method to identify a customer using their unique [hard ID](https://documentation.bloomreach.com/engagement/docs/customer-identification#hard-id).
 
-The default hard ID is `registered` and its value is typically the customer's email address. However, your Engagement project may define a different hard ID.
+The default hard ID is `registered` and its value is typically the customer's email address. However, your {user.mkg} project may define a different hard ID.
 
 Optionally, you can track additional customer properties such as first and last names, age, etc.
 
@@ -120,7 +120,7 @@ Optionally, you can track additional customer properties such as first and last 
 > ❗️
 >
 > The SDK stores data, including customer hard ID, in a local cache on the device. Removing the hard ID from the local cache requires calling [anonymize](#anonymize) in the app.
-> If the customer profile is anonymized or deleted in the Bloomreach Engagement webapp, subsequent initialization of the SDK in the app can cause the customer profile to be reidentified or recreated from the locally cached data.
+> If the customer profile is anonymized or deleted in the {user.mkg} webapp, subsequent initialization of the SDK in the app can cause the customer profile to be reidentified or recreated from the locally cached data.
 
 > Always use a [hard ID](https://documentation.bloomreach.com/engagement/docs/customer-identification#hard-id) to identify a customer. Using a soft ID with `identifyCustomer` could unintentionally cause the customer to be associated with an incorrect profile.
 
@@ -128,7 +128,7 @@ Optionally, you can track additional customer properties such as first and last 
 
 | Name                        | Type                      | Description |
 | --------------------------- | ------------------------- | ----------- |
-| customerIds **(required)**  | [String: String]          | Dictionary of customer unique identifiers. Only identifiers defined in the Engagement project are accepted. |
+| customerIds **(required)**  | [String: String]          | Dictionary of customer unique identifiers. Only identifiers defined in the {user.mkg} project are accepted. |
 | properties                  | [String: JSONConvertible] | Dictionary of customer properties. |
 | timestamp                   | Double                    | Unix timestamp specifying when the customer properties were updated. Specify the `nil` value to use the current time. |
 
@@ -172,7 +172,7 @@ Exponea.identifyCustomer(customerIds: customerIds,
 >
 > Optionally, you can provide a custom `timestamp` if the identification happened at a different time. By default the current time will be used.
 
-### Identify with auth context (Stream/Data hub)
+### Identify with auth context (Stream/{user.dh})
 
 When using Stream JWT integration, you can provide customer IDs and the JWT token together using `identifyCustomer(context:properties:timestamp:)`. This is the preferred method for Stream mode as it atomically associates the customer identity with the JWT.
 
@@ -205,11 +205,11 @@ Invoking this method will cause the SDK to:
 1. Track a `session_end` event if `automaticSessionTracking` is enabled.
 2. Invalidate the push notification token by tracking `notification_state` with `valid: false`.
 3. Flush all pending events to the server (in Stream mode, this uses the current JWT while it is still available).
-4. Remove the push notification token for the current customer from local device storage and the customer profile in Engagement.
+4. Remove the push notification token for the current customer from local device storage and the customer profile in {user.mkg}.
 5. Clear local repositories and caches, excluding tracked events.
 6. Clear the JWT from the Keychain (Stream mode).
 7. If [`regenerateDeviceIdOnAnonymize`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) is set to `true`, regenerate the SDK's persisted telemetry `device_id` so subsequent events for the new customer carry a freshly-generated identifier (see the callout below for the full data flow). This step runs before the new customer record is created so the new `device_id` is in place for steps 8–12.
-8. Create a new customer record in Engagement (a new `cookie` soft ID is generated).
+8. Create a new customer record in {user.mkg} (a new `cookie` soft ID is generated).
 9. Assign the previous push notification token to the new customer record.
 10. Preload in-app messages, in-app content blocks, and app inbox for the new customer.
 11. Track a new `installation` event for the new customer.
@@ -243,6 +243,31 @@ You can also use the `anonymize` method to switch to a different integration. Th
 > ⚠️
 >
 > `anonymize(exponeaProject:projectMapping:)` is **deprecated**. Use `anonymize(exponeaIntegrationType:exponeaProjectMapping:)` instead, which accepts any `ExponeaIntegrationType` (both Project and Stream).
+
+> 📘 **Completion guarantee for `anonymize(completion:)` and `anonymize(...completion:)`**
+>
+> When the SDK is configured and no stop is in progress, the completion-bearing `anonymize` overloads invoke the callback on the main thread on the successful path. Public-API short-circuits that also invoke the callback are:
+>
+> - SDK stopped via `stopIntegration`
+> - Prior internal exception
+>
+> In those short-circuit cases, the SDK performs no anonymization — the callback signals only that the call resolved.
+>
+> The SDK queues calls placed before `configure(...)` finishes. If the deferred call succeeds, the SDK invokes the callback once configuration completes. `Exponea.logger` logs deferred failures — prior internal exception or `NSException` during deferred execution — which may not surface in the callback.
+>
+> A similar guarantee applies to [`flushData(completion:)`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-data-flushing#completion-guarantee). Public-API short-circuits that deliver a `FlushResult.error(_:)` carrying the underlying `ExponeaError` are:
+>
+> - SDK stopped
+> - Prior internal exception
+> - Insufficient authorization
+>
+> Pipeline short-circuits that deliver their typed `FlushResult` case are:
+>
+> - No internet connection
+> - Flush already in progress
+> - Empty queue (returns `.success(0)`)
+>
+> Flutter, React Native, and similar wrapper SDKs that resolve a `Promise` or `Future` inside the iOS callback can rely on this contract for post-configure paths.
 
 #### Examples
 
@@ -327,6 +352,23 @@ Exponea.shared.trackSessionStart()
 Exponea.shared.trackSessionEnd()
 ``` 
 
+### Get the current customer cookie
+
+Use `Exponea.shared.customerCookie` to retrieve the cookie that identifies the current customer being tracked. The value is available only after the SDK is initialized. Before initialization, the API returns `nil`.
+
+By default, the SDK tracks events for an anonymous customer identified by a cookie. When you identify the customer with a hard ID, the SDK keeps using the same cookie alongside the hard ID. The cookie persists until you call:
+
+* `Exponea.shared.anonymize()` to generate a new cookie immediately.
+* `Exponea.shared.stopIntegration()` or `Exponea.shared.clearLocalCustomerData(appGroup: String)` to remove the cookie. A new one is created only on the next SDK initialization.
+
+Use this cookie value to work with the current anonymous identity in your app, for example, to synchronize identity with a webview.
+
+#### Example
+
+``` swift
+let cookie = Exponea.shared.customerCookie
+```
+
 ## Push notifications
 
 If developers [integrate push notification functionality](https://documentation.bloomreach.com/engagement/docs/ios-sdk-push-notifications#integration) in their app, the SDK automatically tracks the push notification token by default.
@@ -343,7 +385,9 @@ Use the `trackPushToken()` method to manually track the token for receiving push
 
 Invoking this method will track a push token immediately regardless of the value of `tokenTrackFrequency` (refer to the [Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) documentation for details).
 
-Each time the app becomes active, the SDK invokes `verifyPushStatusAndTrackPushToken`, which re-evaluates the configured [`tokenTrackFrequency`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration) and tracks the token again only when the condition is met (or when an OS push authorization flip is detected, which always forces a fresh `notification_state` regardless of frequency).
+Each time the app becomes active, the SDK invokes `verifyPushStatusAndTrackPushToken`, which re-evaluates the configured [`tokenTrackFrequency`](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration). Under `everyLaunch`, this produces up to one frequency-based `notification_state` per app process. Foreground transitions don't re-track unless push permission changed or another override applies. Other frequency modes track in one of the following situations:
+- Their configured condition is met.
+- An OS push authorization flip is detected. This always forces a fresh `notification_state` regardless of frequency.
 
 #### Arguments
 
@@ -622,11 +666,11 @@ Exponea.shared.stopIntegration {
 
 #### Stop the SDK and wipe all tracked data
 
-The SDK caches data (such as sessions, events, and customer properties) in an internal local database and periodically sends them to the Bloomreach Engagement app. If the device has no network or if you configured the SDK to upload them less frequently, these data are kept locally.
+The SDK caches data (such as sessions, events, and customer properties) in an internal local database and periodically sends them to the {user.mkg} app. If the device has no network or if you configured the SDK to upload them less frequently, these data are kept locally.
 
-You may face the use case where the customer gets removed from the Bloomreach Engagement platform, and subsequently, you want to remove them from local storage too.
+You may face the use case where the customer gets removed from the {user.mkg} platform, and subsequently, you want to remove them from local storage too.
 
-Please do not initialize the SDK in this case. Depending on your configuration, the SDK may upload the stored tracked events. This may lead to the customer's profile being recreated in Bloomreach Engagement. Stored events may have been tracked for this customer, and uploading them will result in the recreation of the customer profile based on the assigned customer IDs.
+Please do not initialize the SDK in this case. Depending on your configuration, the SDK may upload the stored tracked events. This may lead to the customer's profile being recreated in {user.mkg}. Stored events may have been tracked for this customer, and uploading them will result in the recreation of the customer profile based on the assigned customer IDs.
 
 To prevent this from happening, invoke `stopIntegration()` immediately without initializing the SDK:
 

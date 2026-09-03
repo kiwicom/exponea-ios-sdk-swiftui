@@ -11,7 +11,7 @@ import WebKit
 
 class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
     private lazy var inAppContentBlocksManager = InAppContentBlocksManager.manager
-    var webview = WKWebView()
+    var webview = WKWebView(frame: .zero, configuration: HtmlNormalizer.createWebViewConfiguration())
     var assignedMessage: InAppContentBlockResponse?
     var placeholder: String = ""
     var actionClicked: EmptyBlock?
@@ -105,6 +105,9 @@ class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
             Exponea.logger.log(.warning, message: "InAppCB: Unknown action URL: \(String(describing: actionUrl))")
             return false
         }
+        if isOfflineResourceNav(actionUrl) {
+            return false
+        }
         if isBlankNav(actionUrl) {
             // on first load
             // nothing to do, not need to continue loading
@@ -151,6 +154,10 @@ class CarouselContentBlockViewCell: UICollectionViewCell, WKNavigationDelegate {
 
     private func isBlankNav(_ url: URL?) -> Bool {
         url?.absoluteString == "about:blank"
+    }
+
+    private func isOfflineResourceNav(_ url: URL?) -> Bool {
+        url?.scheme?.lowercased() == HtmlNormalizer.offlineResourceScheme
     }
 
     private func determineActionType(_ action: ActionInfo) -> InAppContentBlockActionType {

@@ -415,6 +415,8 @@ public class ExponeaInternal: ExponeaType {
                     onEventCallback: { type, event in
                         self.inAppMessagesManager?.onEventOccurred(of: type, for: event, triggerCompletion: nil)
                         self.appInboxManager?.onEventOccurred(of: type, for: event)
+                        (self.inAppContentBlocksManager as? InAppContentBlocksManager)?
+                            .onEventOccurred(of: type, for: event)
                         if case .immediate = Exponea.shared.flushingMode {
                             self.segmentationManager?.processTriggeredBy(type: .identify)
                         }
@@ -434,8 +436,11 @@ public class ExponeaInternal: ExponeaType {
                 
                 configuration.saveToUserDefaults()
 
-                self.inAppContentBlocksManager = InAppContentBlocksManager.manager
-                self.inAppContentBlocksManager?.initBlocker()
+                let inAppContentBlocksManager = InAppContentBlocksManager.manager
+                self.inAppContentBlocksManager = inAppContentBlocksManager
+                inAppContentBlocksManager.initBlocker {
+                    inAppContentBlocksManager.prewarmReusableContentBlockResourcesForStartup()
+                }
                 self.inAppContentBlocksManager?.loadInAppContentBlockMessages { [weak self] in
                     self?.inAppContentBlocksManager?.prefetchPlaceholdersWithIds(ids: configuration.inAppContentBlocksPlaceholders ?? [])
                 }

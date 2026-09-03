@@ -9,7 +9,7 @@ content:
   excerpt: 'Build, run, and navigate the example app included with the iOS SDK'
 ---
 
-The Exponea iOS SDK includes an example application you can use as a reference implementation. You can build and run the app, test Engagement features, and compare the code and behavior of your implementation with the expected behavior and code in the example app.
+The Exponea iOS SDK includes an example application you can use as a reference implementation. You can build and run the app, test {user.mkg} features, and compare the code and behavior of your implementation with the expected behavior and code in the example app.
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ In Xcode, navigate to **Xcode** > **Settings** > **Locations** and make sure `Co
 
 > 📘
 >
-> To enable push notifications in the example app, you must also [Configure Apple Push Notification Service for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configure-apns) in the Engagement web app.
+> To enable push notifications in the example app, you must also [Configure Apple Push Notification Service for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configure-apns) in the {user.mkg} web app.
 
 ## Navigate the example app
 
@@ -56,8 +56,8 @@ When you run the app in the simulator, you'll see the **Authentication** view. T
    - Enter your `Project token`.
    - **Optional:** Enter the `Authorization` (API key).
    - **Optional:** Enter the `Advanced Auth` key to enable [customer token authorization](https://documentation.bloomreach.com/engagement/docs/ios-sdk-authorization#customer-token-authorization).
-4. Enter the `Base (API) URL` (API base URL for the Bloomreach platform).
-5. **Optional:** Enter an `Application ID` if your Engagement project supports multiple mobile apps. If you leave this blank, the SDK uses the default value `default-application`. [Learn more about Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration).
+4. Enter the `Base (API) URL` (API base URL for the {user.br} platform).
+5. **Optional:** Enter an `Application ID` if your {user.mkg} project supports multiple mobile apps. If you leave this blank, the SDK uses the default value `default-application`. [Learn more about Configuration for iOS SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-configuration).
 6. Click **Start** to [initialize the SDK](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize-the-sdk).
 
 The **Clear local data** button invokes `Exponea.shared.clearLocalCustomerData(appGroup:)` to delete all locally stored data without initializing the SDK.
@@ -92,13 +92,13 @@ The app provides several views, accessible using the bottom navigation, to test 
 - The **Logging** view displays log messages from the SDK.
   > [`LogViewController.swift`](https://github.com/exponea/exponea-ios-sdk/blob/main/ExponeaSDK/Example/Views/Logging/LogViewController.swift)
 
-Try out the different features in the app, then find the customer profile in the Engagement web app (under `Data & Assets` > `Customers`) to see the properties and events tracked by the SDK.
+Try out the different features in the app, then find the customer profile in the {user.mkg} web app (under `Data & Assets` > `Customers`) to see the properties and events tracked by the SDK.
 
-If you enter a `Registered customer ID` on the authentication screen (Stream ID mode), the customer is identified from startup and can be found in the Engagement web app by their registered ID.
+If you enter a `Registered customer ID` on the authentication screen (Stream ID mode), the customer is identified from startup and can be found in the {user.mkg} web app by their registered ID.
 
-If you left the `Registered customer ID` field blank, or are using Project token mode, the customer is tracked anonymously using a cookie soft ID. You can look up the cookie value in the logs and find the corresponding profile in the Engagement web app.
+If you left the `Registered customer ID` field blank, or are using Project token mode, the customer is tracked anonymously using a cookie soft ID. You can look up the cookie value in the logs and find the corresponding profile in the {user.mkg} web app.
 
-If you use `Identify Customer` in the app to set the `registered` hard ID (use an email address as value), the customer is identified and can be found in the Engagement web app by their email address.
+If you use `Identify Customer` in the app to set the `registered` hard ID (use an email address as value), the customer is identified and can be found in the {user.mkg} web app by their email address.
 
 > 📘
 >

@@ -9,7 +9,7 @@ content:
   excerpt: Enable and track universal links in your app using the iOS SDK
 ---
 
-Universal links allow the links you send through Engagement to open directly in your native mobile application without any redirects that would hinder your users' experience.
+Universal links allow the links you send through {user.mkg} to open directly in your native mobile application without any redirects that would hinder your users' experience.
 
 For details on how universal links work and how they can improve your users' experience, refer to the [Universal links](https://documentation.bloomreach.com/engagement/docs/universal-link) section in the Campaigns documentation.
 
@@ -56,7 +56,7 @@ Once the above items are in place, opening universal links should open your app.
 
 ## Track universal links
 
-When the system opens your app after a user taps or clicks on a universal link, your app receives an `NSUserActivity` object with an `activityType` value of `NSUserActivityTypeBrowsingWeb`. You must update your app delegate to respond and track the link to the Engagement platform when it receives the `NSUserActivity` object.
+When the system opens your app after a user taps or clicks on a universal link, your app receives an `NSUserActivity` object with an `activityType` value of `NSUserActivityTypeBrowsingWeb`. You must update your app delegate to respond and track the link to the {user.mkg} platform when it receives the `NSUserActivity` object.
 
 The activity object’s `webpageURL` property contains the URL you need to pass on to the SDK’s `.trackCampaignClick()` method.
 
@@ -84,4 +84,4 @@ Universal Link parameters are automatically tracked in `session_start` events wh
 
 > ❗️
 >
-> The SDK might not be initialized when `.trackCampaignClick()` is called. In this case, the event will be sent to the Engagement backend **after** the SDK is [initialized](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize-the-sdk) with `Exponea.shared.configure()`. 
+> The SDK might not be initialized when `.trackCampaignClick()` is called. In this case, the event will be sent to the {user.mkg} backend **after** the SDK is [initialized](https://documentation.bloomreach.com/engagement/docs/ios-sdk-setup#initialize-the-sdk) with `Exponea.shared.configure()`. 

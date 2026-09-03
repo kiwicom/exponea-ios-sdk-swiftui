@@ -24,7 +24,7 @@ open class AppInboxDetailViewController: UIViewController, WKUIDelegate {
     public let action2 = UIButton()
     public let action3 = UIButton()
     public let action4 = UIButton()
-    public let htmlContainer = WKWebView()
+    public let htmlContainer = WKWebView(frame: .zero, configuration: HtmlNormalizer.createWebViewConfiguration())
 
     private let SUPPORTED_MESSAGE_ACTION_TYPES: [MessageItemActionType] = [
         .deeplink, .browser
@@ -211,7 +211,13 @@ open class AppInboxDetailViewController: UIViewController, WKUIDelegate {
                 makeResourcesOffline: true,
                 ensureCloseButton: false
             )
-            let normalizedPayload = HtmlNormalizer(selfWhileAsync.data?.content?.html ?? "").normalize(normalizeConf)
+            guard let normalizedPayload = HtmlRenderResourcePreloader().prepareNormalizedHtml(
+                html: selfWhileAsync.data?.content?.html ?? "",
+                config: normalizeConf
+            ) else {
+                Exponea.logger.log(.error, message: "AppInbox message contains invalid HTML")
+                return
+            }
             guard
                 normalizedPayload.valid
             else {

@@ -51,6 +51,9 @@ final class WebActionManager: NSObject, WKNavigationDelegate {
 
     func handleActionClick(_ url: URL?) -> Bool {
         Exponea.logger.log(.verbose, message: "[HTML] action for \(String(describing: url))")
+        if isOfflineResourceNav(url) {
+            return false
+        }
         if isBlankNav(url) {
             // on first load
             // nothing to do, not need to continue loading
@@ -86,5 +89,9 @@ final class WebActionManager: NSObject, WKNavigationDelegate {
 private extension WebActionManager {
     func isBlankNav(_ url: URL?) -> Bool {
         url?.absoluteString == "about:blank"
+    }
+
+    func isOfflineResourceNav(_ url: URL?) -> Bool {
+        url?.scheme?.lowercased() == HtmlNormalizer.offlineResourceScheme
     }
 }

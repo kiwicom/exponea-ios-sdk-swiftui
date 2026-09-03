@@ -11,6 +11,7 @@ import UIKit
 final class InAppMessagesCache: InAppMessagesCacheType {
     static let inAppMessagesFolder = "exponeasdk_in_app_messages"
     static let inAppMessagesFileName = "in-app-messages.json"
+    private static let imageResourceType = "image"
     // we should use our own instance of filemanager, host app can implement delegate on default one
     private let fileManager: FileManager = FileManager()
 
@@ -108,7 +109,9 @@ final class InAppMessagesCache: InAppMessagesCacheType {
     }
 
     func deleteImages(except: [String]) {
-        let exceptFileNames = except.map { FileUtils.getFileName(fileUrl: $0) }
+        let exceptFileNames = except.map {
+            FileUtils.getFileName(fileUrl: $0, resourceType: Self.imageResourceType)
+        }
         guard let directory = getCacheDirectoryURL() else {
             return
         }
@@ -130,7 +133,9 @@ final class InAppMessagesCache: InAppMessagesCacheType {
             Exponea.logger.log(.warning, message: "Unable to get in-app message image cache directory")
             return false
         }
-        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
+        let fileUrl = directory.appendingPathComponent(
+            FileUtils.getFileName(fileUrl: imageUrl, resourceType: Self.imageResourceType)
+        )
         let exists = fileManager.fileExists(atPath: fileUrl.path)
         if !exists {
             Exponea.logger.log(.verbose, message: "In-app message image \(imageUrl) not found in cache.")
@@ -142,7 +147,9 @@ final class InAppMessagesCache: InAppMessagesCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return
         }
-        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
+        let fileUrl = directory.appendingPathComponent(
+            FileUtils.getFileName(fileUrl: imageUrl, resourceType: Self.imageResourceType)
+        )
         do {
             try data.write(to: fileUrl, options: .atomic)
         } catch {
@@ -154,7 +161,9 @@ final class InAppMessagesCache: InAppMessagesCacheType {
         guard let directory = getCacheDirectoryURL() else {
             return nil
         }
-        let fileUrl = directory.appendingPathComponent(FileUtils.getFileName(fileUrl: imageUrl))
+        let fileUrl = directory.appendingPathComponent(
+            FileUtils.getFileName(fileUrl: imageUrl, resourceType: Self.imageResourceType)
+        )
         return try? Data(contentsOf: fileUrl)
     }
 

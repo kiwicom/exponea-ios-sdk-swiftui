@@ -28,14 +28,20 @@
 import UIKit
 
 extension UIImage {
-    public class func gif(data: Data) -> UIImage? {
-        // Create source from data
+    /// Decode image data into an animated `UIImage`.
+    ///
+    /// - Parameters:
+    ///   - data: Raw image bytes (GIF, WebP, or any format supported by ImageIO).
+    ///   - maxPixelSize: When set, each frame is downsampled so its longest
+    ///     edge does not exceed this value (in pixels). Aspect ratio is preserved.
+    ///     Use this in memory-constrained contexts such as notification extensions.
+    public class func gif(data: Data, maxPixelSize: Int? = nil) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             print("SwiftGif: Source for the image does not exist")
             return nil
         }
 
-        return UIImage.animatedImageWithSource(source)
+        return UIImage.animatedImageWithSource(source, maxPixelSize: maxPixelSize)
     }
 
     public class func gif(url: String) -> UIImage? {
@@ -166,22 +172,33 @@ extension UIImage {
         return gcd
     }
 
-    internal class func animatedImageWithSource(_ source: CGImageSource) -> UIImage? {
+    internal class func animatedImageWithSource(_ source: CGImageSource, maxPixelSize: Int? = nil) -> UIImage? {
         let count = CGImageSourceGetCount(source)
         var images = [CGImage]()
         var delays = [Int]()
 
-        // Fill arrays
+        let thumbnailOptions: CFDictionary? = maxPixelSize.map { size in
+            [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceThumbnailMaxPixelSize: size,
+                kCGImageSourceCreateThumbnailWithTransform: true
+            ] as CFDictionary
+        }
+
         for index in 0..<count {
-            // Add image
-            if let image = CGImageSourceCreateImageAtIndex(source, index, nil) {
+            let image: CGImage?
+            if let options = thumbnailOptions {
+                image = CGImageSourceCreateThumbnailAtIndex(source, index, options)
+            } else {
+                image = CGImageSourceCreateImageAtIndex(source, index, nil)
+            }
+            if let image {
                 images.append(image)
             }
 
-            // At it's delay in cs
             let delaySeconds = UIImage.delayForImageAtIndex(Int(index),
                 source: source)
-            delays.append(Int(delaySeconds * 1000.0)) // Seconds to ms
+            delays.append(Int(delaySeconds * 1000.0))
         }
 
         // Calculate full duration

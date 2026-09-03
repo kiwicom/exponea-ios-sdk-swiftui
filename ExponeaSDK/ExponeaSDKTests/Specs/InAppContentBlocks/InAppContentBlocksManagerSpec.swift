@@ -756,29 +756,16 @@ class InAppContentBlocksManagerSpec: QuickSpec {
             expect(tokenB).toNot(equal(tokenA))
         }
 
-        // Regression guard: two back-to-back reload() calls for the SAME placeholder
-        // must NOT both issue a personalization fetch. A production trace captured two
-        // identical POST /inappcontentblocks bursts 216 ms apart for `example_carousel`,
-        // costing ~300 ms of wall-clock and doubling HTML-normalization work on the
-        // cold-render path.
-        //
-        // Observable proxy: `carouselValidationTokens[placeholder]`. `loadMessagesForCarousel`
-        // rotates this token synchronously on the calling thread *right before* invoking
-        // the provider — so token rotations are a 1:1 synchronous proxy for provider
-        // invocations on the same main thread. Under the dedup fix, the second caller
-        // short-circuits on the in-flight map BEFORE rotating the token; under the
-        // pre-fix code each call unconditionally rotates, producing two distinct UUIDs.
-        //
-        // Why not spy on the repository directly: `InAppContentBlocksDataProvider.serverRepository`
-        // is a `private lazy var` that captures `Exponea.shared.repository` on first access,
-        // and `ExponeaInternal.configure` triggers that first access during `loadInAppContentBlockMessages`
-        // — before any test-side swap. A token-level proxy avoids adding a second injection seam.
+        // Two back-to-back reload() calls for the same placeholder must share one provider
+        // fetch. Token rotations in carouselValidationTokens are a synchronous proxy for
+        // provider invocations: the second caller should attach to the in-flight fetch
+        // without rotating the token again.
         it("two loadMessagesForCarousel calls for the same placeholder share one in-flight fetch") {
             let concreteManager = manager as! InAppContentBlocksManager
             let placeholder = "carousel_dedup_\(UUID().uuidString)"
-            // Prime the static cache so `idsForDownload` is non-empty — matches the
-            // production scenario captured in the log trace where the placeholder has
-            // known message IDs before the personalization fetch fires.
+            // Prime the static cache so `idsForDownload` is non-empty, matching the
+            // production scenario where the placeholder has known message IDs before
+            // the personalization fetch fires.
             manager.addMessage(SampleInAppContentBlocks.getSampleIninAppContentBlocks(
                 id: "dedup-msg-\(UUID().uuidString)",
                 placeholders: [placeholder]
@@ -873,10 +860,8 @@ class InAppContentBlocksManagerSpec: QuickSpec {
             expect(completionFires).to(equal(2))
         }
 
-        // Regression guard for C1 (TOCTOU): after the token rotates, a stale worker's write of
-        // `.valid` / `.corrupted` must NOT overwrite the fresh run's `.pending`. The pre-fix
-        // `updateImageValidationState(messageId:isCorrupted:)` did not check the token, so the
-        // final state write from a superseded run would clobber the current run's state.
+        // After the token rotates, a stale worker must not overwrite the fresh run's
+        // image validation state.
         it("stale worker's final state write is a no-op when token has rotated") {
             let concreteManager = manager as! InAppContentBlocksManager
             let messageId = "stale-race-\(UUID().uuidString)"
@@ -892,8 +877,8 @@ class InAppContentBlocksManagerSpec: QuickSpec {
             concreteManager.$carouselValidationTokens.changeValue { $0[placeholder] = tokenRun2 }
             concreteManager.$imageValidationStates.changeValue { $0[messageId] = .pending }
 
-            // Run 1's stale worker attempts to finalize — under the fix, this is a no-op because
-            // `placeholder`'s active token is T2, not T1.
+            // Run 1's stale worker attempts to finalize; this is a no-op because
+            // the active token is T2, not T1.
             concreteManager.updateImageValidationState(
                 messageId: messageId,
                 placeholder: placeholder,
@@ -1029,9 +1014,7 @@ class InAppContentBlocksManagerSpec: QuickSpec {
             expect(weakView).toEventually(beNil(), timeout: .seconds(2))
         }
 
-        // Regression guard: release() must drop all Combine subscriptions.
-        // Before the fix, release() called removeObserver(self, ...) — a no-op for
-        // publisher-based subscriptions — and the cancellables array remained populated.
+        // release() must cancel all Combine subscriptions and drain the cancellables array.
         it("CarouselInAppContentBlockView.release() cancels all Combine subscriptions") {
             let view = CarouselInAppContentBlockView(placeholder: "ph_carousel_cancel")
             expect(view.cancellables).toNot(beEmpty())
@@ -1271,6 +1254,352 @@ class InAppContentBlocksManagerSpec: QuickSpec {
 
             expect(continued?.count).to(equal(1))
             expect(continued?.first?.id).to(equal(validForUnderTest.id))
+        }
+
+        // MARK: - WebView pooling lifecycle
+
+        it("WebView pooling returns the same instance after recycle") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            waitUntil(timeout: .seconds(5)) { done in
+                onMain {
+                    let holder = UIView()
+
+                    // Exhaust the prepared pool so the next dequeue must come from issued-recycle path.
+                    concreteManager.prewarmReusableContentBlockResourcesForStartup()
+                    while concreteManager.preparedContentBlockWebViewCount > 0 {
+                        let drain = concreteManager.dequeueContentBlockWebViewForTest(tag: 999)
+                        holder.addSubview(drain)
+                    }
+
+                    let webView1 = concreteManager.dequeueContentBlockWebViewForTest(tag: 100)
+                    let identity1 = ObjectIdentifier(webView1)
+                    holder.addSubview(webView1)
+
+                    expect(webView1.tag).to(equal(100))
+
+                    // Detach — this is the "recycle" step.
+                    webView1.removeFromSuperview()
+
+                    let webView2 = concreteManager.dequeueContentBlockWebViewForTest(tag: 200)
+                    let identity2 = ObjectIdentifier(webView2)
+
+                    expect(identity2).to(equal(identity1))
+                    expect(webView2.tag).to(equal(200))
+                    done()
+                }
+            }
+        }
+
+        it("WebView pooling creates new instance when pool is exhausted") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            waitUntil(timeout: .seconds(5)) { done in
+                onMain {
+                    let holder = UIView()
+                    var issuedViews: [WKWebView] = []
+                    for i in 0..<5 {
+                        let wv = concreteManager.dequeueContentBlockWebViewForTest(tag: i)
+                        holder.addSubview(wv)
+                        issuedViews.append(wv)
+                    }
+
+                    let identities = Set(issuedViews.map { ObjectIdentifier($0) })
+                    expect(identities.count).to(equal(5))
+
+                    issuedViews.forEach { $0.removeFromSuperview() }
+                    done()
+                }
+            }
+        }
+
+        // MARK: - Queue deduplication
+
+        it("queue deduplication prevents identical entries") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            concreteManager.clearQueueForTest()
+            let message = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "dedup-test-\(UUID().uuidString)",
+                placeholders: ["dedup_placeholder"]
+            )
+            let newValue = UsedInAppContentBlocks(
+                tag: 1,
+                indexPath: IndexPath(row: 0, section: 0),
+                messageId: message.id,
+                placeholder: "dedup_placeholder",
+                height: 0
+            )
+
+            concreteManager.enqueueForTest(message: message, newValue: newValue)
+            concreteManager.enqueueForTest(message: message, newValue: newValue)
+            concreteManager.enqueueForTest(message: message, newValue: newValue)
+
+            expect(concreteManager.queueCount).to(equal(1))
+        }
+
+        it("queue deduplication allows different messages for same cell") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            concreteManager.clearQueueForTest()
+            let message1 = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "dedup-msg1-\(UUID().uuidString)",
+                placeholders: ["dedup_placeholder"]
+            )
+            let message2 = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "dedup-msg2-\(UUID().uuidString)",
+                placeholders: ["dedup_placeholder"]
+            )
+            let indexPath = IndexPath(row: 0, section: 0)
+            let newValue1 = UsedInAppContentBlocks(
+                tag: 1,
+                indexPath: indexPath,
+                messageId: message1.id,
+                placeholder: "dedup_placeholder",
+                height: 0
+            )
+            let newValue2 = UsedInAppContentBlocks(
+                tag: 1,
+                indexPath: indexPath,
+                messageId: message2.id,
+                placeholder: "dedup_placeholder",
+                height: 0
+            )
+
+            concreteManager.enqueueForTest(message: message1, newValue: newValue1)
+            concreteManager.enqueueForTest(message: message2, newValue: newValue2)
+
+            // Same cell dedup replaces the pending entry rather than appending
+            expect(concreteManager.queueCount).to(equal(1))
+        }
+
+        it("queue deduplication allows entries for different cells") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            concreteManager.clearQueueForTest()
+            let message = SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                id: "dedup-multi-\(UUID().uuidString)",
+                placeholders: ["dedup_placeholder"]
+            )
+            let newValue1 = UsedInAppContentBlocks(
+                tag: 1,
+                indexPath: IndexPath(row: 0, section: 0),
+                messageId: message.id,
+                placeholder: "dedup_placeholder",
+                height: 0
+            )
+            let newValue2 = UsedInAppContentBlocks(
+                tag: 2,
+                indexPath: IndexPath(row: 1, section: 0),
+                messageId: message.id,
+                placeholder: "dedup_placeholder",
+                height: 0
+            )
+
+            concreteManager.enqueueForTest(message: message, newValue: newValue1)
+            concreteManager.enqueueForTest(message: message, newValue: newValue2)
+
+            expect(concreteManager.queueCount).to(equal(2))
+        }
+
+        // MARK: - Refresh callback coalescing
+
+        it("refresh callback coalescing suppresses duplicate notifications for the same cell") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            concreteManager.clearRefreshCoalescingState()
+            var callbackCount = 0
+            concreteManager.refreshCallback = { _ in
+                callbackCount += 1
+            }
+
+            let indexPath = IndexPath(row: 0, section: 0)
+
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: indexPath,
+                source: "loadContentForPlaceholder.test",
+                placeholder: "coalesce_ph"
+            )
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: indexPath,
+                source: "loadContentForPlaceholder.test",
+                placeholder: "coalesce_ph"
+            )
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: indexPath,
+                source: "loadContentForPlaceholder.test",
+                placeholder: "coalesce_ph"
+            )
+
+            expect(callbackCount).to(equal(1))
+        }
+
+        it("refresh callback coalescing allows different cells to fire independently") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            concreteManager.clearRefreshCoalescingState()
+            var callbackCount = 0
+            concreteManager.refreshCallback = { _ in
+                callbackCount += 1
+            }
+
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: IndexPath(row: 0, section: 0),
+                source: "loadContentForPlaceholder.a",
+                placeholder: "ph_a"
+            )
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: IndexPath(row: 1, section: 0),
+                source: "loadContentForPlaceholder.b",
+                placeholder: "ph_b"
+            )
+
+            expect(callbackCount).to(equal(2))
+        }
+
+        it("refresh callback does not coalesce non-coalescable sources") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            concreteManager.clearRefreshCoalescingState()
+            var callbackCount = 0
+            concreteManager.refreshCallback = { _ in
+                callbackCount += 1
+            }
+
+            let indexPath = IndexPath(row: 0, section: 0)
+
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: indexPath,
+                source: "someOtherSource",
+                placeholder: "ph"
+            )
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: indexPath,
+                source: "someOtherSource",
+                placeholder: "ph"
+            )
+
+            expect(callbackCount).to(equal(2))
+        }
+
+        it("refresh callback coalescing works for calculateStaticData source") {
+            guard let concreteManager = manager as? InAppContentBlocksManager else {
+                fail("Expected concrete InAppContentBlocksManager")
+                return
+            }
+            concreteManager.clearRefreshCoalescingState()
+            var callbackCount = 0
+            concreteManager.refreshCallback = { _ in
+                callbackCount += 1
+            }
+
+            let indexPath = IndexPath(row: 0, section: 0)
+
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: indexPath,
+                source: "calculateStaticData.test",
+                placeholder: "static_ph"
+            )
+            concreteManager.notifyRefreshCallbackForTest(
+                indexPath: indexPath,
+                source: "calculateStaticData.test",
+                placeholder: "static_ph"
+            )
+
+            expect(callbackCount).to(equal(1))
+        }
+
+        it("loadContent fetches once and reaches height calculation through the completion-only personalized helper") {
+            defer { MockingjayProtocol.removeAllStubs() }
+
+            let placeholder = "height-calc-ph"
+            let messageId = "height-calc-msg-\(UUID().uuidString)"
+            manager.addMessage(
+                SampleInAppContentBlocks.getSampleIninAppContentBlocks(
+                    id: messageId,
+                    placeholders: [placeholder]
+                )
+            )
+
+            let personalizedBody: Data = {
+                let response = PersonalizedInAppContentBlockResponseData(
+                    data: [
+                        PersonalizedInAppContentBlockResponse(
+                            id: messageId,
+                            status: .ok,
+                            ttlSeconds: 60,
+                            variantId: nil,
+                            hasTrackingConsent: true,
+                            variantName: nil,
+                            contentType: nil,
+                            content: .init(html: "<html><body>height</body></html>"),
+                            htmlPayload: nil,
+                            ttlSeen: nil
+                        )
+                    ]
+                )
+                return (try? JSONEncoder().encode(response)) ?? Data()
+            }()
+
+            var fetchCount = 0
+            MockingjayProtocol.addStub(
+                matcher: { $0.url?.path.contains("inappcontentblocks") == true },
+                builder: { _ in
+                    fetchCount += 1
+                    let response = HTTPURLResponse(
+                        url: URL(string: "https://api.exponea.com/personalize")!,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )!
+                    return .success(response, .content(personalizedBody))
+                }
+            )
+
+            let indexPath = IndexPath(row: 0, section: 0)
+            var refreshCalled = false
+            waitUntil(timeout: .seconds(15)) { done in
+                manager.refreshCallback = { _ in
+                    refreshCalled = true
+                    done()
+                }
+                _ = manager.prepareInAppContentBlockView(
+                    placeholderId: placeholder,
+                    indexPath: indexPath
+                )
+            }
+
+            expect(refreshCalled).to(beTrue())
+            expect(fetchCount).to(equal(1))
+
+            // Second prepare simulates a host table reload after refreshCallback.
+            _ = manager.prepareInAppContentBlockView(
+                placeholderId: placeholder,
+                indexPath: indexPath
+            )
+
+            let concreteManager = manager as! InAppContentBlocksManager
+            let stored = concreteManager.getUsedInAppContentBlocks(
+                placeholder: placeholder,
+                indexPath: indexPath
+            )
+            expect(stored?.height).to(beGreaterThan(0))
         }
     }
 }

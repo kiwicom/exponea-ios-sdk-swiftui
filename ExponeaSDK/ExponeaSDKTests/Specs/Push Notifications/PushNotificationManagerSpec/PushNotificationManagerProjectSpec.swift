@@ -746,6 +746,38 @@ final class PushNotificationManagerProjectSpec: QuickSpec {
                 )
             }
 
+            context("first in-session token registration then foreground") {
+                it("emits exactly one notification_state across the first token registration and a subsequent becomeActive") {
+                    let tokenData = "mock_token_data".data(using: .utf8)! as AnyObject
+                    let tokenHex = "6D6F636B5F746F6B656E5F64617461"
+                    UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+
+                    // Fresh install: no persisted push token, default on-token-change frequency.
+                    // userDefaults: nil ensures hasTracked=false → shouldForceTracking=true →
+                    // isFirstNotificationStateTracking=true, regardless of state left by outer beforeEach.
+                    createPushManager(
+                        requirePushAuthorization: true,
+                        currentToken: nil,
+                        tokenTrackFrequency: .onTokenChange,
+                        userDefaults: nil
+                    )
+                    trackingManager.clearCalls()
+
+                    // First-ever APNs token arrives in-session (e.g. right after the user grants permission).
+                    pushManager.handlePushTokenRegistered(dataObject: tokenData)
+                    // Mirror the customer-token persistence the real notification_state track performs,
+                    // so the following foreground observes an unchanged token.
+                    trackingManager.customerPushToken = tokenHex
+
+                    expect(trackingManager.trackedEvents).to(haveCount(1))
+
+                    // Background -> foreground must not re-emit notification_state for the same token/permission.
+                    pushManager.applicationDidBecomeActive()
+
+                    expect(trackingManager.trackedEvents).to(haveCount(1))
+                }
+            }
+
             it("should track push token if not authorized") {
                 UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .denied)
                 pushManager.handlePushTokenRegistered(dataObject: mockTokenData)
@@ -990,7 +1022,7 @@ final class PushNotificationManagerProjectSpec: QuickSpec {
                     .to(beFalse(), description: "spring-forward: different wall-clock day must NOT be same calendar day")
             }
 
-            it("should track token on app foreground in 'everyLaunch' frequency") {
+            it("should track token once per process in 'everyLaunch' frequency on SDK init") {
                 createPushManager(
                     requirePushAuthorization: true,
                     currentToken: "mock-token",
@@ -1015,6 +1047,104 @@ final class PushNotificationManagerProjectSpec: QuickSpec {
                         ]
                     )
                 ]))
+            }
+
+            it("should not set hasTrackedThisSession when everyLaunch track fails and retry on next foreground") {
+                IntegrationManager.shared.isStopped = true
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .everyLaunch,
+                    lastTokenTrackDate: Date(timeIntervalSince1970: 1)
+                )
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(beEmpty())
+                IntegrationManager.shared.isStopped = false
+                trackingManager.clearCalls()
+                pushManager.applicationDidBecomeActive()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+                pushManager.applicationDidBecomeActive()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+            }
+
+            it("should not track again on foreground in 'everyLaunch' frequency when permission unchanged") {
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .everyLaunch,
+                    lastTokenTrackDate: Date(timeIntervalSince1970: 1)
+                )
+                trackingManager.clearCalls()
+                pushManager.applicationDidBecomeActive()
+                pushManager.applicationDidBecomeActive()
+                pushManager.applicationDidBecomeActive()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(0))
+            }
+
+            it("should track token only once per process in 'everyLaunch' frequency across repeated verify calls") {
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "mock-token",
+                    tokenTrackFrequency: .everyLaunch,
+                    lastTokenTrackDate: Date(timeIntervalSince1970: 1)
+                )
+                trackingManager.clearCalls()
+                pushManager.verifyPushStatusAndTrackPushToken()
+                pushManager.verifyPushStatusAndTrackPushToken()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(0))
+            }
+
+            it("should allow valid token track after cancel in 'everyLaunch' frequency") {
+                createPushManager(
+                    requirePushAuthorization: true,
+                    currentToken: "old-token",
+                    tokenTrackFrequency: .everyLaunch,
+                    lastTokenTrackDate: Date(timeIntervalSince1970: 1)
+                )
+                trackingManager.clearCalls()
+                pushManager.handlePushTokenRegistered(token: "new-token")
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(2))
+            }
+
+            it("markEveryLaunchSessionTracked should block subsequent everyLaunch frequency tracks") {
+                createPushManager(
+                    requirePushAuthorization: false,
+                    currentToken: nil,
+                    tokenTrackFrequency: .everyLaunch,
+                    lastTokenTrackDate: Date(timeIntervalSince1970: 1)
+                )
+                trackingManager.clearCalls()
+                pushManager.markEveryLaunchSessionTracked()
+                pushManager.verifyPushStatusAndTrackPushToken()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(0))
+            }
+
+            it("should not emit notification_state on permission change with no token yet, and should track once the token arrives") {
+                let sdkDefaults = UserDefaults(suiteName: Constants.General.userDefaultsSuite)!
+                sdkDefaults.set(true, forKey: Constants.General.notificationStateTracked)
+                sdkDefaults.set(false, forKey: Constants.General.notificationStateLastPermissionFlag)
+                UNAuthorizationStatusProvider.current = MockUNAuthorizationStatusProviding(status: .authorized)
+
+                createPushManager(
+                    requirePushAuthorization: false,
+                    currentToken: nil,
+                    tokenTrackFrequency: .everyLaunch,
+                    lastTokenTrackDate: Date()
+                )
+                // Permission flipped vs the persisted flag, but there is no token yet -> safe no-op.
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(beEmpty())
+
+                // Repeated foreground while still no token keeps retrying harmlessly.
+                pushManager.applicationDidBecomeActive()
+                pushManager.applicationDidBecomeActive()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(beEmpty())
+
+                // Token finally arrives -> exactly one notification_state emitted.
+                pushManager.handlePushTokenRegistered(token: "new-token")
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
+
+                // hasTrackedThisSession is now set -> subsequent foregrounds stay silent.
+                pushManager.applicationDidBecomeActive()
+                expect(trackingManager.trackedEvents.filter { $0.type == .notificationState }).to(haveCount(1))
             }
 
             it("should track permission denied if not authorized and authorization required") {
@@ -1449,7 +1579,7 @@ final class PushNotificationManagerProjectSpec: QuickSpec {
                             currentAppVersion: "1.0.0",
                             currentApplicationID: "app-id-same"
                         )
-                        // everyLaunch always sends on each launch; onTokenChange/daily skip when version and app ID unchanged.
+                        // everyLaunch sends once per process start; onTokenChange/daily skip when version and app ID unchanged.
                         let expectedCount = tokenTrackFrequency == .everyLaunch ? 1 : 0
                         expect(trackingManager.trackedEvents).to(haveCount(expectedCount))
                     }
